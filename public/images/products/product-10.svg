@@ -1,0 +1,12 @@
+﻿<svg xmlns='http://www.w3.org/2000/svg' width='600' height='600' viewBox='0 0 600 600'>
+  <defs>
+    <linearGradient id='g10' x1='0%' y1='0%' x2='100%' y2='100%'>
+      <stop offset='0%' stop-color='#db2777' stop-opacity='0.15'/>
+      <stop offset='100%' stop-color='#db2777' stop-opacity='0.35'/>
+    </linearGradient>
+  </defs>
+  <rect width='600' height='600' fill='url(#g10)'/>
+  <rect x='80' y='80' width='440' height='440' rx='32' fill='white' fill-opacity='0.55'/>
+  <text x='300' y='290' text-anchor='middle' font-family='Arial, sans-serif' font-size='28' font-weight='700' fill='#db2777'>KidCraze</text>
+  <text x='300' y='330' text-anchor='middle' font-family='Arial, sans-serif' font-size='18' fill='#525252'>Product 10</text>
+</svg>

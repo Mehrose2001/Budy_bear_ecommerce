@@ -1,0 +1,10 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900">
+  <defs>
+    <linearGradient id="winter" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e3a8a"/>
+      <stop offset="100%" stop-color="#0ea5e9"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="900" fill="url(#winter)"/>
+  <text x="600" y="460" text-anchor="middle" font-family="Arial, sans-serif" font-size="64" font-weight="700" fill="white">Winter 26</text>
+</svg>
