@@ -11,8 +11,7 @@ export default function Footer() {
           <div className="lg:col-span-2">
             <BrandLogo size={56} showWordmark variant="light" />
             <p className="mt-4 max-w-sm text-sm leading-6 text-white/70">
-              {brand.slogan} Premium kids fashion, shoes, toys, and school
-              essentials for every little adventure in Pakistan.
+              {brand.slogan} Premium kids fashion and accessories for every little adventure in Pakistan.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               {footerLinks.social.map((item) => (

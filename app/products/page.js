@@ -24,7 +24,7 @@ function ProductsFallback() {
 
 export const metadata = {
   title: "Shop All Products",
-  description: `Browse ${brand.name} kids wear, toys, shoes, and school essentials. Filter by category, price, size, and more.`,
+  description: `Browse ${brand.name} kids wear and accessories. Filter by category, price, size, and more.`,
 };
 
 export default async function ProductsPage({ searchParams }) {
@@ -43,7 +43,7 @@ export default async function ProductsPage({ searchParams }) {
       ? "Discover great savings on premium kids products."
       : presetFilter === "new-arrivals"
         ? "Explore the latest additions to our collection."
-        : "Browse our complete catalog of kids fashion, toys, and essentials.";
+        : "Browse our complete catalog of kids fashion and essentials.";
 
   return (
     <Suspense fallback={<ProductsFallback />}>

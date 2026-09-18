@@ -1,12 +1,17 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
+import { getProductImages } from "@/lib/productImages";
 
-export default function ProductGallery({ product, compact = false }) {
+export default function ProductGallery({ product, compact = false, selectedColor }) {
   const [activeIndex, setActiveIndex] = useState(0);
-  const images = product.images.length ? product.images : ["/images/products/product-1.svg"];
+  const images = getProductImages(product, selectedColor);
+
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [selectedColor, product.id]);
 
   return (
     <div className={cn("grid gap-4", compact ? "" : "lg:grid-cols-[88px_minmax(0,1fr)]")}>
@@ -18,7 +23,7 @@ export default function ProductGallery({ product, compact = false }) {
       >
         {images.map((image, index) => (
           <button
-            key={image}
+            key={`${image}-${index}`}
             type="button"
             onClick={() => setActiveIndex(index)}
             className={cn(

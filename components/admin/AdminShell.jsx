@@ -118,8 +118,8 @@ export default function AdminShell({ children }) {
   );
 
   return (
-    <div className="min-h-screen bg-brand-cream lg:grid lg:grid-cols-[260px_minmax(0,1fr)]">
-      <aside className="hidden lg:block">{sidebar}</aside>
+    <div className="h-dvh overflow-hidden bg-brand-cream lg:grid lg:grid-cols-[260px_minmax(0,1fr)]">
+      <aside className="hidden h-full lg:block">{sidebar}</aside>
 
       {mobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
@@ -131,8 +131,8 @@ export default function AdminShell({ children }) {
         </div>
       )}
 
-      <div className="flex min-h-screen flex-col">
-        <header className="flex items-center justify-between border-b border-border bg-white px-4 py-3 lg:px-8">
+      <div className="flex h-full min-h-0 flex-col overflow-hidden">
+        <header className="flex shrink-0 items-center justify-between border-b border-border bg-white px-4 py-3 lg:px-8">
           <button
             type="button"
             className="rounded-full p-2 text-brand-primary hover:bg-brand-cream lg:hidden"
@@ -155,7 +155,9 @@ export default function AdminShell({ children }) {
             View store
           </Link>
         </header>
-        <div className="flex-1 px-4 py-6 lg:px-8">{children}</div>
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 py-6 lg:px-8">
+          {children}
+        </div>
       </div>
     </div>
   );

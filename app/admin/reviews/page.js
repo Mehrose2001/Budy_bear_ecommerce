@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import AdminTable from "@/components/admin/AdminTable";
 import { adminFetch } from "@/lib/adminApi";
 import { useAdminAuth } from "@/context/AdminAuthContext";
 
@@ -37,11 +38,11 @@ export default function AdminReviewsPage() {
   };
 
   return (
-    <div>
+    <div className="flex h-full min-h-0 flex-col">
       <AdminPageHeader title="Reviews" description="Moderate customer feedback before it stays on product pages." />
-      <div className="overflow-x-auto rounded-2xl border border-border bg-white shadow-sm">
+      <AdminTable>
         <table className="min-w-full text-left text-sm">
-          <thead className="border-b border-border bg-brand-cream/60">
+          <thead className="sticky top-0 z-10 border-b border-border bg-brand-cream">
             <tr>
               <th className="px-4 py-3 font-medium">Product</th>
               <th className="px-4 py-3 font-medium">Review</th>
@@ -82,7 +83,7 @@ export default function AdminReviewsPage() {
             ))}
           </tbody>
         </table>
-      </div>
+      </AdminTable>
     </div>
   );
 }

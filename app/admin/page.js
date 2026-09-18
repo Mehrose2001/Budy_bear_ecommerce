@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ClipboardList, Package, Users, Wallet } from "lucide-react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import AdminTable from "@/components/admin/AdminTable";
 import { adminFetch } from "@/lib/adminApi";
 import { formatPrice } from "@/lib/utils";
 import { useAdminAuth } from "@/context/AdminAuthContext";
@@ -28,7 +29,7 @@ export default function AdminDashboardPage() {
   }, [admin?.token]);
 
   return (
-    <div>
+    <div className="flex h-full min-h-0 flex-col">
       <AdminPageHeader
         title={`Welcome back, ${admin?.name?.split(" ")[0] || "Admin"}`}
         description="Track sales, orders, and catalog health for Budy Bear."
@@ -36,7 +37,7 @@ export default function AdminDashboardPage() {
 
       {error && <p className="mb-4 text-sm text-error">{error}</p>}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid shrink-0 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {CARDS.map((card) => {
           const Icon = card.icon;
           const value = stats?.[card.key];
@@ -62,16 +63,16 @@ export default function AdminDashboardPage() {
         })}
       </div>
 
-      <div className="mt-8 rounded-2xl border border-border bg-white p-5 shadow-sm">
-        <div className="mb-4 flex items-center justify-between">
+      <div className="mt-8 flex min-h-0 flex-1 flex-col rounded-2xl border border-border bg-white p-5 shadow-sm">
+        <div className="mb-4 flex shrink-0 items-center justify-between">
           <h3 className="text-lg font-black text-brand-primary">Recent orders</h3>
           <Link href="/admin/orders" className="text-sm font-semibold text-brand-accent">
             View all
           </Link>
         </div>
-        <div className="overflow-x-auto">
+        <AdminTable className="border-0 shadow-none">
           <table className="min-w-full text-left text-sm">
-            <thead className="border-b border-border text-neutral-500">
+            <thead className="sticky top-0 z-10 border-b border-border bg-white text-neutral-500">
               <tr>
                 <th className="py-2 pr-4 font-medium">Order</th>
                 <th className="py-2 pr-4 font-medium">Customer</th>
@@ -97,7 +98,7 @@ export default function AdminDashboardPage() {
               )}
             </tbody>
           </table>
-        </div>
+        </AdminTable>
       </div>
     </div>
   );

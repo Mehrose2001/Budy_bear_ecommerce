@@ -12,20 +12,18 @@ const inter = Inter({
 
 export const metadata = {
   title: {
-    default: `${brand.name} | Premium Kids Wear, Toys & School Essentials`,
+    default: `${brand.name} | Premium Kids Wear`,
     template: `%s | ${brand.name}`,
   },
-  description: `${brand.slogan} Shop premium kids clothing, shoes, toys, and school essentials. Free delivery on orders above Rs. 3,000 across Pakistan.`,
+  description: `${brand.slogan} Shop premium kids clothing and accessories. Free delivery on orders above Rs. 3,000 across Pakistan.`,
   keywords: [
     "kids wear",
     "children clothing",
-    "kids shoes",
-    "toys Pakistan",
-    "school essentials",
+    "kids fashion Pakistan",
     brand.name,
   ],
   openGraph: {
-    title: `${brand.name} | Premium Kids Wear, Toys & School Essentials`,
+    title: `${brand.name} | Premium Kids Wear`,
     description: brand.description,
     siteName: brand.name,
     locale: "en_PK",

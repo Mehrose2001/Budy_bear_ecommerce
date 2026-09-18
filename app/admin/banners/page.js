@@ -47,7 +47,7 @@ export default function AdminBannersPage() {
   };
 
   return (
-    <div>
+    <div className="h-full min-h-0 overflow-y-auto">
       <AdminPageHeader title="Banners" description="Manage homepage and campaign imagery." />
       <form
         onSubmit={save}

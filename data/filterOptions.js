@@ -39,4 +39,23 @@ export const DEFAULT_FILTERS = {
 
 export const DEFAULT_SORT = "featured";
 
+export const KID_MONTH_SIZES = [
+  "0-3M",
+  "3-6M",
+  "6-9M",
+  "6-12M",
+  "9-12M",
+  "12-18M",
+  "18-24M",
+];
+
+export const KID_YEAR_SIZES = [
+  "2-3Y",
+  "4-5Y",
+  "6-7Y",
+  "8-9Y",
+  "10-11Y",
+  "12-13Y",
+];
+
 export const PRODUCTS_PER_PAGE = 12;

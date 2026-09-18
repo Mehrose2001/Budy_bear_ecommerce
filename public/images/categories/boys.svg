@@ -1,11 +1,16 @@
-﻿<svg xmlns='http://www.w3.org/2000/svg' width='800' height='500' viewBox='0 0 800 500'>
-  <defs>
-    <linearGradient id='g' x1='0%' y1='0%' x2='100%' y2='100%'>
-      <stop offset='0%' stop-color='#3b82f6' stop-opacity='0.2'/>
-      <stop offset='100%' stop-color='#3b82f6' stop-opacity='0.55'/>
-    </linearGradient>
-  </defs>
-  <rect width='800' height='500' fill='url(#g)'/>
-  <text x='400' y='250' text-anchor='middle' font-family='Arial, sans-serif' font-size='42' font-weight='700' fill='white'>Boys</text>
-  <text x='400' y='300' text-anchor='middle' font-family='Arial, sans-serif' font-size='20' fill='white' fill-opacity='0.9'>Shop KidCraze</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500">
+  <rect width="800" height="500" fill="#EAF0F6"/>
+  <rect x="0" y="360" width="800" height="140" fill="#16324F"/>
+  <path d="M250 150 L290 150 L310 230 L330 150 L370 150 L400 280 L400 390 L220 390 L220 280 Z" fill="#16324F"/>
+  <path d="M250 150 L290 150 L300 120 L320 120 L330 150 L370 150 L355 175 L265 175 Z" fill="#1F466C"/>
+  <circle cx="310" cy="210" r="18" fill="#D4A017"/>
+  <rect x="240" y="390" width="70" height="55" rx="8" fill="#2F5D73"/>
+  <rect x="310" y="390" width="70" height="55" rx="8" fill="#2F5D73"/>
+  <ellipse cx="275" cy="450" rx="38" ry="12" fill="#0F2744"/>
+  <ellipse cx="345" cy="450" rx="38" ry="12" fill="#0F2744"/>
+  <path d="M470 210 L560 210 L575 250 L620 250 L620 400 L470 400 Z" fill="#C9A227"/>
+  <path d="M490 250 H600 V270 H490 Z" fill="#16324F" opacity="0.15"/>
+  <path d="M545 210 V400" stroke="#16324F" stroke-width="4" opacity="0.2"/>
+  <rect x="430" y="400" width="90" height="22" rx="6" fill="#F7EFE4"/>
+  <rect x="560" y="400" width="70" height="22" rx="6" fill="#F7EFE4"/>
 </svg>

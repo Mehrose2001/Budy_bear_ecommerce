@@ -13,7 +13,7 @@ import { useWishlist } from "@/context/WishlistContext";
 import { COLOR_SWATCHES, FREE_DELIVERY_THRESHOLD } from "@/data/store";
 import { formatLabel, formatPrice, getDiscountPercent, cn } from "@/lib/utils";
 
-export default function ProductInfo({ product, compact = false, onAdded }) {
+export default function ProductInfo({ product, compact = false, onAdded, onColorChange }) {
   const { addItem } = useCart();
   const { showToast } = useToast();
   const { hasItem, toggleItem } = useWishlist();
@@ -84,7 +84,10 @@ export default function ProductInfo({ product, compact = false, onAdded }) {
             <button
               key={option}
               type="button"
-              onClick={() => setColor(option)}
+              onClick={() => {
+                setColor(option);
+                onColorChange?.(option);
+              }}
               className={cn(
                 "inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-medium",
                 color === option
@@ -95,7 +98,10 @@ export default function ProductInfo({ product, compact = false, onAdded }) {
             >
               <span
                 className="h-4 w-4 rounded-full border border-neutral-200"
-                style={{ backgroundColor: COLOR_SWATCHES[option] || "#d4d4d4" }}
+                style={{
+                  backgroundColor:
+                    COLOR_SWATCHES[option] || product.colorSwatches?.[option] || "#d4d4d4",
+                }}
               />
               {option}
             </button>

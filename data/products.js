@@ -2,11 +2,8 @@ import { slugify } from "@/lib/utils";
 
 const brands = ["Budy Bear", "LittleStar", "PlayJoy", "MiniStyle", "TinyTrend"];
 const sizes = {
-  clothing: ["2-3Y", "4-5Y", "6-7Y", "8-9Y", "10-11Y", "12-13Y"],
-  baby: ["0-3M", "3-6M", "6-12M", "12-18M"],
-  shoes: ["24", "26", "28", "30", "32", "34"],
-  toys: ["One Size"],
-  school: ["One Size"],
+  clothing: ["12-18M", "18-24M", "2-3Y", "4-5Y", "6-7Y", "8-9Y", "10-11Y", "12-13Y"],
+  baby: ["0-3M", "3-6M", "6-9M", "6-12M", "9-12M", "12-18M", "18-24M"],
   accessories: ["One Size", "S", "M", "L"],
   gifts: ["One Size"],
 };
@@ -85,21 +82,6 @@ export const products = [
   createProduct({ id: 15, name: "Baby Boys Striped Set", category: "baby", subcategory: "baby-boys", price: 2299, salePrice: 1899, rating: 4.6, reviewCount: 18, stock: 30 }),
   createProduct({ id: 16, name: "Baby Girls Floral Set", category: "baby", subcategory: "baby-girls", price: 2299, featured: true, rating: 4.7, reviewCount: 21, stock: 28 }),
   createProduct({ id: 17, name: "Baby Cozy Sleep Set", category: "baby", subcategory: "baby-sets", price: 2599, salePrice: 2199, rating: 4.5, reviewCount: 15, stock: 22 }),
-  createProduct({ id: 18, name: "Kids Running Sneakers", category: "shoes", subcategory: "sneakers", price: 3499, salePrice: 2999, bestSeller: true, rating: 4.6, reviewCount: 33 }),
-  createProduct({ id: 19, name: "Boys Sport Shoes", category: "shoes", subcategory: "boys-shoes", price: 3299, featured: true, rating: 4.5, reviewCount: 27 }),
-  createProduct({ id: 20, name: "Girls Ballet Flats", category: "shoes", subcategory: "girls-shoes", price: 2799, salePrice: 2399, rating: 4.4, reviewCount: 19 }),
-  createProduct({ id: 21, name: "Baby First Walk Shoes", category: "shoes", subcategory: "baby-shoes", price: 2199, newArrival: true, rating: 4.7, reviewCount: 14, stock: 18 }),
-  createProduct({ id: 22, name: "Remote Control Racing Car", category: "toys", subcategory: "remote-control", price: 3999, salePrice: 3299, bestSeller: true, rating: 4.8, reviewCount: 52, brand: "PlayJoy" }),
-  createProduct({ id: 23, name: "Educational Building Blocks", category: "toys", subcategory: "educational", price: 2499, featured: true, rating: 4.7, reviewCount: 41, brand: "PlayJoy" }),
-  createProduct({ id: 24, name: "Princess Doll Set", category: "toys", subcategory: "dolls", price: 1899, salePrice: 1599, rating: 4.5, reviewCount: 29, brand: "PlayJoy" }),
-  createProduct({ id: 25, name: "Die-Cast Vehicle Pack", category: "toys", subcategory: "vehicles", price: 1699, rating: 4.4, reviewCount: 23, brand: "PlayJoy" }),
-  createProduct({ id: 26, name: "Family Board Game", category: "toys", subcategory: "games", price: 2199, salePrice: 1799, rating: 4.6, reviewCount: 18, brand: "PlayJoy" }),
-  createProduct({ id: 27, name: "Outdoor Flying Disc Set", category: "toys", subcategory: "outdoor", price: 1299, newArrival: true, rating: 4.3, reviewCount: 12, brand: "PlayJoy" }),
-  createProduct({ id: 28, name: "Kids School Backpack", category: "school", subcategory: "backpacks", price: 2999, salePrice: 2499, bestSeller: true, rating: 4.8, reviewCount: 64 }),
-  createProduct({ id: 29, name: "Insulated Lunch Box", category: "school", subcategory: "lunch-boxes", price: 1499, featured: true, rating: 4.5, reviewCount: 37 }),
-  createProduct({ id: 30, name: "Stainless Steel Water Bottle", category: "school", subcategory: "water-bottles", price: 1299, salePrice: 999, rating: 4.6, reviewCount: 42 }),
-  createProduct({ id: 31, name: "Complete Stationery Kit", category: "school", subcategory: "stationery", price: 899, newArrival: true, rating: 4.4, reviewCount: 25 }),
-  createProduct({ id: 32, name: "School Pencil Case Set", category: "school", subcategory: "school-accessories", price: 699, rating: 4.3, reviewCount: 16 }),
   createProduct({ id: 33, name: "Kids Baseball Cap", category: "accessories", subcategory: "caps", price: 899, salePrice: 749, rating: 4.2, reviewCount: 11, brand: "MiniStyle" }),
   createProduct({ id: 34, name: "Crossbody Mini Bag", category: "accessories", subcategory: "bags", price: 1599, featured: true, rating: 4.5, reviewCount: 19, brand: "MiniStyle" }),
   createProduct({ id: 35, name: "Cotton Ankle Socks Pack", category: "accessories", subcategory: "socks", price: 599, rating: 4.4, reviewCount: 28, brand: "MiniStyle" }),
@@ -110,8 +92,6 @@ export const products = [
   createProduct({ id: 40, name: "Eid Celebration Gift Box", category: "gifts", subcategory: "occasion-gifts", price: 3499, salePrice: 2999, bestSeller: true, rating: 4.7, reviewCount: 17, brand: "TinyTrend" }),
   createProduct({ id: 41, name: "Boys Polo T-Shirt", category: "boys", subcategory: "t-shirts", price: 1799, rating: 4.4, reviewCount: 20, brand: "LittleStar" }),
   createProduct({ id: 42, name: "Girls Denim Jacket", category: "girls", subcategory: "jackets", price: 3799, salePrice: 3199, newArrival: true, rating: 4.6, reviewCount: 14, brand: "LittleStar" }),
-  createProduct({ id: 43, name: "STEM Science Experiment Kit", category: "toys", subcategory: "educational", price: 2899, salePrice: 2499, featured: true, rating: 4.8, reviewCount: 36, brand: "PlayJoy" }),
-  createProduct({ id: 44, name: "Premium Ergonomic School Bag", category: "school", subcategory: "backpacks", price: 4499, salePrice: 3999, newArrival: true, rating: 4.9, reviewCount: 29 }),
 ];
 
 export function getProductBySlug(slug) {

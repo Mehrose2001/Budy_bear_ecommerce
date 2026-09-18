@@ -26,15 +26,10 @@ export default function CollectionBanner() {
               season ahead.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Button href="/category/boys?new=true" size="lg">
+              <Button href="/category/boys?new=true" size="lg" variant="accent">
                 Shop Boys
               </Button>
-              <Button
-                href="/category/girls?new=true"
-                variant="secondary"
-                size="lg"
-                className="border-white text-white hover:bg-white hover:text-neutral-900"
-              >
+              <Button href="/category/girls?new=true" size="lg" variant="onDark">
                 Shop Girls
               </Button>
             </div>

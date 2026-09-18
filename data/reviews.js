@@ -11,7 +11,7 @@ const COMMENTS = [
   "Great quality and my child loves wearing it.",
   "Soft fabric and true to size. Will order again.",
   "Arrived quickly and looks just like the photos.",
-  "Comfortable for all-day play and school.",
+  "Comfortable for all-day play and everyday wear.",
   "Premium feel without an expensive price.",
   "Colors stayed bright after washing.",
 ];

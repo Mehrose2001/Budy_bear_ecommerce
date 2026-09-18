@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import AdminTable from "@/components/admin/AdminTable";
 import { adminFetch } from "@/lib/adminApi";
 import { useAdminAuth } from "@/context/AdminAuthContext";
 
@@ -32,14 +33,14 @@ export default function AdminInventoryPage() {
   };
 
   return (
-    <div>
+    <div className="flex h-full min-h-0 flex-col">
       <AdminPageHeader
         title="Inventory"
         description="Adjust stock levels for products currently on the store."
       />
-      <div className="overflow-x-auto rounded-2xl border border-border bg-white shadow-sm">
+      <AdminTable>
         <table className="min-w-full text-left text-sm">
-          <thead className="border-b border-border bg-brand-cream/60">
+          <thead className="sticky top-0 z-10 border-b border-border bg-brand-cream">
             <tr>
               <th className="px-4 py-3 font-medium">Product</th>
               <th className="px-4 py-3 font-medium">SKU / ID</th>
@@ -76,7 +77,7 @@ export default function AdminInventoryPage() {
             ))}
           </tbody>
         </table>
-      </div>
+      </AdminTable>
     </div>
   );
 }

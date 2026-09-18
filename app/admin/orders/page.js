@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import AdminTable from "@/components/admin/AdminTable";
 import { adminFetch } from "@/lib/adminApi";
 import { formatPrice } from "@/lib/utils";
 import { ORDER_STATUSES } from "@/data/admin";
@@ -34,14 +35,14 @@ export default function AdminOrdersPage() {
   };
 
   return (
-    <div>
+    <div className="flex h-full min-h-0 flex-col">
       <AdminPageHeader
         title="Orders"
         description="Review incoming orders and update fulfillment status."
       />
-      <div className="overflow-x-auto rounded-2xl border border-border bg-white shadow-sm">
+      <AdminTable>
         <table className="min-w-full text-left text-sm">
-          <thead className="border-b border-border bg-brand-cream/60">
+          <thead className="sticky top-0 z-10 border-b border-border bg-brand-cream">
             <tr>
               <th className="px-4 py-3 font-medium">Order</th>
               <th className="px-4 py-3 font-medium">Customer</th>
@@ -83,7 +84,7 @@ export default function AdminOrdersPage() {
             ))}
           </tbody>
         </table>
-      </div>
+      </AdminTable>
     </div>
   );
 }

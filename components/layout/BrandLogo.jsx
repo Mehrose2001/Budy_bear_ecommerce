@@ -29,7 +29,7 @@ export default function BrandLogo({
         priority={priority}
       />
       {showWordmark && (
-        <span className="hidden leading-tight sm:block">
+        <span className="hidden leading-tight lg:block">
           <span
             className={cn(
               "block text-lg font-black tracking-tight",

@@ -1,11 +1,11 @@
-﻿<svg xmlns='http://www.w3.org/2000/svg' width='800' height='500' viewBox='0 0 800 500'>
-  <defs>
-    <linearGradient id='g' x1='0%' y1='0%' x2='100%' y2='100%'>
-      <stop offset='0%' stop-color='#ec4899' stop-opacity='0.2'/>
-      <stop offset='100%' stop-color='#ec4899' stop-opacity='0.55'/>
-    </linearGradient>
-  </defs>
-  <rect width='800' height='500' fill='url(#g)'/>
-  <text x='400' y='250' text-anchor='middle' font-family='Arial, sans-serif' font-size='42' font-weight='700' fill='white'>Girls</text>
-  <text x='400' y='300' text-anchor='middle' font-family='Arial, sans-serif' font-size='20' fill='white' fill-opacity='0.9'>Shop KidCraze</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500">
+  <rect width="800" height="500" fill="#F8EFE3"/>
+  <rect x="0" y="360" width="800" height="140" fill="#8B5E1A"/>
+  <path d="M300 120 L340 120 L355 165 L380 120 L420 120 L450 200 L500 430 L220 430 L270 200 Z" fill="#D4A017"/>
+  <path d="M300 120 L340 120 L348 95 Q360 78 372 95 L380 120 L420 120 L405 150 L315 150 Z" fill="#C39214"/>
+  <circle cx="360" cy="88" r="10" fill="#F7EFE4"/>
+  <path d="M250 430 Q360 470 470 430" fill="none" stroke="#F7EFE4" stroke-width="8"/>
+  <circle cx="560" cy="210" r="18" fill="#16324F"/>
+  <path d="M542 228 Q560 255 578 228" fill="none" stroke="#16324F" stroke-width="8" stroke-linecap="round"/>
+  <rect x="520" y="400" width="80" height="18" rx="9" fill="#F7EFE4"/>
 </svg>

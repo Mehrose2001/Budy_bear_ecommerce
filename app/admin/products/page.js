@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import AdminTable from "@/components/admin/AdminTable";
 import ProductForm from "@/components/admin/ProductForm";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
@@ -56,7 +57,7 @@ export default function AdminProductsPage() {
   );
 
   return (
-    <div>
+    <div className="flex h-full min-h-0 flex-col">
       <AdminPageHeader
         title="Products"
         description="Add, edit, and manage catalog items shown on the store."
@@ -76,12 +77,12 @@ export default function AdminProductsPage() {
         value={query}
         onChange={(event) => setQuery(event.target.value)}
         placeholder="Search products"
-        className="mb-4 h-11 w-full max-w-sm rounded-xl border border-border bg-white px-4 text-sm"
+        className="mb-4 h-11 w-full max-w-sm shrink-0 rounded-xl border border-border bg-white px-4 text-sm"
       />
 
-      <div className="overflow-x-auto rounded-2xl border border-border bg-white shadow-sm">
+      <AdminTable>
         <table className="min-w-full text-left text-sm">
-          <thead className="border-b border-border bg-brand-cream/60 text-neutral-600">
+          <thead className="sticky top-0 z-10 border-b border-border bg-brand-cream text-neutral-600">
             <tr>
               <th className="px-4 py-3 font-medium">Product</th>
               <th className="px-4 py-3 font-medium">Category</th>
@@ -128,12 +129,13 @@ export default function AdminProductsPage() {
             ))}
           </tbody>
         </table>
-      </div>
+      </AdminTable>
 
       <Modal
         isOpen={open}
         onClose={() => setOpen(false)}
         title={editing ? "Edit product" : "Add product"}
+        className="max-w-4xl"
       >
         <ProductForm
           product={editing}

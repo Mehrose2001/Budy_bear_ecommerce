@@ -20,12 +20,7 @@ export default function PromoBanner() {
           <p className="mt-3 max-w-xl text-white/90">
             Thoughtfully chosen products that make everyday moments special.
           </p>
-          <Button
-            href="/products"
-            variant="secondary"
-            size="lg"
-            className="mt-8 border-white text-white hover:bg-white hover:text-neutral-900"
-          >
+          <Button href="/products" variant="onDark" size="lg" className="mt-8">
             Shop Now
           </Button>
         </div>

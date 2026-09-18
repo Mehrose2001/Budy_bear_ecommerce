@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import AdminTable from "@/components/admin/AdminTable";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { adminFetch } from "@/lib/adminApi";
@@ -48,11 +49,11 @@ export default function AdminCouponsPage() {
   };
 
   return (
-    <div>
+    <div className="flex h-full min-h-0 flex-col">
       <AdminPageHeader title="Coupons" description="Create discount codes for checkout promotions." />
       <form
         onSubmit={save}
-        className="mb-8 grid gap-4 rounded-2xl border border-border bg-white p-5 shadow-sm md:grid-cols-2"
+        className="mb-6 grid shrink-0 gap-4 rounded-2xl border border-border bg-white p-5 shadow-sm md:grid-cols-2"
       >
         <Input
           label="Code"
@@ -93,9 +94,9 @@ export default function AdminCouponsPage() {
         </div>
       </form>
 
-      <div className="overflow-x-auto rounded-2xl border border-border bg-white shadow-sm">
+      <AdminTable>
         <table className="min-w-full text-left text-sm">
-          <thead className="border-b border-border bg-brand-cream/60">
+          <thead className="sticky top-0 z-10 border-b border-border bg-brand-cream">
             <tr>
               <th className="px-4 py-3 font-medium">Code</th>
               <th className="px-4 py-3 font-medium">Offer</th>
@@ -133,7 +134,7 @@ export default function AdminCouponsPage() {
             ))}
           </tbody>
         </table>
-      </div>
+      </AdminTable>
     </div>
   );
 }

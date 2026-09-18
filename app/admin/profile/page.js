@@ -32,7 +32,7 @@ export default function AdminProfilePage() {
   };
 
   return (
-    <div>
+    <div className="h-full min-h-0 overflow-y-auto">
       <AdminPageHeader
         title="Your profile"
         description="This name appears in the admin sidebar and activity context."

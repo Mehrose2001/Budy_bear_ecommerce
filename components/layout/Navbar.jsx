@@ -22,7 +22,7 @@ export default function Navbar() {
             <Link
               href={item.href}
               className={cn(
-                "inline-flex items-center gap-1 rounded-full px-3 py-2 text-xs font-bold tracking-wide text-neutral-700 transition-colors hover:bg-neutral-100 hover:text-brand-primary",
+                "inline-flex items-center gap-1 rounded-full px-3 py-2 text-xs font-bold tracking-wide text-brand-primary transition-colors hover:bg-brand-cream hover:text-brand-primary",
                 item.label === "SALE" && "text-brand-accent hover:text-brand-accent",
                 item.label === "NEW ARRIVALS" && "text-brand-secondary hover:text-brand-secondary"
               )}

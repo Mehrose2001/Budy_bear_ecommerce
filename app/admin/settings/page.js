@@ -39,7 +39,7 @@ export default function AdminSettingsPage() {
   };
 
   return (
-    <div>
+    <div className="h-full min-h-0 overflow-y-auto">
       <AdminPageHeader
         title="Store settings"
         description="Update storefront copy used across the shop."

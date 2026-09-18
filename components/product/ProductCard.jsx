@@ -2,11 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Eye, Heart, ShoppingBag } from "lucide-react";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
-import StarRating from "@/components/ui/StarRating";
 import { useCart } from "@/context/CartContext";
 import { useQuickView } from "@/context/QuickViewContext";
 import { useToast } from "@/context/ToastContext";
@@ -15,6 +14,8 @@ import { formatPrice, getDiscountPercent, cn } from "@/lib/utils";
 
 export default function ProductCard({ product, className }) {
   const [isHovered, setIsHovered] = useState(false);
+  const [showActions, setShowActions] = useState(false);
+  const cardRef = useRef(null);
   const { addItem } = useCart();
   const { openQuickView } = useQuickView();
   const { showToast } = useToast();
@@ -25,6 +26,19 @@ export default function ProductCard({ product, className }) {
   const displayPrice = product.salePrice ?? product.price;
   const secondaryImage = product.images[1] || product.images[0];
 
+  useEffect(() => {
+    if (!showActions) return undefined;
+
+    const handlePointer = (event) => {
+      if (!cardRef.current?.contains(event.target)) {
+        setShowActions(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointer);
+    return () => document.removeEventListener("pointerdown", handlePointer);
+  }, [showActions]);
+
   const handleAddToCart = (event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -32,14 +46,27 @@ export default function ProductCard({ product, className }) {
     showToast(`${product.name} added to cart`);
   };
 
+  const handleImageClick = (event) => {
+    if (event.nativeEvent.pointerType === "mouse") return;
+    if (!showActions) {
+      event.preventDefault();
+      setShowActions(true);
+    }
+  };
+
   return (
     <article
+      ref={cardRef}
       className={cn("group relative flex flex-col", className)}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       <div className="relative overflow-hidden rounded-2xl bg-neutral-100 ring-1 ring-neutral-200/80">
-        <Link href={`/product/${product.slug}`} className="block">
+        <Link
+          href={`/product/${product.slug}`}
+          className="block"
+          onClick={handleImageClick}
+        >
           <div className="relative aspect-[4/5] overflow-hidden">
             <Image
               src={isHovered ? secondaryImage : product.images[0]}
@@ -79,13 +106,22 @@ export default function ProductCard({ product, className }) {
           <Heart className={cn("h-4 w-4", isWishlisted && "fill-current")} />
         </button>
 
-        <div className="absolute inset-x-3 bottom-3 flex translate-y-2 flex-col gap-2 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 max-sm:translate-y-0 max-sm:opacity-100">
+        <div
+          className={cn(
+            "absolute inset-x-3 bottom-3 flex translate-y-2 flex-col gap-2 opacity-0 transition-all duration-300 lg:group-hover:translate-y-0 lg:group-hover:opacity-100",
+            showActions && "translate-y-0 opacity-100"
+          )}
+        >
           <Button
             type="button"
             size="sm"
             variant="outline"
             className="w-full rounded-xl bg-white/95 backdrop-blur"
-            onClick={() => openQuickView(product)}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              openQuickView(product);
+            }}
           >
             <Eye className="h-4 w-4" />
             Quick View
@@ -103,9 +139,8 @@ export default function ProductCard({ product, className }) {
       </div>
 
       <div className="mt-4 flex flex-1 flex-col">
-        <StarRating rating={product.rating} count={product.reviewCount} />
         <Link href={`/product/${product.slug}`} className="group/link flex-1">
-          <h3 className="mt-2 line-clamp-2 text-sm font-semibold leading-5 text-neutral-900 transition-colors group-hover/link:text-brand-primary">
+          <h3 className="line-clamp-2 text-sm font-semibold leading-5 text-neutral-900 transition-colors group-hover/link:text-brand-primary">
             {product.name}
           </h3>
         </Link>

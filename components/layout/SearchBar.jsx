@@ -13,7 +13,7 @@ export default function SearchBar({
   onChange,
   onSubmit,
   onNavigate,
-  placeholder = "Search for clothes, toys, shoes...",
+  placeholder = "Search for clothes, dresses, jackets...",
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);

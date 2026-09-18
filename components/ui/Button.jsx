@@ -11,6 +11,8 @@ const variants = {
   ghost: "text-neutral-700 hover:bg-neutral-100 hover:text-brand-primary",
   accent:
     "bg-brand-accent text-white hover:bg-brand-accent-dark shadow-sm hover:shadow-md",
+  onDark:
+    "border border-white bg-white text-brand-primary hover:bg-brand-cream",
 };
 
 const sizes = {
