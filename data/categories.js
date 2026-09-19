@@ -4,7 +4,7 @@ export const categories = [
     name: "Boys",
     slug: "boys",
     description: "Stylish and comfortable clothing for boys.",
-    image: "/images/categories/boys.svg",
+    image: "/images/categories/boys.jpg",
     subcategories: [
       "t-shirts",
       "shirts",
@@ -19,7 +19,7 @@ export const categories = [
     name: "Girls",
     slug: "girls",
     description: "Trendy outfits and essentials for girls.",
-    image: "/images/categories/girls.svg",
+    image: "/images/categories/girl.jpg",
     subcategories: [
       "tops",
       "dresses",
@@ -34,7 +34,7 @@ export const categories = [
     name: "Baby",
     slug: "baby",
     description: "Soft and safe products for your little ones.",
-    image: "/images/categories/baby.svg",
+    image: "/images/categories/baby.jpg",
     subcategories: [
       "newborn",
       "baby-boys",
@@ -48,7 +48,7 @@ export const categories = [
     name: "Accessories",
     slug: "accessories",
     description: "Caps, bags, socks and more.",
-    image: "/images/categories/accessories.svg",
+    image: "/images/categories/accessories.jpg",
     subcategories: ["caps", "bags", "socks", "hair-accessories", "watches"],
   },
   {
@@ -56,7 +56,7 @@ export const categories = [
     name: "Gifts",
     slug: "gifts",
     description: "Perfect gift ideas for every occasion.",
-    image: "/images/categories/gifts.svg",
+    image: "/images/categories/gifts.jpg",
     subcategories: ["gift-sets", "personalized", "occasion-gifts"],
   },
 ];

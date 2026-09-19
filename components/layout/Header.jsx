@@ -87,6 +87,18 @@ export default function Header() {
                   <Search className="h-5 w-5" />
                 )}
               </button>
+              <Link
+                href="/wishlist"
+                className="relative inline-flex h-10 w-10 items-center justify-center rounded-full text-brand-primary transition-colors hover:bg-brand-cream"
+                aria-label={`Favourites, ${wishlistCount} items`}
+              >
+                <Heart className="h-5 w-5" />
+                {wishlistCount > 0 && (
+                  <span className="absolute -right-0.5 -top-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-accent px-1 text-[10px] font-bold text-white">
+                    {wishlistCount}
+                  </span>
+                )}
+              </Link>
               <button
                 type="button"
                 onClick={openDrawer}

@@ -5,9 +5,10 @@ import { useParams } from "next/navigation";
 import Image from "next/image";
 import Breadcrumbs from "@/components/ui/Breadcrumbs";
 import Button from "@/components/ui/Button";
-import { BANK_DETAILS } from "@/data/checkout";
+import OrderSlipDownload from "@/components/order/OrderSlipDownload";
 import { readLocalOrders } from "@/lib/storage";
 import { formatPrice } from "@/lib/utils";
+import { brand } from "@/data/brand";
 
 export default function OrderConfirmationPage() {
   const params = useParams();
@@ -122,6 +123,17 @@ export default function OrderConfirmationPage() {
       </section>
 
       <section className="mt-6 rounded-3xl border border-neutral-200 bg-white p-6">
+        <h2 className="font-black text-neutral-900">From (sender)</h2>
+        <p className="mt-3 text-sm leading-6 text-neutral-600">
+          {brand.name}
+          <br />
+          {brand.companyAddress}
+          <br />
+          {brand.supportPhone}
+        </p>
+      </section>
+
+      <section className="mt-6 rounded-3xl border border-neutral-200 bg-white p-6">
         <h2 className="font-black text-neutral-900">Delivery to</h2>
         <p className="mt-3 text-sm leading-6 text-neutral-600">
           {order.shippingAddress.fullName}
@@ -138,21 +150,12 @@ export default function OrderConfirmationPage() {
       {order.paymentMethod === "cod" && (
         <p className="mt-6 rounded-2xl bg-brand-cream px-5 py-4 text-sm text-neutral-700">
           Pay <strong>{formatPrice(order.total)}</strong> in cash when your parcel
-          arrives.
+          arrives. Download your shipping slip below for your records.
         </p>
       )}
 
-      {order.paymentMethod === "bank-transfer" && (
-        <section className="mt-6 rounded-2xl bg-brand-cream px-5 py-4 text-sm text-neutral-700">
-          <p className="font-semibold">Complete your bank transfer using:</p>
-          <p className="mt-2">{BANK_DETAILS.accountTitle}</p>
-          <p>{BANK_DETAILS.bank}</p>
-          <p>Account: {BANK_DETAILS.accountNumber}</p>
-          <p>IBAN: {BANK_DETAILS.iban}</p>
-        </section>
-      )}
-
       <div className="mt-8 flex flex-wrap gap-3">
+        <OrderSlipDownload order={order} label="Download receipt" />
         <Button href="/products">Continue Shopping</Button>
         <Button href="/wishlist" variant="outline">
           View favourites

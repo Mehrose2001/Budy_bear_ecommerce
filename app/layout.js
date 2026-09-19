@@ -1,6 +1,7 @@
 import { Inter } from "next/font/google";
 import AppProviders from "@/components/providers/AppProviders";
 import StoreChrome from "@/components/layout/StoreChrome";
+import WhatsAppFloat from "@/components/layout/WhatsAppFloat";
 import { brand } from "@/data/brand";
 import "./globals.css";
 
@@ -37,6 +38,7 @@ export default function RootLayout({ children }) {
       <body className="flex min-h-full flex-col bg-background text-foreground antialiased">
         <AppProviders>
           <StoreChrome>{children}</StoreChrome>
+          <WhatsAppFloat />
         </AppProviders>
       </body>
     </html>

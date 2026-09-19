@@ -17,9 +17,15 @@ export const DELIVERY_METHODS = [
   {
     id: "express",
     label: "Express Delivery",
-    detail: "1–2 working days in major cities",
+    detail: "1–2 working days — available only in Karachi, Sindh",
   },
 ];
+
+export function isExpressAvailable(province, city) {
+  const normalizedProvince = String(province || "").trim().toLowerCase();
+  const normalizedCity = String(city || "").trim().toLowerCase();
+  return normalizedProvince === "sindh" && normalizedCity === "karachi";
+}
 
 export const PAYMENT_METHODS = [
   {
@@ -29,22 +35,9 @@ export const PAYMENT_METHODS = [
     enabled: true,
   },
   {
-    id: "bank-transfer",
-    label: "Bank Transfer",
-    detail: "Transfer to our account and keep the receipt for confirmation.",
-    enabled: true,
-  },
-  {
-    id: "online",
-    label: "Online Payment",
-    detail: "Card and wallet checkout is coming soon.",
+    id: "card",
+    label: "Debit / Credit card",
+    detail: "Card checkout is coming soon and is currently unavailable.",
     enabled: false,
   },
 ];
-
-export const BANK_DETAILS = {
-  accountTitle: "Budy Bear Kids Wear",
-  bank: "Meezan Bank",
-  accountNumber: "01234567890123",
-  iban: "PK12MEZN0000001234567890",
-};

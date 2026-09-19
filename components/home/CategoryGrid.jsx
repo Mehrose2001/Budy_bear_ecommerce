@@ -1,43 +1,80 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { shopCategories } from "@/data/navigation";
 
-export default function CategoryGrid() {
+function CategoryCard({ category, isDuplicate }) {
+  const className =
+    "group w-40 shrink-0 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-border sm:w-52 sm:rounded-3xl";
+
+  const media = (
+    <>
+      <div className="relative aspect-[3/4] overflow-hidden bg-[#eaf0f6]">
+        <Image
+          src={category.image}
+          alt={isDuplicate ? "" : `Shop ${category.label}`}
+          fill
+          quality={90}
+          sizes="208px"
+          className="origin-top object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+          style={{ objectPosition: category.objectPosition || "center top" }}
+        />
+      </div>
+      <div className="bg-brand-primary px-3 py-2 text-center sm:py-2.5">
+        <h3 className="text-sm font-bold text-white sm:text-base">{category.label}</h3>
+      </div>
+    </>
+  );
+
+  if (isDuplicate) {
+    return (
+      <div className={className} aria-hidden="true">
+        {media}
+      </div>
+    );
+  }
+
   return (
-    <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-16 lg:px-8">
-      <div className="mb-8 text-center sm:mb-10">
-        <h2 className="text-2xl font-black tracking-tight text-brand-primary sm:text-3xl">
+    <Link href={category.href} className={className}>
+      {media}
+    </Link>
+  );
+}
+
+export default function CategoryGrid() {
+  const [animate, setAnimate] = useState(false);
+
+  useEffect(() => {
+    setAnimate(true);
+  }, []);
+
+  return (
+    <section className="overflow-hidden bg-brand-cream py-6 sm:py-8">
+      <div className="mb-4 px-5 text-center sm:mb-6 sm:px-6">
+        <h2 className="text-xl font-black tracking-tight text-brand-primary sm:text-2xl">
           Shop By Category
         </h2>
-        <p className="mt-3 text-neutral-600">
-          Explore our curated collections for every age and occasion.
-        </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-4 lg:gap-6">
-        {shopCategories.map((category) => (
-          <Link
-            key={category.label}
-            href={category.href}
-            className="group overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-border transition-all hover:-translate-y-1 hover:shadow-lg sm:rounded-3xl"
-          >
-            <div className="relative aspect-[4/3] overflow-hidden bg-[#eaf0f6]">
-              <Image
-                src={category.image}
-                alt={`Shop ${category.label}`}
-                fill
-                unoptimized
-                sizes="(max-width: 768px) 50vw, 25vw"
-                className="object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-            </div>
-            <div className="bg-brand-primary px-3 py-2.5 text-center sm:px-4 sm:py-3">
-              <h3 className="text-sm font-bold text-white sm:text-lg">
-                {category.label}
-              </h3>
-            </div>
-          </Link>
-        ))}
+      <div className="relative">
+        <div
+          className={`flex w-max gap-3 pr-3 sm:gap-5 sm:pr-5 ${
+            animate ? "animate-category-marquee hover:[animation-play-state:paused]" : ""
+          }`}
+        >
+          {shopCategories.map((category) => (
+            <CategoryCard key={category.label} category={category} />
+          ))}
+          {shopCategories.map((category) => (
+            <CategoryCard
+              key={`loop-${category.label}`}
+              category={category}
+              isDuplicate
+            />
+          ))}
+        </div>
       </div>
     </section>
   );

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, Heart, ShoppingBag, User, X } from "lucide-react";
+import { ChevronDown, User, X } from "lucide-react";
 import { mainNavItems } from "@/data/navigation";
 import { cn } from "@/lib/utils";
 import BrandLogo from "./BrandLogo";
@@ -111,30 +111,14 @@ export default function MobileMenu({ isOpen, onClose }) {
           </ul>
         </nav>
 
-        <div className="grid grid-cols-3 gap-2 border-t border-neutral-200 p-4">
+        <div className="border-t border-neutral-200 p-4">
           <Link
             href="/login"
             onClick={onClose}
-            className="flex flex-col items-center gap-1 rounded-xl py-3 text-xs font-medium text-neutral-700 hover:bg-brand-cream"
+            className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-neutral-700 hover:bg-brand-cream"
           >
             <User className="h-5 w-5" />
             Account
-          </Link>
-          <Link
-            href="/wishlist"
-            onClick={onClose}
-            className="flex flex-col items-center gap-1 rounded-xl py-3 text-xs font-medium text-neutral-700 hover:bg-brand-cream"
-          >
-            <Heart className="h-5 w-5" />
-            Favourites
-          </Link>
-          <Link
-            href="/cart"
-            onClick={onClose}
-            className="flex flex-col items-center gap-1 rounded-xl py-3 text-xs font-medium text-neutral-700 hover:bg-brand-cream"
-          >
-            <ShoppingBag className="h-5 w-5" />
-            Cart
           </Link>
         </div>
       </div>

@@ -10,13 +10,14 @@ import Button from "@/components/ui/Button";
 import {
   DEFAULT_FILTERS,
   DEFAULT_SORT,
+  PRICE_FILTER_MAX,
+  PRICE_FILTER_MIN,
   SORT_OPTIONS,
 } from "@/data/filterOptions";
 import {
   applyFilters,
   buildSearchParamsFromFilters,
   getActiveFilterCount,
-  getEffectivePrice,
   getFilterFacets,
   parseFiltersFromSearchParams,
   sortProducts,
@@ -82,17 +83,13 @@ export default function ProductListing({
   const hasMore = visibleCount < filteredProducts.length;
   const activeFilterCount = getActiveFilterCount(filters);
 
-  const priceBounds = useMemo(() => {
-    if (!products.length) {
-      return { min: 0, max: 10000 };
-    }
-
-    const prices = products.map((product) => getEffectivePrice(product));
-    return {
-      min: Math.min(...prices),
-      max: Math.max(...prices),
-    };
-  }, [products]);
+  const priceBounds = useMemo(
+    () => ({
+      min: PRICE_FILTER_MIN,
+      max: PRICE_FILTER_MAX,
+    }),
+    []
+  );
 
   useEffect(() => {
     setVisibleCount(PRODUCTS_PER_PAGE);

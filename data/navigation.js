@@ -50,11 +50,11 @@ export const mainNavItems = [
 ];
 
 export const shopCategories = [
-  { label: "Boys", href: "/category/boys", image: "/images/categories/boys.svg" },
-  { label: "Girls", href: "/category/girls", image: "/images/categories/girls.svg" },
-  { label: "Baby", href: "/category/baby", image: "/images/categories/baby.svg" },
-  { label: "Accessories", href: "/category/accessories", image: "/images/categories/accessories.svg" },
-  { label: "Gifts", href: "/category/gifts", image: "/images/categories/gifts.svg" },
+  { label: "Boys", href: "/category/boys", image: "/images/categories/boys.jpg", objectPosition: "center 18%" },
+  { label: "Girls", href: "/category/girls", image: "/images/categories/girl.jpg", objectPosition: "center 12%" },
+  { label: "Baby", href: "/category/baby", image: "/images/categories/baby.jpg", objectPosition: "center 22%" },
+  { label: "Accessories", href: "/category/accessories", image: "/images/categories/accessories.jpg", objectPosition: "center" },
+  { label: "Gifts", href: "/category/gifts", image: "/images/categories/gifts.jpg", objectPosition: "center" },
 ];
 
 export const footerLinks = {

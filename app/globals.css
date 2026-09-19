@@ -136,8 +136,22 @@ body {
   animation: announcement-marquee 28s linear infinite;
 }
 
+@keyframes category-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-category-marquee {
+  animation: category-marquee 32s linear infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .animate-announcement-marquee {
+  .animate-announcement-marquee,
+  .animate-category-marquee {
     animation: none;
     transform: none;
   }
@@ -150,4 +164,20 @@ body {
 
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+.hero-explore-cta {
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .hero-explore-cta {
+    opacity: 0;
+  }
+
+  .group:hover .hero-explore-cta,
+  .group:focus-within .hero-explore-cta {
+    opacity: 1;
+  }
 }

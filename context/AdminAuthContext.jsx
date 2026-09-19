@@ -12,7 +12,23 @@ export function AdminAuthProvider({ children }) {
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(ADMIN_SESSION_KEY);
-      setAdmin(raw ? JSON.parse(raw) : null);
+      if (!raw) {
+        setAdmin(null);
+        setIsReady(true);
+        return;
+      }
+
+      const session = JSON.parse(raw);
+      const next = {
+        ...session,
+        name: DEMO_ADMIN.name,
+        phone: DEMO_ADMIN.phone,
+        email: session.email || DEMO_ADMIN.email,
+        role: session.role || DEMO_ADMIN.role,
+        title: session.title || DEMO_ADMIN.title,
+      };
+      window.localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(next));
+      setAdmin(next);
     } catch {
       setAdmin(null);
     }

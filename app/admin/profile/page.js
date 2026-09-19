@@ -41,7 +41,7 @@ export default function AdminProfilePage() {
         <Input label="Email" value={admin?.email || ""} disabled />
         <Input label="Role" value={admin?.role || ""} disabled />
         <Input
-          label="Full name"
+          label="User name"
           value={form.name}
           onChange={(event) => setForm({ ...form, name: event.target.value })}
         />

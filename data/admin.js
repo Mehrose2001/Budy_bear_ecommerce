@@ -5,9 +5,9 @@ export const DEMO_ADMIN = {
   id: "admin-1",
   email: "admin@budybear.pk",
   password: "Admin@1234",
-  name: "Ayesha Malik",
+  name: "Budy Bear",
   role: "Store Admin",
-  phone: "0300 1234567",
+  phone: "+92 333 0370236",
   title: "Budy Bear Operations",
 };
 

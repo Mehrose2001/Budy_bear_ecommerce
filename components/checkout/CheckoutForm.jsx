@@ -6,13 +6,9 @@ import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { useCart } from "@/context/CartContext";
 import { useToast } from "@/context/ToastContext";
-import {
-  BANK_DETAILS,
-  DELIVERY_METHODS,
-  PAKISTAN_PROVINCES,
-  PAYMENT_METHODS,
-} from "@/data/checkout";
+import { DELIVERY_METHODS, PAKISTAN_PROVINCES, PAYMENT_METHODS, isExpressAvailable } from "@/data/checkout";
 import { getShippingCost } from "@/lib/orders";
+import { notifyOrderOnWhatsApp } from "@/lib/orderNotifications";
 import { saveLocalOrder } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 
@@ -43,8 +39,14 @@ function validate(form) {
   if (!form.city.trim()) errors.city = "City is required.";
   if (!form.province) errors.province = "Select a province.";
   if (!form.postalCode.trim()) errors.postalCode = "Postal code is required.";
-  if (form.paymentMethod === "online") {
-    errors.paymentMethod = "Online payment is not available yet.";
+  if (
+    form.deliveryMethod === "express" &&
+    !isExpressAvailable(form.province, form.city)
+  ) {
+    errors.deliveryMethod = "Express delivery is available only in Karachi, Sindh.";
+  }
+  if (form.paymentMethod !== "cod") {
+    errors.paymentMethod = "Please choose Cash on Delivery. Card payment is coming soon.";
   }
 
   return errors;
@@ -59,7 +61,17 @@ export function useCheckoutForm(totals) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const updateField = (name, value) => {
-    setForm((current) => ({ ...current, [name]: value }));
+    setForm((current) => {
+      const next = { ...current, [name]: value };
+      if (
+        (name === "city" || name === "province") &&
+        next.deliveryMethod === "express" &&
+        !isExpressAvailable(next.province, next.city)
+      ) {
+        next.deliveryMethod = "standard";
+      }
+      return next;
+    });
   };
 
   const selectedPayment = PAYMENT_METHODS.find(
@@ -125,7 +137,8 @@ export function useCheckoutForm(totals) {
 
       saveLocalOrder(data.order);
       clearCart();
-      showToast("Your order has been placed.");
+      notifyOrderOnWhatsApp(data.order);
+      showToast("Your order has been placed. WhatsApp slips are opening.");
       router.push(`/order/${data.order.id}`);
     } catch (error) {
       showToast(error.message, "error");
@@ -238,11 +251,16 @@ export function CheckoutFields({
       <section className="rounded-3xl border border-neutral-200 bg-white p-6">
         <h2 className="text-lg font-black text-neutral-900">Delivery method</h2>
         <div className="mt-5 grid gap-3">
-          {DELIVERY_METHODS.map((method) => (
+          {DELIVERY_METHODS.map((method) => {
+            const expressLocked =
+              method.id === "express" && !isExpressAvailable(form.province, form.city);
+
+            return (
             <label
               key={method.id}
               className={cn(
-                "flex cursor-pointer items-start gap-3 rounded-2xl border p-4",
+                "flex items-start gap-3 rounded-2xl border p-4",
+                expressLocked ? "cursor-not-allowed opacity-60" : "cursor-pointer",
                 form.deliveryMethod === method.id
                   ? "border-brand-primary bg-brand-cream"
                   : "border-neutral-200"
@@ -253,6 +271,7 @@ export function CheckoutFields({
                 name="deliveryMethod"
                 value={method.id}
                 checked={form.deliveryMethod === method.id}
+                disabled={expressLocked}
                 onChange={() => updateField("deliveryMethod", method.id)}
                 className="mt-1"
               />
@@ -263,8 +282,14 @@ export function CheckoutFields({
                 <span className="text-sm text-neutral-500">{method.detail}</span>
               </span>
             </label>
-          ))}
+            );
+          })}
         </div>
+        {!isExpressAvailable(form.province, form.city) && (
+          <p className="mt-3 text-sm text-neutral-500">
+            Express delivery is enabled only when province is Sindh and city is Karachi.
+          </p>
+        )}
       </section>
 
       <section className="rounded-3xl border border-neutral-200 bg-white p-6">
@@ -306,19 +331,16 @@ export function CheckoutFields({
 
         {form.paymentMethod === "cod" && (
           <p className="mt-4 rounded-xl bg-brand-cream px-4 py-3 text-sm text-neutral-700">
-            Cash on Delivery is confirmed instantly. Please keep the exact amount
-            ready for the rider.
+            Cash on Delivery is confirmed instantly. A WhatsApp slip will be sent
+            to you and to Budy Bear, and you can download the receipt after placing
+            the order.
           </p>
         )}
 
-        {form.paymentMethod === "bank-transfer" && (
-          <div className="mt-4 rounded-xl bg-brand-cream px-4 py-3 text-sm text-neutral-700">
-            <p className="font-semibold">Transfer to:</p>
-            <p className="mt-2">{BANK_DETAILS.accountTitle}</p>
-            <p>{BANK_DETAILS.bank}</p>
-            <p>Account: {BANK_DETAILS.accountNumber}</p>
-            <p>IBAN: {BANK_DETAILS.iban}</p>
-          </div>
+        {form.paymentMethod === "card" && (
+          <p className="mt-4 rounded-xl bg-neutral-100 px-4 py-3 text-sm text-neutral-600">
+            Debit / Credit card checkout is coming soon.
+          </p>
         )}
       </section>
 

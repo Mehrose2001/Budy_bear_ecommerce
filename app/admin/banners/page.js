@@ -12,7 +12,7 @@ export default function AdminBannersPage() {
   const [banners, setBanners] = useState([]);
   const [form, setForm] = useState({
     title: "",
-    image: "/images/banners/hero-banner.jpg",
+    image: "/images/banners/banner_image_4k.jpeg",
     href: "/products",
     active: true,
   });
@@ -37,7 +37,7 @@ export default function AdminBannersPage() {
       },
       admin.token
     );
-    setForm({ title: "", image: "/images/banners/hero-banner.jpg", href: "/products", active: true });
+    setForm({ title: "", image: "/images/banners/banner_image_4k.jpeg", href: "/products", active: true });
     await load();
   };
 

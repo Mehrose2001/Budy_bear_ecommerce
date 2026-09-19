@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isExpressAvailable } from "@/data/checkout";
 import { createOrder, listOrders } from "@/lib/orders";
 
 function validateOrder(body) {
@@ -20,12 +21,19 @@ function validateOrder(body) {
     return "Please complete your delivery address.";
   }
 
-  if (!["cod", "bank-transfer"].includes(body.paymentMethod)) {
-    return "Please choose a valid payment method.";
+  if (body.paymentMethod !== "cod") {
+    return "Please choose Cash on Delivery. Card payments are coming soon.";
   }
 
   if (!["standard", "express"].includes(body.deliveryMethod)) {
     return "Please choose a delivery method.";
+  }
+
+  if (
+    body.deliveryMethod === "express" &&
+    !isExpressAvailable(body.shippingAddress?.province, body.shippingAddress?.city)
+  ) {
+    return "Express delivery is available only in Karachi, Sindh.";
   }
 
   return null;

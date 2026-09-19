@@ -23,7 +23,7 @@ export default function CheckoutPage() {
         Checkout
       </h1>
       <p className="mt-3 max-w-2xl text-neutral-600">
-        Enter your delivery details and choose Cash on Delivery or bank transfer.
+        Enter your delivery details and place your Cash on Delivery order.
       </p>
 
       {items.length === 0 ? (

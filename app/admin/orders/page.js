@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import AdminTable from "@/components/admin/AdminTable";
+import OrderSlipDownload from "@/components/order/OrderSlipDownload";
 import { adminFetch } from "@/lib/adminApi";
 import { formatPrice } from "@/lib/utils";
 import { ORDER_STATUSES } from "@/data/admin";
@@ -50,6 +51,7 @@ export default function AdminOrdersPage() {
               <th className="px-4 py-3 font-medium">Total</th>
               <th className="px-4 py-3 font-medium">Payment</th>
               <th className="px-4 py-3 font-medium">Status</th>
+              <th className="px-4 py-3 font-medium">Shipment</th>
             </tr>
           </thead>
           <tbody>
@@ -65,7 +67,7 @@ export default function AdminOrdersPage() {
                 </td>
                 <td className="px-4 py-3">{formatPrice(order.total)}</td>
                 <td className="px-4 py-3">
-                  {order.paymentMethod} · {order.paymentStatus}
+                  {order.paymentMethod === "cod" ? "Cash on Delivery" : "Debit / Credit"} · {order.paymentStatus}
                 </td>
                 <td className="px-4 py-3">
                   <select
@@ -79,6 +81,14 @@ export default function AdminOrdersPage() {
                       </option>
                     ))}
                   </select>
+                </td>
+                <td className="px-4 py-3">
+                  <OrderSlipDownload
+                    order={order}
+                    variant="outline"
+                    size="sm"
+                    label="Download slip"
+                  />
                 </td>
               </tr>
             ))}
