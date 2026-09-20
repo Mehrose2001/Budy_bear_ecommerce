@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-export default function StarRating({ rating = 0, size = "sm", count }) {
+export default function StarRating({ rating = 0, size = "sm", count, animated = false }) {
   const iconClass = size === "md" ? "h-4 w-4" : "h-3.5 w-3.5";
 
   return (
@@ -14,8 +14,14 @@ export default function StarRating({ rating = 0, size = "sm", count }) {
             iconClass,
             index < Math.round(rating)
               ? "fill-current"
-              : "fill-none text-neutral-300"
+              : "fill-none text-neutral-300",
+            animated && index < Math.round(rating) && "testimonial-star"
           )}
+          style={
+            animated && index < Math.round(rating)
+              ? { animationDelay: `${index * 0.18}s` }
+              : undefined
+          }
           stroke="currentColor"
           strokeWidth="2"
           aria-hidden="true"

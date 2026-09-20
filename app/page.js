@@ -7,16 +7,18 @@ import Newsletter from "@/components/home/Newsletter";
 import {
   getBestSellers,
   getNewArrivals,
+  listCategories,
 } from "@/lib/catalogStore";
 
 export default function HomePage() {
   const newArrivals = getNewArrivals().slice(0, 8);
   const bestSellers = getBestSellers().slice(0, 8);
+  const categories = listCategories();
 
   return (
     <>
       <Hero />
-      <CategoryGrid />
+      <CategoryGrid categories={categories} />
       <ProductSection
         title="New Arrivals"
         description="Fresh styles and latest drops for the season."

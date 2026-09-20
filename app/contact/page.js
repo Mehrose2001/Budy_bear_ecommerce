@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { brand } from "@/data/brand";
 import { getWhatsAppChatUrl } from "@/lib/orderNotifications";
 import Breadcrumbs from "@/components/ui/Breadcrumbs";
@@ -20,7 +21,8 @@ export default function ContactPage() {
         Contact Budy Bear
       </h1>
       <p className="mt-3 text-neutral-600">
-        Questions about an order, size, or delivery? Message us on WhatsApp or call.
+        Questions about an order, size, or delivery? Message us on WhatsApp,
+        call, or email. We usually reply on working days.
       </p>
       <div className="mt-8 space-y-3 rounded-3xl border border-border bg-white p-6 text-neutral-700">
         <p>
@@ -29,19 +31,28 @@ export default function ContactPage() {
         </p>
         <p>
           <span className="font-semibold text-brand-primary">Email:</span>{" "}
-          {brand.supportEmail}
+          <a href={`mailto:${brand.supportEmail}`} className="font-medium text-brand-primary underline">
+            {brand.supportEmail}
+          </a>
         </p>
         <p>
           <span className="font-semibold text-brand-primary">Location:</span>{" "}
           {brand.companyAddress}
         </p>
       </div>
-      <Button
-        href={getWhatsAppChatUrl("Hi Budy Bear, I would like to get in touch.")}
-        className="mt-6"
-      >
-        Chat on WhatsApp
-      </Button>
+      <div className="mt-6 flex flex-wrap gap-3">
+        <Button href={getWhatsAppChatUrl("Hi Budy Bear, I would like to get in touch.")}>
+          Chat on WhatsApp
+        </Button>
+        <Button href={`mailto:${brand.supportEmail}`} variant="outline">
+          Email us
+        </Button>
+      </div>
+      <p className="mt-8 text-sm text-neutral-500">
+        You can also read our <Link href="/faqs" className="font-semibold text-brand-primary">FAQs</Link>,{" "}
+        <Link href="/shipping" className="font-semibold text-brand-primary">Shipping</Link>, and{" "}
+        <Link href="/returns" className="font-semibold text-brand-primary">Returns</Link> pages.
+      </p>
     </div>
   );
 }

@@ -75,14 +75,17 @@ export const footerLinks = {
   ],
   company: [
     { label: "About Budy Bear", href: "/about" },
-    { label: "Careers", href: "/careers" },
     { label: "Privacy Policy", href: "/privacy" },
     { label: "Terms & Conditions", href: "/terms" },
   ],
   social: [
-    { label: "Instagram", href: "https://instagram.com" },
-    { label: "Facebook", href: "https://facebook.com" },
-    { label: "TikTok", href: "https://tiktok.com" },
-    { label: "YouTube", href: "https://youtube.com" },
+    {
+      label: "Instagram",
+      href: "https://www.instagram.com/budybear_kidswear_?stkn=MW94Z3Vqa2JjdngwYQ==",
+    },
+    {
+      label: "Facebook",
+      href: "https://www.facebook.com/share/1DKmeoJnaC/?mibextid=wwXIfr",
+    },
   ],
 };

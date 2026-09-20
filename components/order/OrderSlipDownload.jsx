@@ -12,7 +12,9 @@ export default function OrderSlipDownload({ order, variant = "primary", size = "
       type="button"
       variant={variant}
       size={size}
-      onClick={() => downloadOrderSlip(order)}
+      onClick={() => {
+        downloadOrderSlip(order);
+      }}
     >
       <Download className="h-4 w-4" />
       {label}

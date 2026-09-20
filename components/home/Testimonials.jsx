@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useRef } from "react";
 import StarRating from "@/components/ui/StarRating";
 
 const testimonials = [
@@ -32,6 +35,28 @@ const testimonials = [
 ];
 
 export default function Testimonials() {
+  const gridRef = useRef(null);
+
+  useEffect(() => {
+    const cards = gridRef.current?.querySelectorAll(".testimonial-card");
+    if (!cards?.length) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-visible");
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.25 }
+    );
+
+    cards.forEach((card) => observer.observe(card));
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <section className="bg-brand-cream py-14 sm:py-16">
       <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8">
@@ -47,20 +72,29 @@ export default function Testimonials() {
           </p>
         </div>
 
-        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {testimonials.map((item) => (
+        <div ref={gridRef} className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {testimonials.map((item, index) => (
             <figure
               key={item.name}
-              className="flex h-full flex-col rounded-3xl bg-white p-6 shadow-sm ring-1 ring-border"
+              className="testimonial-card relative overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-border"
+              style={{ "--enter-delay": `${index * 0.14}s` }}
             >
-              <StarRating rating={item.rating} size="md" />
-              <blockquote className="mt-4 flex-1 text-sm leading-6 text-neutral-700">
-                “{item.quote}”
-              </blockquote>
-              <figcaption className="mt-5">
-                <p className="text-sm font-bold text-brand-primary">{item.name}</p>
-                <p className="text-xs text-neutral-500">{item.city}</p>
-              </figcaption>
+              <div className="testimonial-float relative flex h-full flex-col p-6">
+                <span
+                  className="testimonial-quote pointer-events-none absolute -right-1 -top-3 select-none font-serif text-7xl leading-none text-brand-accent"
+                  aria-hidden="true"
+                >
+                  “
+                </span>
+                <StarRating rating={item.rating} size="md" animated />
+                <blockquote className="relative mt-4 flex-1 text-sm leading-6 text-neutral-700">
+                  “{item.quote}”
+                </blockquote>
+                <figcaption className="mt-5">
+                  <p className="text-sm font-bold text-brand-primary">{item.name}</p>
+                  <p className="text-xs text-neutral-500">{item.city}</p>
+                </figcaption>
+              </div>
             </figure>
           ))}
         </div>

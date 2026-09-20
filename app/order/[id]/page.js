@@ -2,13 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import Image from "next/image";
 import Breadcrumbs from "@/components/ui/Breadcrumbs";
 import Button from "@/components/ui/Button";
+import OrderReceipt from "@/components/order/OrderReceipt";
 import OrderSlipDownload from "@/components/order/OrderSlipDownload";
 import { readLocalOrders } from "@/lib/storage";
 import { formatPrice } from "@/lib/utils";
-import { brand } from "@/data/brand";
 
 export default function OrderConfirmationPage() {
   const params = useParams();
@@ -82,75 +81,14 @@ export default function OrderConfirmationPage() {
         <strong>{order.paymentStatus}</strong>
       </p>
 
-      <section className="mt-8 rounded-3xl border border-neutral-200 bg-white p-6">
-        <h2 className="font-black text-neutral-900">Items</h2>
-        <ul className="mt-4 space-y-4">
-          {order.items.map((item) => (
-            <li key={item.id} className="flex gap-3">
-              <span className="relative h-16 w-16 overflow-hidden rounded-xl bg-neutral-100">
-                <Image src={item.image} alt={item.name} fill className="object-cover" sizes="64px" />
-              </span>
-              <span className="flex-1">
-                <span className="block font-semibold">{item.name}</span>
-                <span className="text-sm text-neutral-500">
-                  {item.color} · {item.size} · Qty {item.quantity}
-                </span>
-              </span>
-              <span className="font-bold">
-                {formatPrice(item.unitPrice * item.quantity)}
-              </span>
-            </li>
-          ))}
-        </ul>
-        <div className="mt-5 border-t border-neutral-200 pt-4 text-sm">
-          <p className="flex justify-between">
-            <span>Subtotal</span>
-            <span>{formatPrice(order.subtotal)}</span>
-          </p>
-          <p className="flex justify-between">
-            <span>Discount</span>
-            <span>-{formatPrice(order.discount)}</span>
-          </p>
-          <p className="flex justify-between">
-            <span>Delivery</span>
-            <span>{order.shipping === 0 ? "Free" : formatPrice(order.shipping)}</span>
-          </p>
-          <p className="mt-2 flex justify-between text-base font-black">
-            <span>Total</span>
-            <span>{formatPrice(order.total)}</span>
-          </p>
-        </div>
-      </section>
-
-      <section className="mt-6 rounded-3xl border border-neutral-200 bg-white p-6">
-        <h2 className="font-black text-neutral-900">From (sender)</h2>
-        <p className="mt-3 text-sm leading-6 text-neutral-600">
-          {brand.name}
-          <br />
-          {brand.companyAddress}
-          <br />
-          {brand.supportPhone}
-        </p>
-      </section>
-
-      <section className="mt-6 rounded-3xl border border-neutral-200 bg-white p-6">
-        <h2 className="font-black text-neutral-900">Delivery to</h2>
-        <p className="mt-3 text-sm leading-6 text-neutral-600">
-          {order.shippingAddress.fullName}
-          <br />
-          {order.shippingAddress.address}
-          <br />
-          {order.shippingAddress.city}, {order.shippingAddress.province}{" "}
-          {order.shippingAddress.postalCode}
-          <br />
-          {order.customer.phone}
-        </p>
-      </section>
+      <div className="mt-8">
+        <OrderReceipt order={order} />
+      </div>
 
       {order.paymentMethod === "cod" && (
         <p className="mt-6 rounded-2xl bg-brand-cream px-5 py-4 text-sm text-neutral-700">
           Pay <strong>{formatPrice(order.total)}</strong> in cash when your parcel
-          arrives. Download your shipping slip below for your records.
+          arrives. Download your receipt below for your records.
         </p>
       )}
 

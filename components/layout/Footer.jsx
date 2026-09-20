@@ -22,27 +22,9 @@ function FacebookIcon({ className }) {
   );
 }
 
-function YouTubeIcon({ className }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
-      <path d="M23 12.2s0-3.2-.4-4.6c-.2-.9-.9-1.6-1.8-1.8C19.2 5.4 12 5.4 12 5.4s-7.2 0-8.8.4c-.9.2-1.6.9-1.8 1.8C1 9 1 12.2 1 12.2s0 3.2.4 4.6c.2.9.9 1.6 1.8 1.8 1.6.4 8.8.4 8.8.4s7.2 0 8.8-.4c.9-.2 1.6-.9 1.8-1.8.4-1.4.4-4.6.4-4.6zM9.8 15.5V8.9l6.2 3.3-6.2 3.3z" />
-    </svg>
-  );
-}
-
-function TikTokIcon({ className }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
-      <path d="M14.5 3c.4 2.4 1.8 4.1 4.1 4.4v2.3c-1.4 0-2.7-.4-3.8-1.1v6.6c0 3.4-2.6 6.1-6.1 6.1S2.6 18.6 2.6 15.2 5.2 9 8.7 9c.4 0 .8 0 1.1.1v2.5c-.3-.1-.7-.2-1.1-.2-2 0-3.6 1.6-3.6 3.7s1.6 3.7 3.6 3.7 3.6-1.6 3.6-3.7V3h2.2z" />
-    </svg>
-  );
-}
-
 const SOCIAL_ICONS = {
   Instagram: InstagramIcon,
   Facebook: FacebookIcon,
-  YouTube: YouTubeIcon,
-  TikTok: TikTokIcon,
 };
 
 export default function Footer() {
