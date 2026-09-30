@@ -2,7 +2,10 @@ function mediaRemotePatterns() {
   const hosts = new Set();
   const mediaHost = process.env.NEXT_PUBLIC_MEDIA_HOST;
   const api = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL;
-  const supabase = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabase =
+    process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    process.env.SUPABASE_URL ||
+    "https://bdmihntpuyiuhtrkllil.supabase.co";
 
   if (mediaHost) hosts.add(mediaHost);
   if (api) {

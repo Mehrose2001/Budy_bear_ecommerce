@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { isSupabaseConfigured, getSupabaseConfig } from "@/lib/supabase/config";
+import {
+  isSupabaseConfigured,
+  getSupabaseConfig,
+  getSupabaseEnvDebug,
+} from "@/lib/supabase/config";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -13,5 +17,6 @@ export async function GET() {
     supabaseConfigured: isSupabaseConfigured(),
     supabaseUrlSet: Boolean(url),
     supabaseAnonSet: Boolean(anonKey),
+    env: getSupabaseEnvDebug(),
   });
 }
