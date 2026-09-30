@@ -56,7 +56,7 @@ export async function POST(request) {
       return NextResponse.json(
         {
           error:
-            "Image uploads on Vercel need NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.",
+            "Set SUPABASE_URL and SUPABASE_ANON_KEY on Vercel for Preview and Production, then Redeploy.",
         },
         { status: 503 }
       );
