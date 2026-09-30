@@ -1,6 +1,6 @@
 import { AppError, throwIf } from "@/lib/errors";
-import { createUserClient } from "@/lib/supabase/server";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { createServiceClient, createUserClient } from "@/lib/supabase/server";
+import { getSupabaseConfig, isSupabaseConfigured } from "@/lib/supabase/config";
 
 export const PRODUCT_IMAGE_BUCKET = "product-images";
 const MAX_BYTES = 6 * 1024 * 1024;
@@ -18,7 +18,7 @@ function assertFile(file) {
   if (!ALLOWED_TYPES.has(type) && !type.startsWith("image/")) {
     throw new AppError("Upload a JPG, PNG, WEBP, GIF, or SVG image.", 400);
   }
-  if (file.size > MAX_BYTES) {
+  if (typeof file.size === "number" && file.size > MAX_BYTES) {
     throw new AppError("Image must be under 6MB.", 400);
   }
 }
@@ -32,12 +32,29 @@ function extensionOf(file) {
   return match ? match[0] : ".jpg";
 }
 
+function storageErrorMessage(error) {
+  if (!error) return "Unable to upload image.";
+  return error.message || error.error || error.statusCode || "Unable to upload image.";
+}
+
 export function getProductImageUrl(path) {
   if (!path) return "";
   if (/^https?:\/\//i.test(path) || path.startsWith("/")) return path;
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const { url } = getSupabaseConfig();
   if (!url) return path;
   return `${url}/storage/v1/object/public/${PRODUCT_IMAGE_BUCKET}/${path.replace(/^\/+/, "")}`;
+}
+
+async function ensurePublicBucket(supabase) {
+  const { data } = await supabase.storage.getBucket(PRODUCT_IMAGE_BUCKET);
+  if (data) return;
+  const { error } = await supabase.storage.createBucket(PRODUCT_IMAGE_BUCKET, {
+    public: true,
+    fileSizeLimit: MAX_BYTES,
+  });
+  if (error && !/already exists/i.test(error.message || "")) {
+    throw new AppError(storageErrorMessage(error), 500);
+  }
 }
 
 export async function uploadProductImage(productId, file, accessToken) {
@@ -45,16 +62,29 @@ export async function uploadProductImage(productId, file, accessToken) {
     throw new AppError("Supabase Storage is not configured.", 503);
   }
   assertFile(file);
-  const supabase = createUserClient(accessToken);
+  const service = createServiceClient();
+  const supabase = service || createUserClient(accessToken);
+  if (!supabase) {
+    throw new AppError("Unable to create a Storage client.", 500);
+  }
+  if (service) {
+    await ensurePublicBucket(supabase);
+  }
+
+  const bytes = Buffer.from(await file.arrayBuffer());
+  if (bytes.length > MAX_BYTES) {
+    throw new AppError("Image must be under 6MB.", 400);
+  }
+
   const filename = `${Date.now()}-${crypto.randomUUID()}${extensionOf(file)}`;
   const folder = productId ? `products/${productId}` : "products/draft";
   const path = `${folder}/${filename}`;
-  const { error } = await supabase.storage.from(PRODUCT_IMAGE_BUCKET).upload(path, file, {
+  const { error } = await supabase.storage.from(PRODUCT_IMAGE_BUCKET).upload(path, bytes, {
     cacheControl: "3600",
     upsert: false,
     contentType: file.type || "image/jpeg",
   });
-  throwIf(error, "Unable to upload image.");
+  throwIf(error, storageErrorMessage(error), 400);
   return {
     path,
     url: getProductImageUrl(path),
@@ -68,8 +98,8 @@ export async function deleteProductImage(path, accessToken) {
   if (!isSupabaseConfigured()) {
     throw new AppError("Supabase Storage is not configured.", 503);
   }
-  const supabase = createUserClient(accessToken);
+  const supabase = createServiceClient() || createUserClient(accessToken);
   const { error } = await supabase.storage.from(PRODUCT_IMAGE_BUCKET).remove([path]);
-  throwIf(error, "Unable to delete image.");
+  throwIf(error, storageErrorMessage(error), 400);
   return true;
 }
