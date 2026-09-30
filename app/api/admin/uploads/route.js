@@ -6,6 +6,8 @@ import { withBackend } from "@/lib/withBackend";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { uploadProductImage } from "@/services/storageService";
 
+export const runtime = "nodejs";
+
 const ALLOWED_TYPES = new Set([
   "image/jpeg",
   "image/png",
@@ -14,6 +16,10 @@ const ALLOWED_TYPES = new Set([
   "image/svg+xml",
 ]);
 const ALLOWED_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg"]);
+
+function canWriteLocalUploads() {
+  return process.env.VERCEL !== "1" && process.env.NODE_ENV !== "production";
+}
 
 export async function POST(request) {
   return withBackend(request, "/admin/uploads", async () => {
@@ -43,6 +49,16 @@ export async function POST(request) {
     if (isSupabaseConfigured()) {
       const uploaded = await uploadProductImage(productId, file, getAccessToken(request));
       return NextResponse.json(uploaded);
+    }
+
+    if (!canWriteLocalUploads()) {
+      return NextResponse.json(
+        {
+          error:
+            "Image uploads on Vercel need NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.",
+        },
+        { status: 503 }
+      );
     }
 
     const bytes = Buffer.from(await file.arrayBuffer());
