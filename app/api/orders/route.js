@@ -50,18 +50,24 @@ export async function POST(request) {
         getBearerToken(request)
       );
       try {
-        await sendOrderPlacedEmail(order);
+        const emailed = await sendOrderPlacedEmail(order);
+        if (!emailed) {
+          console.warn("Order placed without email: SMTP is not configured.");
+        }
       } catch (error) {
-        console.error("Order email failed:", error);
+        console.error("Order email failed:", error?.message || error);
       }
       return NextResponse.json({ order }, { status: 201 });
     }
 
     const order = createMemoryOrder(body);
     try {
-      await sendOrderPlacedEmail(order);
+      const emailed = await sendOrderPlacedEmail(order);
+      if (!emailed) {
+        console.warn("Order placed without email: SMTP is not configured.");
+      }
     } catch (error) {
-      console.error("Order email failed:", error);
+      console.error("Order email failed:", error?.message || error);
     }
     return NextResponse.json({ order }, { status: 201 });
   });

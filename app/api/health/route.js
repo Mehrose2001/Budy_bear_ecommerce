@@ -4,6 +4,7 @@ import {
   getSupabaseConfig,
   getSupabaseEnvDebug,
 } from "@/lib/supabase/config";
+import { isSmtpConfigured } from "@/lib/orderEmail";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -18,5 +19,6 @@ export async function GET() {
     supabaseUrlSet: Boolean(url),
     supabaseAnonSet: Boolean(anonKey),
     env: getSupabaseEnvDebug(),
+    smtpConfigured: isSmtpConfigured(),
   });
 }
