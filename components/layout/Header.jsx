@@ -7,6 +7,7 @@ import { Heart, Menu, Search, ShoppingBag, User, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
+import { useCustomerAuth } from "@/context/CustomerAuthContext";
 import AnnouncementBar from "./AnnouncementBar";
 import BrandLogo from "./BrandLogo";
 import Navbar from "./Navbar";
@@ -21,6 +22,7 @@ export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const { itemCount, openDrawer } = useCart();
   const { count: wishlistCount } = useWishlist();
+  const { isAuthenticated } = useCustomerAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -129,7 +131,7 @@ export default function Header() {
 
             <div className="flex items-center gap-2">
               <Link
-                href="/login"
+                href={isAuthenticated ? "/account" : "/login"}
                 className="inline-flex h-10 w-10 items-center justify-center rounded-full text-brand-primary transition-colors hover:bg-brand-cream"
                 aria-label="Account"
               >

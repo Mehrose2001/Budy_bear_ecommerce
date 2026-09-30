@@ -11,14 +11,16 @@ import { useCart } from "@/context/CartContext";
 import { useToast } from "@/context/ToastContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { COLOR_SWATCHES, FREE_DELIVERY_THRESHOLD } from "@/data/store";
+import { getProductColors } from "@/lib/productImages";
 import { formatLabel, formatPrice, getDiscountPercent, cn } from "@/lib/utils";
 
 export default function ProductInfo({ product, compact = false, onAdded, onColorChange }) {
   const { addItem } = useCart();
   const { showToast } = useToast();
   const { hasItem, toggleItem } = useWishlist();
+  const colors = getProductColors(product);
   const [size, setSize] = useState(product.sizes[0]);
-  const [color, setColor] = useState(product.colors[0]);
+  const [color, setColor] = useState(colors[0]);
   const [quantity, setQuantity] = useState(1);
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
   const wishlisted = hasItem(product.id);
@@ -77,10 +79,11 @@ export default function ProductInfo({ product, compact = false, onAdded, onColor
         {product.stock > 0 ? `${product.stock} in stock` : "Out of stock"}
       </p>
 
+      {colors.length > 0 && (
       <fieldset className="mt-6">
         <legend className="mb-3 text-sm font-bold text-neutral-900">Color</legend>
         <div className="flex flex-wrap gap-2">
-          {product.colors.map((option) => (
+          {colors.map((option) => (
             <button
               key={option}
               type="button"
@@ -108,6 +111,7 @@ export default function ProductInfo({ product, compact = false, onAdded, onColor
           ))}
         </div>
       </fieldset>
+      )}
 
       <fieldset className="mt-6">
         <div className="mb-3 flex items-center justify-between">

@@ -21,6 +21,7 @@ import {
   X,
 } from "lucide-react";
 import BrandLogo from "@/components/layout/BrandLogo";
+import Loader from "@/components/ui/Loader";
 import { useAdminAuth } from "@/context/AdminAuthContext";
 import { cn } from "@/lib/utils";
 
@@ -54,13 +55,16 @@ export default function AdminShell({ children }) {
   }, [isReady, isAuthenticated, isLogin, router]);
 
   if (isLogin) {
-    return children;
+    return <div data-admin-root>{children}</div>;
   }
 
   if (!isReady || !isAuthenticated) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-brand-cream text-sm text-neutral-500">
-        Checking admin session...
+      <div
+        data-admin-root
+        className="flex min-h-screen items-center justify-center bg-brand-cream"
+      >
+        <Loader label="Checking admin session..." />
       </div>
     );
   }
@@ -119,7 +123,10 @@ export default function AdminShell({ children }) {
   );
 
   return (
-    <div className="h-dvh overflow-hidden bg-brand-cream lg:grid lg:grid-cols-[260px_minmax(0,1fr)]">
+    <div
+      data-admin-root
+      className="h-dvh overflow-hidden bg-brand-cream lg:grid lg:grid-cols-[260px_minmax(0,1fr)]"
+    >
       <aside className="hidden h-full lg:block">{sidebar}</aside>
 
       {mobileOpen && (

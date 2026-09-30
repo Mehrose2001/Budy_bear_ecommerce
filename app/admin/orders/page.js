@@ -8,6 +8,7 @@ import { adminFetch } from "@/lib/adminApi";
 import { formatPrice } from "@/lib/utils";
 import { ORDER_STATUSES } from "@/data/admin";
 import { useAdminAuth } from "@/context/AdminAuthContext";
+import { openCustomerConfirmWhatsApp } from "@/lib/orderNotifications";
 
 export default function AdminOrdersPage() {
   const { admin } = useAdminAuth();
@@ -24,7 +25,7 @@ export default function AdminOrdersPage() {
   }, [load]);
 
   const updateStatus = async (id, orderStatus) => {
-    await adminFetch(
+    const data = await adminFetch(
       "/api/admin/orders",
       {
         method: "PATCH",
@@ -32,6 +33,9 @@ export default function AdminOrdersPage() {
       },
       admin.token
     );
+    if (orderStatus === "Confirmed") {
+      openCustomerConfirmWhatsApp(data.order);
+    }
     await load();
   };
 
@@ -39,7 +43,7 @@ export default function AdminOrdersPage() {
     <div className="flex h-full min-h-0 flex-col">
       <AdminPageHeader
         title="Orders"
-        description="Review incoming orders and update fulfillment status."
+        description="Review incoming orders and update fulfillment status. Confirming an order opens WhatsApp with a message to the customer."
       />
       <AdminTable>
         <table className="min-w-full text-left text-sm">

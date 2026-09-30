@@ -6,9 +6,11 @@ import { ChevronDown, User, X } from "lucide-react";
 import { mainNavItems } from "@/data/navigation";
 import { cn } from "@/lib/utils";
 import BrandLogo from "./BrandLogo";
+import { useCustomerAuth } from "@/context/CustomerAuthContext";
 
 export default function MobileMenu({ isOpen, onClose }) {
   const [openSection, setOpenSection] = useState(null);
+  const { isAuthenticated } = useCustomerAuth();
 
   const toggleSection = (label) => {
     setOpenSection((current) => (current === label ? null : label));
@@ -113,7 +115,7 @@ export default function MobileMenu({ isOpen, onClose }) {
 
         <div className="border-t border-neutral-200 p-4">
           <Link
-            href="/login"
+            href={isAuthenticated ? "/account" : "/login"}
             onClick={onClose}
             className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-neutral-700 hover:bg-brand-cream"
           >

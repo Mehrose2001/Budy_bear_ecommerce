@@ -4,10 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import ProductGallery from "@/components/product/ProductGallery";
 import ProductInfo from "@/components/product/ProductInfo";
+import { getProductColors } from "@/lib/productImages";
 
 export default function ProductDetailsClient({ product }) {
   const router = useRouter();
-  const [selectedColor, setSelectedColor] = useState(product.colors[0]);
+  const [selectedColor, setSelectedColor] = useState(getProductColors(product)[0]);
 
   return (
     <div className="grid gap-10 lg:grid-cols-2">

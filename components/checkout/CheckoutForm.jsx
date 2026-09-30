@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
@@ -8,9 +8,9 @@ import { useCart } from "@/context/CartContext";
 import { useToast } from "@/context/ToastContext";
 import { DELIVERY_METHODS, PAKISTAN_PROVINCES, PAYMENT_METHODS, isExpressAvailable } from "@/data/checkout";
 import { getShippingCost } from "@/lib/orders";
-import { notifyOrderOnWhatsApp } from "@/lib/orderNotifications";
 import { saveLocalOrder } from "@/lib/storage";
 import { cn } from "@/lib/utils";
+import { useCustomerAuth } from "@/context/CustomerAuthContext";
 
 const INITIAL_FORM = {
   fullName: "",
@@ -56,9 +56,26 @@ export function useCheckoutForm(totals) {
   const router = useRouter();
   const { items, clearCart } = useCart();
   const { showToast } = useToast();
-  const [form, setForm] = useState(INITIAL_FORM);
+  const { user, authHeaders } = useCustomerAuth();
+  const [form, setForm] = useState({
+    ...INITIAL_FORM,
+  });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [couponCode, setCouponCode] = useState("");
+  const [coupon, setCoupon] = useState(null);
+  const [couponError, setCouponError] = useState("");
+  const [couponDiscount, setCouponDiscount] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+    setForm((current) => ({
+      ...current,
+      fullName: current.fullName || user.name || "",
+      email: current.email || user.email || "",
+      phone: current.phone || user.phone || "",
+    }));
+  }, [user]);
 
   const updateField = (name, value) => {
     setForm((current) => {
@@ -79,16 +96,39 @@ export function useCheckoutForm(totals) {
   );
 
   const liveTotals = useMemo(() => {
-    const shipping = getShippingCost(
-      totals.subtotal - totals.discount,
-      form.deliveryMethod
-    );
+    const afterSale = totals.subtotal - totals.discount;
+    const discount = totals.discount + couponDiscount;
+    const shipping = getShippingCost(afterSale - couponDiscount, form.deliveryMethod);
     return {
       ...totals,
+      discount,
       shipping,
-      total: totals.subtotal - totals.discount + shipping,
+      total: totals.subtotal - discount + shipping,
     };
-  }, [form.deliveryMethod, totals]);
+  }, [couponDiscount, form.deliveryMethod, totals]);
+
+  const applyCoupon = async () => {
+    setCouponError("");
+    try {
+      const response = await fetch("/api/coupons/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: couponCode,
+          subtotal: totals.subtotal - totals.discount,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Invalid coupon.");
+      setCoupon(data.coupon);
+      setCouponDiscount(Number(data.discount || 0));
+      showToast(`${data.coupon.code} applied`);
+    } catch (error) {
+      setCoupon(null);
+      setCouponDiscount(0);
+      setCouponError(error.message);
+    }
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -104,7 +144,7 @@ export function useCheckoutForm(totals) {
     try {
       const response = await fetch("/api/orders", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify({
           items,
           subtotal: liveTotals.subtotal,
@@ -113,6 +153,7 @@ export function useCheckoutForm(totals) {
           total: liveTotals.total,
           deliveryMethod: form.deliveryMethod,
           paymentMethod: form.paymentMethod,
+          couponCode: coupon?.code || "",
           customer: {
             fullName: form.fullName.trim(),
             email: form.email.trim(),
@@ -137,8 +178,7 @@ export function useCheckoutForm(totals) {
 
       saveLocalOrder(data.order);
       clearCart();
-      notifyOrderOnWhatsApp(data.order);
-      showToast("Your order has been placed. WhatsApp slips are opening.");
+      showToast("Your order has been placed. Budy Bear has been emailed.");
       router.push(`/order/${data.order.id}`);
     } catch (error) {
       showToast(error.message, "error");
@@ -147,7 +187,20 @@ export function useCheckoutForm(totals) {
     }
   };
 
-  return { form, liveTotals, errors, isSubmitting, updateField, handleSubmit, selectedPayment };
+  return {
+    form,
+    liveTotals,
+    errors,
+    isSubmitting,
+    updateField,
+    handleSubmit,
+    selectedPayment,
+    couponCode,
+    setCouponCode,
+    coupon,
+    couponError,
+    applyCoupon,
+  };
 }
 
 export function CheckoutFields({
@@ -157,6 +210,11 @@ export function CheckoutFields({
   handleSubmit,
   isSubmitting,
   selectedPayment,
+  couponCode,
+  setCouponCode,
+  coupon,
+  couponError,
+  applyCoupon,
 }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-8" noValidate>
@@ -331,8 +389,9 @@ export function CheckoutFields({
 
         {form.paymentMethod === "cod" && (
           <p className="mt-4 rounded-xl bg-brand-cream px-4 py-3 text-sm text-neutral-700">
-            Cash on Delivery is confirmed instantly. A WhatsApp slip will be sent
-            to you and to Budy Bear, and you can download the receipt after placing
+            Cash on Delivery. We email Budy Bear when you place the order. After
+            we confirm it in the admin panel, you will receive a WhatsApp message
+            from our store number. You can also download the receipt after placing
             the order.
           </p>
         )}
@@ -342,6 +401,28 @@ export function CheckoutFields({
             Debit / Credit card checkout is coming soon.
           </p>
         )}
+      </section>
+
+      <section className="rounded-3xl border border-neutral-200 bg-white p-6">
+        <h2 className="text-lg font-black text-neutral-900">Promo code</h2>
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+          <Input
+            name="couponCode"
+            value={couponCode}
+            onChange={(event) => setCouponCode(event.target.value.toUpperCase())}
+            placeholder="WELCOME10"
+            className="flex-1"
+          />
+          <Button type="button" variant="outline" onClick={applyCoupon}>
+            Apply
+          </Button>
+        </div>
+        {coupon && (
+          <p className="mt-3 text-sm text-brand-primary">
+            {coupon.code} · {coupon.label}
+          </p>
+        )}
+        {couponError && <p className="mt-2 text-sm text-error">{couponError}</p>}
       </section>
 
       <section className="rounded-3xl border border-neutral-200 bg-white p-6">

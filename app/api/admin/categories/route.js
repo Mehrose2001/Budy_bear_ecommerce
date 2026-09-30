@@ -1,34 +1,69 @@
 import { NextResponse } from "next/server";
-import { isAdminRequest } from "@/lib/adminAuth";
+import { isAdminRequest, getAccessToken } from "@/lib/adminAuth";
 import {
-  deleteCategory,
-  listCategories,
-  upsertCategory,
+  deleteCategory as deleteMemoryCategory,
+  listCategories as listMemoryCategories,
+  upsertCategory as upsertMemoryCategory,
 } from "@/lib/catalogStore";
+import { withBackend } from "@/lib/withBackend";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
+import {
+  createCategory,
+  deleteCategory,
+  getCategories,
+  getCategoryBySlug,
+  updateCategory,
+} from "@/services/categoryService";
 
 export async function GET(request) {
-  if (!isAdminRequest(request)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  return NextResponse.json({ categories: listCategories() });
+  return withBackend(request, "/admin/categories", async () => {
+    if (!(await isAdminRequest(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (isSupabaseConfigured()) {
+      const categories = await getCategories({
+        includeInactive: true,
+        accessToken: getAccessToken(request),
+      });
+      return NextResponse.json({ categories });
+    }
+    return NextResponse.json({ categories: listMemoryCategories() });
+  });
 }
 
 export async function POST(request) {
-  if (!isAdminRequest(request)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  const body = await request.json();
-  if (!body.name || !body.slug) {
-    return NextResponse.json({ error: "Name and slug are required." }, { status: 400 });
-  }
-  return NextResponse.json({ category: upsertCategory(body) });
+  return withBackend(request, "/admin/categories", async () => {
+    if (!(await isAdminRequest(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const body = await request.json();
+    if (!body.name || !body.slug) {
+      return NextResponse.json({ error: "Name and slug are required." }, { status: 400 });
+    }
+    if (isSupabaseConfigured()) {
+      const token = getAccessToken(request);
+      const existing = await getCategoryBySlug(body.slug, { includeInactive: true, accessToken: token });
+      const category = existing
+        ? await updateCategory(existing.id, body, token)
+        : await createCategory(body, token);
+      return NextResponse.json({ category });
+    }
+    return NextResponse.json({ category: upsertMemoryCategory(body) });
+  });
 }
 
 export async function DELETE(request) {
-  if (!isAdminRequest(request)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  const { searchParams } = new URL(request.url);
-  deleteCategory(searchParams.get("slug"));
-  return NextResponse.json({ ok: true });
+  return withBackend(request, "/admin/categories", async () => {
+    if (!(await isAdminRequest(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const { searchParams } = new URL(request.url);
+    const slug = searchParams.get("slug");
+    if (isSupabaseConfigured()) {
+      await deleteCategory(slug, getAccessToken(request));
+      return NextResponse.json({ ok: true });
+    }
+    deleteMemoryCategory(slug);
+    return NextResponse.json({ ok: true });
+  });
 }

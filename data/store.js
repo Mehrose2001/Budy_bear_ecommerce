@@ -18,3 +18,4 @@ export const WISHLIST_STORAGE_KEY = "budybear-wishlist";
 export const ORDERS_STORAGE_KEY = "budybear-orders";
 export const RECENTLY_VIEWED_KEY = "budybear-recently-viewed";
 export const EXPRESS_SHIPPING_FEE = 499;
+export const CUSTOMER_SESSION_KEY = "budybear-customer-session";

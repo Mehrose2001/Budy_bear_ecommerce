@@ -1,8 +1,9 @@
 import StarRating from "@/components/ui/StarRating";
 import { getReviewsForProduct } from "@/data/reviews";
+import ReviewForm from "@/components/product/ReviewForm";
 
-export default function ProductReviews({ product }) {
-  const reviews = getReviewsForProduct(product);
+export default function ProductReviews({ product, reviews }) {
+  const items = reviews?.length ? reviews : getReviewsForProduct(product);
 
   return (
     <section id="reviews" className="scroll-mt-36">
@@ -12,7 +13,7 @@ export default function ProductReviews({ product }) {
       </p>
 
       <div className="mt-6 space-y-4">
-        {reviews.map((review) => (
+        {items.map((review) => (
           <article
             key={review.id}
             className="rounded-2xl border border-neutral-200 bg-white p-5"
@@ -33,6 +34,7 @@ export default function ProductReviews({ product }) {
           </article>
         ))}
       </div>
+      <ReviewForm productId={product.id} />
     </section>
   );
 }

@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation";
 import Modal from "@/components/ui/Modal";
 import ProductGallery from "@/components/product/ProductGallery";
 import ProductInfo from "@/components/product/ProductInfo";
+import { getProductColors } from "@/lib/productImages";
 
 export default function QuickView({ product, onClose }) {
   const router = useRouter();
-  const [selectedColor, setSelectedColor] = useState(product?.colors?.[0]);
+  const [selectedColor, setSelectedColor] = useState(getProductColors(product)[0]);
 
   if (!product) return null;
 

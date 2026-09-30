@@ -14,6 +14,7 @@ export default function AdminLoginPage() {
   const [email, setEmail] = useState(DEMO_ADMIN.email);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (isReady && isAuthenticated) {
@@ -21,9 +22,12 @@ export default function AdminLoginPage() {
     }
   }, [isReady, isAuthenticated, router]);
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    const result = login(email, password);
+    setError("");
+    setIsSubmitting(true);
+    const result = await login(email, password);
+    setIsSubmitting(false);
     if (!result.ok) {
       setError(result.error);
       return;
@@ -60,8 +64,8 @@ export default function AdminLoginPage() {
             required
           />
           {error && <p className="text-sm text-error">{error}</p>}
-          <Button type="submit" className="w-full" size="lg">
-            Sign in
+          <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
+            {isSubmitting ? "Signing in..." : "Sign in"}
           </Button>
         </form>
 

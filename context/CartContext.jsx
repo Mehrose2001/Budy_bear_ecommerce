@@ -11,6 +11,7 @@ import {
 import { FREE_DELIVERY_THRESHOLD, SHIPPING_FEE } from "@/data/store";
 import { readCart, writeCart } from "@/lib/storage";
 import { getEffectivePrice } from "@/lib/productFilters";
+import { getProductColors } from "@/lib/productImages";
 
 const CartContext = createContext(null);
 
@@ -39,7 +40,7 @@ export function CartProvider({ children }) {
 
   const addItem = useCallback((product, { size, color, quantity = 1, openDrawer: shouldOpen = true } = {}) => {
     const selectedSize = size || product.sizes[0];
-    const selectedColor = color || product.colors[0];
+    const selectedColor = color || getProductColors(product)[0];
     const lineId = createLineId(product, selectedSize, selectedColor);
     const unitPrice = getEffectivePrice(product);
 

@@ -1,78 +1,89 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { ADMIN_SESSION_KEY, ADMIN_TOKEN, DEMO_ADMIN } from "@/data/admin";
+import { usePathname } from "next/navigation";
+import { DEMO_ADMIN } from "@/data/admin";
+import {
+  AUTH_CHANGED_EVENT,
+  clearAuthSessions,
+  emitAuthChanged,
+  isAdminRole,
+  readAdminSession,
+  toAdminSession,
+  writeAdminSession,
+  writeCustomerSessionFromAdmin,
+} from "@/lib/adminSession";
 
 const AdminAuthContext = createContext(null);
 
 export function AdminAuthProvider({ children }) {
+  const pathname = usePathname();
   const [admin, setAdmin] = useState(null);
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(ADMIN_SESSION_KEY);
-      if (!raw) {
-        setAdmin(null);
-        setIsReady(true);
-        return;
-      }
-
-      const session = JSON.parse(raw);
-      const next = {
-        ...session,
-        name: DEMO_ADMIN.name,
-        phone: DEMO_ADMIN.phone,
-        email: session.email || DEMO_ADMIN.email,
-        role: session.role || DEMO_ADMIN.role,
-        title: session.title || DEMO_ADMIN.title,
-      };
-      window.localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(next));
-      setAdmin(next);
-    } catch {
-      setAdmin(null);
-    }
-    setIsReady(true);
-  }, []);
+    const sync = () => {
+      setAdmin(readAdminSession());
+      setIsReady(true);
+    };
+    sync();
+    window.addEventListener(AUTH_CHANGED_EVENT, sync);
+    return () => window.removeEventListener(AUTH_CHANGED_EVENT, sync);
+  }, [pathname]);
 
   const value = useMemo(() => {
-    const login = (email, password) => {
-      if (
-        email.trim().toLowerCase() !== DEMO_ADMIN.email ||
-        password !== DEMO_ADMIN.password
-      ) {
-        return { ok: false, error: "Invalid email or password." };
-      }
+    const login = async (email, password) => {
+      try {
+        const response = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          return { ok: false, error: data.error || "Invalid email or password." };
+        }
+        if (!isAdminRole(data.user?.role)) {
+          return { ok: false, error: "This account is not an admin." };
+        }
 
-      const session = {
-        id: DEMO_ADMIN.id,
-        email: DEMO_ADMIN.email,
-        name: DEMO_ADMIN.name,
-        role: DEMO_ADMIN.role,
-        phone: DEMO_ADMIN.phone,
-        title: DEMO_ADMIN.title,
-        token: ADMIN_TOKEN,
-      };
-      window.localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(session));
-      setAdmin(session);
-      return { ok: true };
+        const session = toAdminSession(data.user, data.accessToken) || {
+          id: data.user?.id || DEMO_ADMIN.id,
+          email: data.user?.email || email,
+          name: data.user?.name || DEMO_ADMIN.name,
+          role: "admin",
+          phone: data.user?.phone || DEMO_ADMIN.phone,
+          title: DEMO_ADMIN.title,
+          token: data.accessToken,
+        };
+        writeAdminSession(session);
+        writeCustomerSessionFromAdmin(session);
+        setAdmin(session);
+        emitAuthChanged();
+        return { ok: true };
+      } catch {
+        return { ok: false, error: "Unable to sign in. Please try again." };
+      }
     };
 
     const updateProfile = (input) => {
       setAdmin((current) => {
         if (!current) return current;
         const next = { ...current, ...input };
-        window.localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(next));
+        writeAdminSession(next);
+        writeCustomerSessionFromAdmin(next);
         return next;
       });
+      emitAuthChanged();
     };
 
     const logout = () => {
-      window.localStorage.removeItem(ADMIN_SESSION_KEY);
+      clearAuthSessions();
       setAdmin(null);
+      emitAuthChanged();
     };
 
-    return { admin, isReady, isAuthenticated: Boolean(admin), login, logout, updateProfile };
+    return { admin, isReady, isAuthenticated: Boolean(admin?.token), login, logout, updateProfile };
   }, [admin, isReady]);
 
   return (

@@ -6,6 +6,7 @@ import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { useAdminAuth } from "@/context/AdminAuthContext";
 import { adminUploadFile } from "@/lib/adminApi";
+import { compressImageFile } from "@/lib/compressImage";
 import { COLOR_SWATCHES } from "@/data/store";
 
 const emptyProduct = {
@@ -18,7 +19,6 @@ const emptyProduct = {
   salePrice: "",
   stock: 10,
   sizes: "0-3M, 3-6M, 6-12M, 2-3Y, 4-5Y, 6-7Y",
-  colors: "Navy, Gold",
   brand: "Budy Bear",
   featured: false,
   newArrival: true,
@@ -34,7 +34,8 @@ function parseList(value) {
 
 function uniqueColors(values) {
   const seen = new Set();
-  return values.filter((color) => {
+  return values.filter((raw) => {
+    const color = String(raw || "").trim();
     const key = color.toLowerCase();
     if (!color || seen.has(key)) return false;
     seen.add(key);
@@ -88,7 +89,6 @@ function toForm(product) {
     ...product,
     salePrice: product.salePrice ?? "",
     sizes: (product.sizes || []).join(", "),
-    colors: (product.colors || []).join(", "),
     imageItems: toImageItems(product),
   };
 }
@@ -112,10 +112,10 @@ export default function ProductForm({ product, categories, onCancel, onSave }) {
 
   const colorOptions = useMemo(() => {
     return uniqueColors([
-      ...parseList(form.colors),
+      ...Object.keys(COLOR_SWATCHES),
       ...form.imageItems.map((item) => item.color),
     ]);
-  }, [form.colors, form.imageItems]);
+  }, [form.imageItems]);
 
   const updateField = (name, value) => {
     setForm((current) => ({ ...current, [name]: value }));
@@ -131,7 +131,7 @@ export default function ProductForm({ product, categories, onCancel, onSave }) {
   };
 
   const addImageRow = (url = "") => {
-    const color = parseList(form.colors)[0] || "Navy";
+    const color = form.imageItems[0]?.color || "Navy";
     setForm((current) => ({
       ...current,
       imageItems: [
@@ -163,13 +163,14 @@ export default function ProductForm({ product, categories, onCancel, onSave }) {
     try {
       const uploaded = [];
       for (const file of list) {
-        const data = await adminUploadFile(file, admin?.token);
+        const compressed = await compressImageFile(file);
+        const data = await adminUploadFile(compressed, admin?.token, product?.id);
         uploaded.push(data.url);
       }
 
       setForm((current) => {
         const items = [...current.imageItems];
-        const color = parseList(current.colors)[0] || items[0]?.color || "Navy";
+        const color = items[0]?.color || "Navy";
         const hex = COLOR_SWATCHES[color] || items[0]?.hex || "#1e3a8a";
 
         if (targetId) {
@@ -204,11 +205,12 @@ export default function ProductForm({ product, categories, onCancel, onSave }) {
       setError("Upload at least one product image.");
       return;
     }
+    if (imageItems.some((item) => !String(item.color || "").trim())) {
+      setError("Choose a color for each uploaded image.");
+      return;
+    }
 
-    const colors = uniqueColors([
-      ...parseList(form.colors),
-      ...imageItems.map((item) => item.color).filter(Boolean),
-    ]);
+    const colors = uniqueColors(imageItems.map((item) => item.color));
     const colorSwatches = {};
     imageItems.forEach((item) => {
       if (item.color && item.hex) colorSwatches[item.color] = item.hex;
@@ -225,7 +227,7 @@ export default function ProductForm({ product, categories, onCancel, onSave }) {
         salePrice: form.salePrice === "" ? null : Number(form.salePrice),
         stock: Number(form.stock),
         sizes: parseList(form.sizes),
-        colors: colors.length ? colors : ["Navy"],
+        colors,
         images: imageItems.map((item) => item.url),
         colorImages: imageItems.map((item) => ({
           color: item.color,
@@ -344,20 +346,13 @@ export default function ProductForm({ product, categories, onCancel, onSave }) {
         onChange={(event) => updateField("sizes", event.target.value)}
         placeholder="0-3M, 3-6M, 2-3Y, 4-5Y"
       />
-      <Input
-        label="Colors (comma separated)"
-        name="colors"
-        value={form.colors}
-        onChange={(event) => updateField("colors", event.target.value)}
-        placeholder="Navy, Pink, White"
-      />
 
       <div className="md:col-span-2 rounded-2xl border border-neutral-200 bg-brand-cream/40 p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-sm font-bold text-neutral-900">Product images</p>
             <p className="mt-1 text-xs text-neutral-500">
-              Browse files and assign a color to each image.
+              Browse files and assign a color to each image. Those colors appear on the product page.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -407,7 +402,13 @@ export default function ProductForm({ product, categories, onCancel, onSave }) {
                   <input
                     list={`color-options-${item.id}`}
                     value={item.color}
-                    onChange={(event) => updateImageItem(item.id, { color: event.target.value })}
+                    onChange={(event) => {
+                      const color = event.target.value;
+                      updateImageItem(item.id, {
+                        color,
+                        hex: COLOR_SWATCHES[color] || item.hex,
+                      });
+                    }}
                     placeholder="Navy"
                     className="h-11 w-full rounded-xl border border-neutral-200 px-3 text-sm"
                   />
