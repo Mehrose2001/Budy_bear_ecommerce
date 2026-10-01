@@ -29,14 +29,15 @@ function CategoryCard({ category, isDuplicate, onCardClick }) {
       tabIndex={isDuplicate ? -1 : undefined}
       aria-hidden={isDuplicate ? true : undefined}
       onClick={onCardClick}
+      draggable={false}
     >
-      <div className="relative aspect-[3/4] overflow-hidden bg-[#eaf0f6]">
+      <div className="pointer-events-none relative aspect-[3/4] overflow-hidden bg-[#eaf0f6]">
         <Image
           src={category.image}
           alt={isDuplicate ? "" : `Shop ${category.label}`}
           fill
-          quality={90}
-          sizes="208px"
+          quality={75}
+          sizes="(max-width: 640px) 160px, 208px"
           draggable={false}
           className="origin-top object-cover transition-transform duration-500 group-hover:scale-[1.03]"
           style={{ objectPosition: category.objectPosition || "center top" }}
@@ -51,6 +52,7 @@ function CategoryCard({ category, isDuplicate, onCardClick }) {
 
 export default function CategoryGrid({ categories = [] }) {
   const items = toCards(categories);
+  const viewportRef = useRef(null);
   const trackRef = useRef(null);
   const offsetRef = useRef(0);
   const pausedRef = useRef(false);
@@ -58,11 +60,22 @@ export default function CategoryGrid({ categories = [] }) {
   const draggingRef = useRef(false);
   const movedRef = useRef(false);
   const lastXRef = useRef(0);
+  const resumeTimerRef = useRef(null);
   const [paused, setPaused] = useState(false);
 
   useEffect(() => {
     pausedRef.current = paused;
   }, [paused]);
+
+  const wrapOffset = () => {
+    const track = trackRef.current;
+    if (!track) return;
+    const half = track.scrollWidth / 2;
+    if (half <= 0) return;
+    while (-offsetRef.current >= half) offsetRef.current += half;
+    while (offsetRef.current > 0) offsetRef.current -= half;
+    track.style.transform = `translate3d(${offsetRef.current}px,0,0)`;
+  };
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -85,7 +98,7 @@ export default function CategoryGrid({ categories = [] }) {
         if (half > 0 && -offsetRef.current >= half) {
           offsetRef.current += half;
         }
-        track.style.transform = `translateX(${offsetRef.current}px)`;
+        track.style.transform = `translate3d(${offsetRef.current}px,0,0)`;
       }
       frame = requestAnimationFrame(tick);
     };
@@ -94,42 +107,75 @@ export default function CategoryGrid({ categories = [] }) {
     return () => cancelAnimationFrame(frame);
   }, []);
 
-  const wrapOffset = () => {
-    const track = trackRef.current;
-    if (!track) return;
-    const half = track.scrollWidth / 2;
-    if (half <= 0) return;
-    while (-offsetRef.current >= half) offsetRef.current += half;
-    while (offsetRef.current > 0) offsetRef.current -= half;
-    track.style.transform = `translateX(${offsetRef.current}px)`;
-  };
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
 
-  const onPointerDown = (event) => {
-    draggingRef.current = true;
-    movedRef.current = false;
-    lastXRef.current = event.clientX;
-    event.currentTarget.setPointerCapture?.(event.pointerId);
-  };
+    const clearResume = () => {
+      if (resumeTimerRef.current) {
+        clearTimeout(resumeTimerRef.current);
+        resumeTimerRef.current = null;
+      }
+    };
 
-  const onPointerMove = (event) => {
-    if (!draggingRef.current) return;
-    const dx = event.clientX - lastXRef.current;
-    if (Math.abs(dx) > 6) movedRef.current = true;
-    if (!movedRef.current) return;
-    pausedRef.current = true;
-    setPaused(true);
-    offsetRef.current += dx;
-    lastXRef.current = event.clientX;
-    wrapOffset();
-  };
+    const resume = () => {
+      draggingRef.current = false;
+      pausedRef.current = false;
+      setPaused(false);
+    };
 
-  const onPointerUp = (event) => {
-    draggingRef.current = false;
-    if (movedRef.current) return;
-    if (!event.target.closest("a")) {
-      setPaused((current) => !current);
-    }
-  };
+    const onDown = (event) => {
+      if (event.pointerType === "mouse" && event.button !== 0) return;
+      draggingRef.current = true;
+      movedRef.current = false;
+      lastXRef.current = event.clientX;
+      clearResume();
+      viewport.setPointerCapture?.(event.pointerId);
+    };
+
+    const onMove = (event) => {
+      if (!draggingRef.current) return;
+      const dx = event.clientX - lastXRef.current;
+      if (Math.abs(dx) > 4) {
+        movedRef.current = true;
+        if (event.cancelable) event.preventDefault();
+      }
+      if (!movedRef.current) return;
+      offsetRef.current += dx;
+      lastXRef.current = event.clientX;
+      wrapOffset();
+    };
+
+    const onUp = (event) => {
+      const wasMove = movedRef.current;
+      draggingRef.current = false;
+      try {
+        viewport.releasePointerCapture?.(event.pointerId);
+      } catch {
+        // Capture may already be released on touch cancel.
+      }
+      if (wasMove) {
+        resumeTimerRef.current = setTimeout(resume, 350);
+        return;
+      }
+      if (!event.target.closest("a")) {
+        setPaused((current) => !current);
+      }
+    };
+
+    viewport.addEventListener("pointerdown", onDown);
+    viewport.addEventListener("pointermove", onMove, { passive: false });
+    viewport.addEventListener("pointerup", onUp);
+    viewport.addEventListener("pointercancel", onUp);
+
+    return () => {
+      clearResume();
+      viewport.removeEventListener("pointerdown", onDown);
+      viewport.removeEventListener("pointermove", onMove);
+      viewport.removeEventListener("pointerup", onUp);
+      viewport.removeEventListener("pointercancel", onUp);
+    };
+  }, []);
 
   const onCardClick = (event) => {
     if (movedRef.current) {
@@ -148,28 +194,29 @@ export default function CategoryGrid({ categories = [] }) {
           className="mt-1 cursor-pointer text-xs text-neutral-500"
           onClick={() => setPaused((current) => !current)}
         >
-          {paused ? "Paused — click here to play, or drag to slide." : "Click here to pause · drag to slide"}
+          {paused
+            ? "Paused — tap here to play, or swipe the row."
+            : "Swipe to browse · tap here to pause"}
         </p>
       </div>
 
       <div
+        ref={viewportRef}
         className={cn(
-          "relative cursor-grab select-none active:cursor-grabbing",
-          paused && "cursor-grab"
+          "relative cursor-grab touch-none select-none active:cursor-grabbing"
         )}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
-        onMouseEnter={() => {
-          hoveringRef.current = true;
+        onPointerEnter={(event) => {
+          if (event.pointerType === "mouse") hoveringRef.current = true;
         }}
-        onMouseLeave={() => {
+        onPointerLeave={() => {
           hoveringRef.current = false;
           draggingRef.current = false;
         }}
       >
-        <div ref={trackRef} className="flex w-max gap-3 pr-3 will-change-transform sm:gap-5 sm:pr-5">
+        <div
+          ref={trackRef}
+          className="flex w-max gap-3 pr-3 will-change-transform sm:gap-5 sm:pr-5"
+        >
           {items.map((category) => (
             <CategoryCard
               key={category.label}

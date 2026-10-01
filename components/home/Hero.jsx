@@ -13,7 +13,7 @@ export default function Hero() {
         alt={`${brand.name} ${brand.tagline}. ${brand.slogan}`}
         width={4096}
         height={2047}
-        quality={100}
+        quality={85}
         sizes="100vw"
         priority
         className="h-auto w-full"

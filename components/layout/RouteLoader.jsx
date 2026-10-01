@@ -57,7 +57,7 @@ function RouteLoaderInner() {
       first.current = false;
       return;
     }
-    const timer = window.setTimeout(() => endNav(), 350);
+    const timer = window.setTimeout(() => endNav(), 180);
     return () => window.clearTimeout(timer);
   }, [pathname, searchParams, endNav]);
 

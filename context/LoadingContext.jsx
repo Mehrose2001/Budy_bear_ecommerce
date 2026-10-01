@@ -12,7 +12,7 @@ import {
 import { ApiLoaderOverlay } from "@/components/ui/Loader";
 
 const LoadingContext = createContext(null);
-const MIN_VISIBLE_MS = 400;
+const MIN_VISIBLE_MS = 180;
 
 function isApiRequest(input, init) {
   const url = typeof input === "string" ? input : input?.url || "";
@@ -23,6 +23,8 @@ function isApiRequest(input, init) {
     if (!parsed.pathname.startsWith("/api/")) return false;
     const method = String(init?.method || input?.method || "GET").toUpperCase();
     if (method === "GET" && parsed.pathname.startsWith("/api/wishlist")) return false;
+    if (method === "GET" && parsed.pathname === "/api/health") return false;
+    if (method === "PATCH" && parsed.pathname.startsWith("/api/admin/orders")) return false;
     return true;
   } catch {
     return String(url).includes("/api/");
