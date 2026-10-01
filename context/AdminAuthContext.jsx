@@ -8,8 +8,10 @@ import {
   clearAuthSessions,
   emitAuthChanged,
   isAdminRole,
+  isAdminSessionFresh,
   readAdminSession,
   toAdminSession,
+  touchAdminSession,
   writeAdminSession,
   writeCustomerSessionFromAdmin,
 } from "@/lib/adminSession";
@@ -29,6 +31,33 @@ export function AdminAuthProvider({ children }) {
     sync();
     window.addEventListener(AUTH_CHANGED_EVENT, sync);
     return () => window.removeEventListener(AUTH_CHANGED_EVENT, sync);
+  }, [pathname]);
+
+  useEffect(() => {
+    const poll = () => {
+      const session = readAdminSession();
+      setAdmin((current) => {
+        if (!session && !current) return current;
+        if (!session) return null;
+        return session;
+      });
+    };
+    const id = window.setInterval(poll, 8000);
+
+    const onActivity = () => {
+      if (!pathname?.startsWith("/admin") || pathname === "/admin/login") return;
+      touchAdminSession();
+    };
+
+    window.addEventListener("pointerdown", onActivity, { passive: true });
+    window.addEventListener("keydown", onActivity);
+    window.addEventListener("focus", onActivity);
+    return () => {
+      window.clearInterval(id);
+      window.removeEventListener("pointerdown", onActivity);
+      window.removeEventListener("keydown", onActivity);
+      window.removeEventListener("focus", onActivity);
+    };
   }, [pathname]);
 
   const value = useMemo(() => {
@@ -83,7 +112,14 @@ export function AdminAuthProvider({ children }) {
       emitAuthChanged();
     };
 
-    return { admin, isReady, isAuthenticated: Boolean(admin?.token), login, logout, updateProfile };
+    return {
+      admin,
+      isReady,
+      isAuthenticated: Boolean(admin?.token) && isAdminSessionFresh(admin),
+      login,
+      logout,
+      updateProfile,
+    };
   }, [admin, isReady]);
 
   return (

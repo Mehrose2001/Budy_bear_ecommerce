@@ -9,6 +9,8 @@ import { getProductColors } from "@/lib/productImages";
 import { formatLabel } from "@/lib/utils";
 import { brand } from "@/data/brand";
 
+export const revalidate = 30;
+
 export async function generateStaticParams() {
   const products = await listProducts();
   return products.map((product) => ({ slug: product.slug }));
@@ -82,7 +84,7 @@ export default async function ProductPage({ params }) {
       </section>
 
       <div className="mt-14">
-        <ProductReviews product={product} reviews={page.reviews} />
+        <ProductReviews product={product} reviews={page.reviews || []} />
       </div>
 
       <section className="mt-16">

@@ -214,14 +214,18 @@ export async function deleteBanner(id) {
 
 export async function updateReview(id, input) {
   const supabase = await requireSupabase();
+  const patch = {
+    title: input.title,
+    comment: input.comment,
+    rating: input.rating,
+  };
+  if (input.status) {
+    patch.status = input.status;
+    patch.is_approved = input.status === "Published";
+  }
   const { data, error } = await supabase
     .from("reviews")
-    .update({
-      status: input.status,
-      title: input.title,
-      comment: input.comment,
-      rating: input.rating,
-    })
+    .update(patch)
     .eq("id", id)
     .select("*")
     .single();
@@ -311,6 +315,9 @@ export async function submitReview(input, userId = null) {
   }
   if (!Number.isFinite(rating) || rating < 1 || rating > 5) {
     throw new HttpError(400, "Choose a rating from 1 to 5.");
+  }
+  if (String(input.comment).trim().length < 8) {
+    throw new HttpError(400, "Please write a short review.");
   }
   const supabase = await requireSupabase();
   const { data, error } = await supabase.rpc("submit_review", {

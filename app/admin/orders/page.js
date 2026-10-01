@@ -9,7 +9,9 @@ import { adminFetch } from "@/lib/adminApi";
 import { formatPrice } from "@/lib/utils";
 import { ORDER_STATUSES } from "@/data/admin";
 import { useAdminAuth } from "@/context/AdminAuthContext";
+import { brand } from "@/data/brand";
 import {
+  buildOrderWhatsAppMessage,
   getCustomerConfirmWhatsAppUrl,
   openCustomerConfirmWhatsApp,
 } from "@/lib/orderNotifications";
@@ -30,8 +32,9 @@ export default function AdminOrdersPage() {
   }, [load]);
 
   const updateStatus = async (order, orderStatus) => {
+    const android = /Android/i.test(navigator.userAgent || "");
     let waWindow = null;
-    if (orderStatus === "Confirmed") {
+    if (orderStatus === "Confirmed" && !android) {
       waWindow = window.open("", "_blank");
     }
 
@@ -51,13 +54,16 @@ export default function AdminOrdersPage() {
         confirmed.customer?.fullName ||
         confirmed.shippingAddress?.fullName ||
         "the customer";
+      const customerPhone =
+        confirmed.customer?.phone || confirmed.shippingAddress?.phone || "";
       if (url) {
-        setWhatsAppPrompt({ url, name });
-        if (waWindow && !waWindow.closed) {
-          waWindow.location.href = url;
-        } else {
-          openCustomerConfirmWhatsApp(confirmed);
-        }
+        setWhatsAppPrompt({
+          url,
+          name,
+          customerPhone,
+          message: buildOrderWhatsAppMessage(confirmed, "customer"),
+        });
+        openCustomerConfirmWhatsApp(confirmed, waWindow);
       } else if (waWindow && !waWindow.closed) {
         waWindow.close();
       }
@@ -70,24 +76,39 @@ export default function AdminOrdersPage() {
     <div className="flex h-full min-h-0 flex-col">
       <AdminPageHeader
         title="Orders"
-        description="Confirming an order opens WhatsApp from your Budy Bear account with a message to the customer. On phone, tap Send on WhatsApp if it does not open by itself."
+        description={`Confirming an order opens WhatsApp Business so you can message the customer from ${brand.whatsapp}. Use the Budy Bear WhatsApp Business login on this phone, not personal WhatsApp or WhatsApp Web.`}
       />
 
       {whatsAppPrompt?.url && (
         <div className="mb-4 shrink-0 rounded-2xl border border-brand-accent bg-white px-4 py-3 shadow-sm">
           <p className="text-sm text-brand-primary">
-            Send the confirmation to {whatsAppPrompt.name} from the Budy Bear WhatsApp
-            account.
+            Message {whatsAppPrompt.name}
+            {whatsAppPrompt.customerPhone ? ` (${whatsAppPrompt.customerPhone})` : ""} from
+            WhatsApp Business logged in as {brand.whatsapp}. Personal WhatsApp or WhatsApp
+            Web will send from the wrong number.
           </p>
-          <a
-            href={whatsAppPrompt.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-2 inline-flex min-h-11 items-center gap-2 rounded-full bg-[#25D366] px-4 py-2 text-sm font-semibold text-white"
-          >
-            <MessageCircle className="h-4 w-4" />
-            Send on WhatsApp
-          </a>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <a
+              href={whatsAppPrompt.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[#25D366] px-4 py-2 text-sm font-semibold text-white"
+            >
+              <MessageCircle className="h-4 w-4" />
+              Open WhatsApp Business
+            </a>
+            {whatsAppPrompt.message ? (
+              <button
+                type="button"
+                className="inline-flex min-h-11 items-center rounded-full border border-border px-4 py-2 text-sm font-semibold text-brand-primary"
+                onClick={() => {
+                  navigator.clipboard?.writeText(whatsAppPrompt.message).catch(() => {});
+                }}
+              >
+                Copy message
+              </button>
+            ) : null}
+          </div>
         </div>
       )}
 

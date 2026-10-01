@@ -43,7 +43,9 @@ export default function AdminLoginPage() {
           Admin login
         </h1>
         <p className="mt-2 text-sm text-neutral-600">
-          Sign in to manage products, orders, and store content.
+          Sign in to manage products, orders, and store content. The session
+          expires after 15 minutes idle, 30 minutes total, closing the tab, or
+          when the login token expires.
         </p>
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-4">

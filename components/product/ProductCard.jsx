@@ -11,6 +11,7 @@ import { useQuickView } from "@/context/QuickViewContext";
 import { useToast } from "@/context/ToastContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { formatPrice, getDiscountPercent, cn } from "@/lib/utils";
+import StarRating from "@/components/ui/StarRating";
 
 export default function ProductCard({ product, className }) {
   const [isHovered, setIsHovered] = useState(false);
@@ -144,6 +145,9 @@ export default function ProductCard({ product, className }) {
             {product.name}
           </h3>
         </Link>
+        <div className="mt-2">
+          <StarRating rating={product.rating} count={product.reviewCount} />
+        </div>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <span className="text-base font-bold text-neutral-900">
             {formatPrice(displayPrice)}

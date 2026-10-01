@@ -14,8 +14,6 @@ import {
   clearAuthSessions,
   emitAuthChanged,
   isAdminRole,
-  toAdminSession,
-  writeAdminSession,
 } from "@/lib/adminSession";
 
 const CustomerAuthContext = createContext(null);
@@ -60,8 +58,6 @@ export function CustomerAuthProvider({ children }) {
       return;
     }
     window.localStorage.setItem(CUSTOMER_SESSION_KEY, JSON.stringify(session));
-    const adminSession = toAdminSession(session.user, session.accessToken);
-    writeAdminSession(adminSession);
     setUser(session.user);
     setToken(session.accessToken);
     emitAuthChanged();

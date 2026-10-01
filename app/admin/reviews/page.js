@@ -66,6 +66,7 @@ export default function AdminReviewsPage() {
                     onChange={(event) => setStatus(review, event.target.value)}
                     className="h-10 rounded-xl border border-border px-3"
                   >
+                    <option>Pending</option>
                     <option>Published</option>
                     <option>Hidden</option>
                   </select>

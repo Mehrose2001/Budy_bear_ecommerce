@@ -162,10 +162,22 @@ begin
     p_rating,
     coalesce(p_title, ''),
     coalesce(p_comment, ''),
-    'Pending',
-    false
+    'Published',
+    true
   )
   returning * into review_row;
+
+  update public.products
+    set
+      review_count = (
+        select count(*) from public.reviews
+        where product_id = p_product_id and (is_approved = true or status = 'Published')
+      ),
+      rating = coalesce((
+        select round(avg(rating)::numeric, 2) from public.reviews
+        where product_id = p_product_id and (is_approved = true or status = 'Published')
+      ), 0)
+    where id = p_product_id;
 
   return review_row;
 end;

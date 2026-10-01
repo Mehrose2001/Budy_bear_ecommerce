@@ -32,6 +32,20 @@ export async function getProductById(id, options = {}) {
   return product;
 }
 
+export async function getRelatedProducts(product, limit = 8) {
+  if (!product) return [];
+  const supabase = client();
+  const { data, error } = await supabase
+    .from("products")
+    .select("*")
+    .eq("is_active", true)
+    .eq("category_id", product.category)
+    .neq("id", Number(product.id))
+    .limit(limit);
+  throwIf(error, "Unable to load related products.", 500);
+  return (data || []).map(mapProduct);
+}
+
 export async function getProductBySlug(slug, options = {}) {
   const supabase = client(options.accessToken);
   const { data, error } = await supabase
