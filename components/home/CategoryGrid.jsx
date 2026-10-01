@@ -53,11 +53,15 @@ function CategoryCard({ category, isDuplicate, onCardClick }) {
 export default function CategoryGrid({ categories = [] }) {
   const items = toCards(categories);
   const viewportRef = useRef(null);
+  const trackRef = useRef(null);
+  const offsetRef = useRef(0);
   const pausedRef = useRef(false);
   const hoveringRef = useRef(false);
   const draggingRef = useRef(false);
   const movedRef = useRef(false);
+  const axisRef = useRef(null);
   const lastXRef = useRef(0);
+  const lastYRef = useRef(0);
   const resumeTimerRef = useRef(null);
   const [paused, setPaused] = useState(false);
 
@@ -65,16 +69,15 @@ export default function CategoryGrid({ categories = [] }) {
     pausedRef.current = paused;
   }, [paused]);
 
-  const wrapScroll = () => {
-    const viewport = viewportRef.current;
-    if (!viewport) return;
-    const half = viewport.scrollWidth / 2;
-    if (half <= 0) return;
-    if (viewport.scrollLeft >= half) {
-      viewport.scrollLeft -= half;
-    } else if (viewport.scrollLeft < 0) {
-      viewport.scrollLeft += half;
+  const applyOffset = () => {
+    const track = trackRef.current;
+    if (!track) return;
+    const half = track.scrollWidth / 2;
+    if (half > 0) {
+      while (-offsetRef.current >= half) offsetRef.current += half;
+      while (offsetRef.current > 0) offsetRef.current -= half;
     }
+    track.style.transform = `translate3d(${offsetRef.current}px,0,0)`;
   };
 
   useEffect(() => {
@@ -86,15 +89,9 @@ export default function CategoryGrid({ categories = [] }) {
 
     let frame;
     const tick = () => {
-      const viewport = viewportRef.current;
-      if (
-        viewport &&
-        !pausedRef.current &&
-        !draggingRef.current &&
-        !hoveringRef.current
-      ) {
-        viewport.scrollLeft += 0.55;
-        wrapScroll();
+      if (!pausedRef.current && !draggingRef.current && !hoveringRef.current) {
+        offsetRef.current -= 0.55;
+        applyOffset();
       }
       frame = requestAnimationFrame(tick);
     };
@@ -114,68 +111,72 @@ export default function CategoryGrid({ categories = [] }) {
       }
     };
 
-    const pauseForUser = () => {
-      draggingRef.current = true;
-      clearResume();
-    };
-
     const resumeSoon = () => {
+      draggingRef.current = false;
+      axisRef.current = null;
       clearResume();
       resumeTimerRef.current = setTimeout(() => {
-        draggingRef.current = false;
-        movedRef.current = false;
         pausedRef.current = false;
         setPaused(false);
-      }, 400);
+      }, 350);
     };
 
-    const onTouchStart = () => {
-      pauseForUser();
+    const startDrag = (x, y) => {
+      draggingRef.current = true;
       movedRef.current = false;
+      axisRef.current = null;
+      lastXRef.current = x;
+      lastYRef.current = y;
+      clearResume();
     };
 
-    const onTouchMove = () => {
-      movedRef.current = true;
-    };
-
-    const onMouseDown = (event) => {
-      if (event.pointerType !== "mouse" || event.button !== 0) return;
-      pauseForUser();
-      movedRef.current = false;
-      lastXRef.current = event.clientX;
-      viewport.setPointerCapture?.(event.pointerId);
-    };
-
-    const onMouseMove = (event) => {
-      if (!draggingRef.current || event.pointerType !== "mouse") return;
-      const dx = event.clientX - lastXRef.current;
-      if (Math.abs(dx) > 3) movedRef.current = true;
-      if (!movedRef.current) return;
-      if (event.cancelable) event.preventDefault();
-      viewport.scrollLeft -= dx;
-      lastXRef.current = event.clientX;
-      wrapScroll();
-    };
-
-    const onMouseUp = (event) => {
-      if (event.pointerType && event.pointerType !== "mouse") return;
-      try {
-        viewport.releasePointerCapture?.(event.pointerId);
-      } catch {
-        // Capture may already be released.
+    const moveDrag = (x, y, event) => {
+      if (!draggingRef.current) return;
+      const dx = x - lastXRef.current;
+      const dy = y - lastYRef.current;
+      if (!axisRef.current) {
+        if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+        axisRef.current = Math.abs(dx) >= Math.abs(dy) ? "x" : "y";
       }
-      resumeSoon();
+      if (axisRef.current !== "x") return;
+      if (event.cancelable) event.preventDefault();
+      movedRef.current = true;
+      offsetRef.current += dx;
+      lastXRef.current = x;
+      lastYRef.current = y;
+      applyOffset();
+    };
+
+    const onTouchStart = (event) => {
+      const touch = event.touches[0];
+      if (!touch) return;
+      startDrag(touch.clientX, touch.clientY);
+    };
+
+    const onTouchMove = (event) => {
+      const touch = event.touches[0];
+      if (!touch) return;
+      moveDrag(touch.clientX, touch.clientY, event);
+    };
+
+    const onPointerDown = (event) => {
+      if (event.pointerType !== "mouse" || event.button !== 0) return;
+      startDrag(event.clientX, event.clientY);
+    };
+
+    const onPointerMove = (event) => {
+      if (event.pointerType !== "mouse") return;
+      moveDrag(event.clientX, event.clientY, event);
     };
 
     viewport.addEventListener("touchstart", onTouchStart, { passive: true });
-    viewport.addEventListener("touchmove", onTouchMove, { passive: true });
+    viewport.addEventListener("touchmove", onTouchMove, { passive: false });
     viewport.addEventListener("touchend", resumeSoon, { passive: true });
     viewport.addEventListener("touchcancel", resumeSoon, { passive: true });
-    viewport.addEventListener("scroll", wrapScroll, { passive: true });
-    viewport.addEventListener("pointerdown", onMouseDown);
-    viewport.addEventListener("pointermove", onMouseMove, { passive: false });
-    viewport.addEventListener("pointerup", onMouseUp);
-    viewport.addEventListener("pointercancel", onMouseUp);
+    viewport.addEventListener("pointerdown", onPointerDown);
+    viewport.addEventListener("pointermove", onPointerMove, { passive: false });
+    viewport.addEventListener("pointerup", resumeSoon);
+    viewport.addEventListener("pointercancel", resumeSoon);
 
     return () => {
       clearResume();
@@ -183,11 +184,10 @@ export default function CategoryGrid({ categories = [] }) {
       viewport.removeEventListener("touchmove", onTouchMove);
       viewport.removeEventListener("touchend", resumeSoon);
       viewport.removeEventListener("touchcancel", resumeSoon);
-      viewport.removeEventListener("scroll", wrapScroll);
-      viewport.removeEventListener("pointerdown", onMouseDown);
-      viewport.removeEventListener("pointermove", onMouseMove);
-      viewport.removeEventListener("pointerup", onMouseUp);
-      viewport.removeEventListener("pointercancel", onMouseUp);
+      viewport.removeEventListener("pointerdown", onPointerDown);
+      viewport.removeEventListener("pointermove", onPointerMove);
+      viewport.removeEventListener("pointerup", resumeSoon);
+      viewport.removeEventListener("pointercancel", resumeSoon);
     };
   }, []);
 
@@ -216,19 +216,20 @@ export default function CategoryGrid({ categories = [] }) {
 
       <div
         ref={viewportRef}
-        className={cn(
-          "scrollbar-hide relative w-full cursor-grab overflow-x-auto overflow-y-hidden overscroll-x-contain",
-          "touch-pan-x select-none active:cursor-grabbing"
-        )}
-        style={{ WebkitOverflowScrolling: "touch" }}
+        className={cn("relative cursor-grab select-none overflow-hidden active:cursor-grabbing")}
+        style={{ touchAction: "pan-y" }}
         onPointerEnter={(event) => {
           if (event.pointerType === "mouse") hoveringRef.current = true;
         }}
         onPointerLeave={() => {
           hoveringRef.current = false;
+          draggingRef.current = false;
         }}
       >
-        <div className="flex w-max gap-3 px-5 sm:gap-5 sm:px-6">
+        <div
+          ref={trackRef}
+          className="flex w-max gap-3 px-5 will-change-transform sm:gap-5 sm:px-6"
+        >
           {items.map((category) => (
             <CategoryCard
               key={category.label}
