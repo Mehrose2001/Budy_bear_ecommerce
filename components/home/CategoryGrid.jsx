@@ -53,8 +53,6 @@ function CategoryCard({ category, isDuplicate, onCardClick }) {
 export default function CategoryGrid({ categories = [] }) {
   const items = toCards(categories);
   const viewportRef = useRef(null);
-  const trackRef = useRef(null);
-  const offsetRef = useRef(0);
   const pausedRef = useRef(false);
   const hoveringRef = useRef(false);
   const draggingRef = useRef(false);
@@ -67,14 +65,16 @@ export default function CategoryGrid({ categories = [] }) {
     pausedRef.current = paused;
   }, [paused]);
 
-  const wrapOffset = () => {
-    const track = trackRef.current;
-    if (!track) return;
-    const half = track.scrollWidth / 2;
+  const wrapScroll = () => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const half = viewport.scrollWidth / 2;
     if (half <= 0) return;
-    while (-offsetRef.current >= half) offsetRef.current += half;
-    while (offsetRef.current > 0) offsetRef.current -= half;
-    track.style.transform = `translate3d(${offsetRef.current}px,0,0)`;
+    if (viewport.scrollLeft >= half) {
+      viewport.scrollLeft -= half;
+    } else if (viewport.scrollLeft < 0) {
+      viewport.scrollLeft += half;
+    }
   };
 
   useEffect(() => {
@@ -86,19 +86,15 @@ export default function CategoryGrid({ categories = [] }) {
 
     let frame;
     const tick = () => {
-      const track = trackRef.current;
+      const viewport = viewportRef.current;
       if (
-        track &&
+        viewport &&
         !pausedRef.current &&
         !draggingRef.current &&
         !hoveringRef.current
       ) {
-        offsetRef.current -= 0.55;
-        const half = track.scrollWidth / 2;
-        if (half > 0 && -offsetRef.current >= half) {
-          offsetRef.current += half;
-        }
-        track.style.transform = `translate3d(${offsetRef.current}px,0,0)`;
+        viewport.scrollLeft += 0.55;
+        wrapScroll();
       }
       frame = requestAnimationFrame(tick);
     };
@@ -118,62 +114,80 @@ export default function CategoryGrid({ categories = [] }) {
       }
     };
 
-    const resume = () => {
-      draggingRef.current = false;
-      pausedRef.current = false;
-      setPaused(false);
+    const pauseForUser = () => {
+      draggingRef.current = true;
+      clearResume();
     };
 
-    const onDown = (event) => {
-      if (event.pointerType === "mouse" && event.button !== 0) return;
-      draggingRef.current = true;
+    const resumeSoon = () => {
+      clearResume();
+      resumeTimerRef.current = setTimeout(() => {
+        draggingRef.current = false;
+        movedRef.current = false;
+        pausedRef.current = false;
+        setPaused(false);
+      }, 400);
+    };
+
+    const onTouchStart = () => {
+      pauseForUser();
+      movedRef.current = false;
+    };
+
+    const onTouchMove = () => {
+      movedRef.current = true;
+    };
+
+    const onMouseDown = (event) => {
+      if (event.pointerType !== "mouse" || event.button !== 0) return;
+      pauseForUser();
       movedRef.current = false;
       lastXRef.current = event.clientX;
-      clearResume();
       viewport.setPointerCapture?.(event.pointerId);
     };
 
-    const onMove = (event) => {
-      if (!draggingRef.current) return;
+    const onMouseMove = (event) => {
+      if (!draggingRef.current || event.pointerType !== "mouse") return;
       const dx = event.clientX - lastXRef.current;
-      if (Math.abs(dx) > 4) {
-        movedRef.current = true;
-        if (event.cancelable) event.preventDefault();
-      }
+      if (Math.abs(dx) > 3) movedRef.current = true;
       if (!movedRef.current) return;
-      offsetRef.current += dx;
+      if (event.cancelable) event.preventDefault();
+      viewport.scrollLeft -= dx;
       lastXRef.current = event.clientX;
-      wrapOffset();
+      wrapScroll();
     };
 
-    const onUp = (event) => {
-      const wasMove = movedRef.current;
-      draggingRef.current = false;
+    const onMouseUp = (event) => {
+      if (event.pointerType && event.pointerType !== "mouse") return;
       try {
         viewport.releasePointerCapture?.(event.pointerId);
       } catch {
-        // Capture may already be released on touch cancel.
+        // Capture may already be released.
       }
-      if (wasMove) {
-        resumeTimerRef.current = setTimeout(resume, 350);
-        return;
-      }
-      if (!event.target.closest("a")) {
-        setPaused((current) => !current);
-      }
+      resumeSoon();
     };
 
-    viewport.addEventListener("pointerdown", onDown);
-    viewport.addEventListener("pointermove", onMove, { passive: false });
-    viewport.addEventListener("pointerup", onUp);
-    viewport.addEventListener("pointercancel", onUp);
+    viewport.addEventListener("touchstart", onTouchStart, { passive: true });
+    viewport.addEventListener("touchmove", onTouchMove, { passive: true });
+    viewport.addEventListener("touchend", resumeSoon, { passive: true });
+    viewport.addEventListener("touchcancel", resumeSoon, { passive: true });
+    viewport.addEventListener("scroll", wrapScroll, { passive: true });
+    viewport.addEventListener("pointerdown", onMouseDown);
+    viewport.addEventListener("pointermove", onMouseMove, { passive: false });
+    viewport.addEventListener("pointerup", onMouseUp);
+    viewport.addEventListener("pointercancel", onMouseUp);
 
     return () => {
       clearResume();
-      viewport.removeEventListener("pointerdown", onDown);
-      viewport.removeEventListener("pointermove", onMove);
-      viewport.removeEventListener("pointerup", onUp);
-      viewport.removeEventListener("pointercancel", onUp);
+      viewport.removeEventListener("touchstart", onTouchStart);
+      viewport.removeEventListener("touchmove", onTouchMove);
+      viewport.removeEventListener("touchend", resumeSoon);
+      viewport.removeEventListener("touchcancel", resumeSoon);
+      viewport.removeEventListener("scroll", wrapScroll);
+      viewport.removeEventListener("pointerdown", onMouseDown);
+      viewport.removeEventListener("pointermove", onMouseMove);
+      viewport.removeEventListener("pointerup", onMouseUp);
+      viewport.removeEventListener("pointercancel", onMouseUp);
     };
   }, []);
 
@@ -203,20 +217,18 @@ export default function CategoryGrid({ categories = [] }) {
       <div
         ref={viewportRef}
         className={cn(
-          "relative cursor-grab touch-none select-none active:cursor-grabbing"
+          "scrollbar-hide relative w-full cursor-grab overflow-x-auto overflow-y-hidden overscroll-x-contain",
+          "touch-pan-x select-none active:cursor-grabbing"
         )}
+        style={{ WebkitOverflowScrolling: "touch" }}
         onPointerEnter={(event) => {
           if (event.pointerType === "mouse") hoveringRef.current = true;
         }}
         onPointerLeave={() => {
           hoveringRef.current = false;
-          draggingRef.current = false;
         }}
       >
-        <div
-          ref={trackRef}
-          className="flex w-max gap-3 pr-3 will-change-transform sm:gap-5 sm:pr-5"
-        >
+        <div className="flex w-max gap-3 px-5 sm:gap-5 sm:px-6">
           {items.map((category) => (
             <CategoryCard
               key={category.label}
