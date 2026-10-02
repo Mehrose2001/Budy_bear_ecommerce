@@ -14,6 +14,11 @@ import { ApiLoaderOverlay } from "@/components/ui/Loader";
 const LoadingContext = createContext(null);
 const MIN_VISIBLE_MS = 180;
 
+function isAdminPath() {
+  if (typeof window === "undefined") return false;
+  return window.location.pathname.startsWith("/admin");
+}
+
 function isApiRequest(input, init) {
   const url = typeof input === "string" ? input : input?.url || "";
   if (!url) return false;
@@ -60,16 +65,19 @@ export function LoadingProvider({ children }) {
   }, []);
 
   const beginApi = useCallback(() => {
+    if (!isAdminPath()) return;
     apiCount.current += 1;
     sync();
   }, [sync]);
 
   const endApi = useCallback(() => {
+    if (!isAdminPath() && apiCount.current === 0) return;
     apiCount.current = Math.max(0, apiCount.current - 1);
     sync();
   }, [sync]);
 
   const beginNav = useCallback(() => {
+    if (!isAdminPath()) return;
     navCount.current = 1;
     sync();
   }, [sync]);

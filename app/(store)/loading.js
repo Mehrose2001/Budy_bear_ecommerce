@@ -1,5 +1,5 @@
-import { PageLoader } from "@/components/ui/Loader";
+import StoreSkeleton from "@/components/ui/StoreSkeleton";
 
 export default function StoreLoading() {
-  return <PageLoader label="Loading store..." />;
+  return <StoreSkeleton />;
 }

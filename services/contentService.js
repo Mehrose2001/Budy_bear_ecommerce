@@ -1,6 +1,6 @@
 import { throwIf } from "@/lib/errors";
 import { mapBanner, mapCoupon, mapSettings } from "@/lib/mappers";
-import { createServerClient, createUserClient } from "@/lib/supabase/server";
+import { createServerClient, createServiceClient, createUserClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { AppError } from "@/lib/errors";
 
@@ -9,6 +9,10 @@ function client(accessToken) {
     throw new AppError("Supabase is not configured.", 503);
   }
   return accessToken ? createUserClient(accessToken) : createServerClient();
+}
+
+function writeClient(accessToken) {
+  return createServiceClient() || client(accessToken);
 }
 
 export async function getStoreSettings() {
@@ -92,7 +96,7 @@ export async function listBanners({ includeInactive = false, accessToken } = {})
 }
 
 export async function upsertBanner(input, accessToken) {
-  const supabase = client(accessToken);
+  const supabase = writeClient(accessToken);
   const row = {
     id: input.id || `b${Date.now()}`,
     title: input.title,
@@ -106,7 +110,7 @@ export async function upsertBanner(input, accessToken) {
 }
 
 export async function deleteBanner(id, accessToken) {
-  const supabase = client(accessToken);
+  const supabase = writeClient(accessToken);
   const { error } = await supabase.from("banners").delete().eq("id", id);
   throwIf(error, "Unable to delete banner.");
 }

@@ -57,7 +57,7 @@ async function ensurePublicBucket(supabase) {
   }
 }
 
-export async function uploadProductImage(productId, file, accessToken) {
+export async function uploadProductImage(productId, file, accessToken, folder = "products") {
   if (!isSupabaseConfigured()) {
     throw new AppError("Supabase Storage is not configured.", 503);
   }
@@ -77,8 +77,11 @@ export async function uploadProductImage(productId, file, accessToken) {
   }
 
   const filename = `${Date.now()}-${crypto.randomUUID()}${extensionOf(file)}`;
-  const folder = productId ? `products/${productId}` : "products/draft";
-  const path = `${folder}/${filename}`;
+  const safeRoot = ["products", "banners", "categories"].includes(folder)
+    ? folder
+    : "products";
+  const nested = productId ? `${safeRoot}/${productId}` : `${safeRoot}/draft`;
+  const path = `${nested}/${filename}`;
   const { error } = await supabase.storage.from(PRODUCT_IMAGE_BUCKET).upload(path, bytes, {
     cacheControl: "3600",
     upsert: false,

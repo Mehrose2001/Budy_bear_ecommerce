@@ -15,15 +15,33 @@ function RouteLoaderInner() {
     const origReplace = history.replaceState.bind(history);
 
     history.pushState = (...args) => {
-      beginNav();
+      const url = args[2];
+      if (url) {
+        try {
+          const next = new URL(String(url), window.location.href);
+          if (next.pathname.startsWith("/admin")) beginNav();
+        } catch {
+          // ignore malformed urls
+        }
+      }
       return origPush(...args);
     };
     history.replaceState = (...args) => {
-      beginNav();
+      const url = args[2];
+      if (url) {
+        try {
+          const next = new URL(String(url), window.location.href);
+          if (next.pathname.startsWith("/admin")) beginNav();
+        } catch {
+          // ignore malformed urls
+        }
+      }
       return origReplace(...args);
     };
 
-    const onPop = () => beginNav();
+    const onPop = () => {
+      if (window.location.pathname.startsWith("/admin")) beginNav();
+    };
     window.addEventListener("popstate", onPop);
 
     const onClick = (event) => {
@@ -40,6 +58,7 @@ function RouteLoaderInner() {
       if (`${next.pathname}${next.search}` === `${window.location.pathname}${window.location.search}`) {
         return;
       }
+      if (!next.pathname.startsWith("/admin")) return;
       beginNav();
     };
 

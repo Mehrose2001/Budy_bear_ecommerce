@@ -11,7 +11,7 @@ import {
   createCategory,
   deleteCategory,
   getCategories,
-  getCategoryBySlug,
+  getCategoryRecord,
   updateCategory,
 } from "@/services/categoryService";
 
@@ -42,7 +42,10 @@ export async function POST(request) {
     }
     if (isSupabaseConfigured()) {
       const token = getAccessToken(request);
-      const existing = await getCategoryBySlug(body.slug, { includeInactive: true, accessToken: token });
+      const lookup = body.id || body.originalSlug || body.slug;
+      const existing = lookup
+        ? await getCategoryRecord(lookup, { includeInactive: true, accessToken: token })
+        : null;
       const category = existing
         ? await updateCategory(existing.id, body, token)
         : await createCategory(body, token);

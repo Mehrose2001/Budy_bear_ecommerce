@@ -31,6 +31,7 @@ export async function POST(request) {
     const formData = await request.formData();
     const file = formData.get("file");
     const productId = formData.get("productId") || "";
+    const folder = String(formData.get("folder") || "products");
 
     if (!file || typeof file === "string" || typeof file.arrayBuffer !== "function") {
       return NextResponse.json({ error: "Choose an image to upload." }, { status: 400 });
@@ -48,7 +49,12 @@ export async function POST(request) {
     }
 
     if (isSupabaseConfigured()) {
-      const uploaded = await uploadProductImage(productId, file, getAccessToken(request));
+      const uploaded = await uploadProductImage(
+        productId,
+        file,
+        getAccessToken(request),
+        folder
+      );
       return NextResponse.json(uploaded);
     }
 
