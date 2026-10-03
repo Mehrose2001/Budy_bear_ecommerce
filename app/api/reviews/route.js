@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { withBackend } from "@/lib/withBackend";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { getBearerToken, getRequestUser } from "@/lib/supabase/server";
+import { getRequestUser } from "@/lib/supabase/server";
 import { addReview, listReviews } from "@/lib/catalogStore";
 import { createReview, getProductReviews } from "@/services/reviewService";
 import { AppError } from "@/lib/errors";
+import { invalidateCatalogSnapshot } from "@/lib/catalog";
 
 export async function GET(request) {
   try {
@@ -34,14 +35,12 @@ export async function POST(request) {
     const body = await request.json().catch(() => ({}));
     if (isSupabaseConfigured()) {
       const user = await getRequestUser(request);
-      const review = await createReview(
-        {
-          ...body,
-          userId: user?.id || null,
-          author: body.author || user?.name || "Customer",
-        },
-        getBearerToken(request)
-      );
+      const review = await createReview({
+        ...body,
+        userId: user?.id || null,
+        author: body.author || user?.name || "Customer",
+      });
+      invalidateCatalogSnapshot();
       return NextResponse.json({ review }, { status: 201 });
     }
     const review = addReview({

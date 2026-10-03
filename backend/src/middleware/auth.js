@@ -47,6 +47,11 @@ export async function optionalUser(req, _res, next) {
     req.user = { ...profile, token };
     next();
   } catch (error) {
+    const message = String(error?.message || "");
+    if (/jwt expired|invalid jwt|invalid token/i.test(message)) {
+      req.user = null;
+      return next();
+    }
     next(error);
   }
 }

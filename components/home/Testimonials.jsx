@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import StarRating from "@/components/ui/StarRating";
 
-const testimonials = [
+const FALLBACK_TESTIMONIALS = [
   {
     name: "Ayesha Khan",
     city: "Karachi",
@@ -34,8 +34,9 @@ const testimonials = [
   },
 ];
 
-export default function Testimonials() {
+export default function Testimonials({ items = [] }) {
   const gridRef = useRef(null);
+  const testimonials = items.length ? items : FALLBACK_TESTIMONIALS;
 
   useEffect(() => {
     const cards = gridRef.current?.querySelectorAll(".testimonial-card");
@@ -55,7 +56,7 @@ export default function Testimonials() {
 
     cards.forEach((card) => observer.observe(card));
     return () => observer.disconnect();
-  }, []);
+  }, [testimonials]);
 
   return (
     <section className="bg-brand-cream py-14 sm:py-16">
@@ -75,7 +76,7 @@ export default function Testimonials() {
         <div ref={gridRef} className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {testimonials.map((item, index) => (
             <figure
-              key={item.name}
+              key={item.name + index}
               className="testimonial-card relative overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-border"
               style={{ "--enter-delay": `${index * 0.14}s` }}
             >

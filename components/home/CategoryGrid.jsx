@@ -7,13 +7,15 @@ import { shopCategories } from "@/data/navigation";
 import { cn } from "@/lib/utils";
 
 function toCards(categories) {
-  if (categories?.length) {
-    return categories.map((category) => ({
-      label: category.name || category.label,
-      href: category.href || `/category/${category.slug}`,
-      image: category.image || "/images/categories/gifts.jpg",
-      objectPosition: category.objectPosition || "center top",
-    }));
+  if (Array.isArray(categories)) {
+    return categories
+      .filter((category) => category?.isActive !== false)
+      .map((category) => ({
+        label: category.name || category.label,
+        href: category.href || `/category/${category.slug}`,
+        image: category.image || category.imageUrl || "/images/categories/gifts.jpg",
+        objectPosition: category.objectPosition || "center top",
+      }));
   }
   return shopCategories;
 }

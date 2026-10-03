@@ -144,7 +144,7 @@ export function mapReview(row) {
     rating: Number(row.rating),
     title: row.title,
     comment: row.comment,
-    status: row.status || (row.is_approved ? "Published" : "Pending"),
+    status: row.is_testimonial || row.status === "Testimonial" ? "Testimonial" : row.status || (row.is_approved ? "Published" : "Pending"),
     date: row.created_at?.slice?.(0, 10) || row.created_at,
   };
 }

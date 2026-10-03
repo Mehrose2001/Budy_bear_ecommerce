@@ -6,13 +6,13 @@ import { ChevronDown } from "lucide-react";
 import { mainNavItems } from "@/data/navigation";
 import { cn } from "@/lib/utils";
 
-export default function Navbar() {
+export default function Navbar({ items = mainNavItems }) {
   const [activeMenu, setActiveMenu] = useState(null);
 
   return (
     <nav aria-label="Main navigation">
       <ul className="flex flex-wrap items-center gap-1 py-3">
-        {mainNavItems.map((item) => (
+        {items.map((item) => (
           <li
             key={item.label}
             className="relative"

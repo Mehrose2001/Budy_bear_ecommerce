@@ -8,6 +8,7 @@ import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
 import { adminFetch } from "@/lib/adminApi";
 import { formatPrice } from "@/lib/utils";
+import { getProductListImage } from "@/lib/productImages";
 import { useAdminAuth } from "@/context/AdminAuthContext";
 
 export default function AdminProductsPage() {
@@ -84,6 +85,7 @@ export default function AdminProductsPage() {
         <table className="min-w-full text-left text-sm">
           <thead className="sticky top-0 z-10 border-b border-border bg-brand-cream text-neutral-600">
             <tr>
+              <th className="px-4 py-3 font-medium">Image</th>
               <th className="px-4 py-3 font-medium">Product</th>
               <th className="px-4 py-3 font-medium">Category</th>
               <th className="px-4 py-3 font-medium">Price</th>
@@ -93,8 +95,17 @@ export default function AdminProductsPage() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((product) => (
+            {filtered.map((product) => {
+              const thumb = getProductListImage(product);
+              return (
               <tr key={product.id} className="border-b border-border/70">
+                <td className="px-4 py-3">
+                  <span className="relative inline-block h-14 w-12 overflow-hidden rounded-lg bg-brand-cream ring-1 ring-border">
+                    {thumb ? (
+                      <img src={thumb} alt="" className="h-full w-full object-cover" />
+                    ) : null}
+                  </span>
+                </td>
                 <td className="px-4 py-3 font-semibold text-brand-primary">{product.name}</td>
                 <td className="px-4 py-3">
                   {product.category} / {product.subcategory}
@@ -123,10 +134,11 @@ export default function AdminProductsPage() {
                     >
                       Delete
                     </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </AdminTable>

@@ -27,9 +27,7 @@ function isApiRequest(input, init) {
     if (parsed.origin !== window.location.origin) return false;
     if (!parsed.pathname.startsWith("/api/")) return false;
     const method = String(init?.method || input?.method || "GET").toUpperCase();
-    if (method === "GET" && parsed.pathname.startsWith("/api/wishlist")) return false;
-    if (method === "GET" && parsed.pathname === "/api/health") return false;
-    if (method === "PATCH" && parsed.pathname.startsWith("/api/admin/orders")) return false;
+    if (method === "GET") return false;
     return true;
   } catch {
     return String(url).includes("/api/");
@@ -44,24 +42,28 @@ export function LoadingProvider({ children }) {
   const hideTimer = useRef(null);
 
   const sync = useCallback(() => {
-    const busy = apiCount.current + navCount.current > 0;
-    if (busy) {
-      if (hideTimer.current) {
-        clearTimeout(hideTimer.current);
-        hideTimer.current = null;
+    const apply = () => {
+      const busy = apiCount.current + navCount.current > 0;
+      if (busy) {
+        if (hideTimer.current) {
+          clearTimeout(hideTimer.current);
+          hideTimer.current = null;
+        }
+        if (!shownAt.current) shownAt.current = Date.now();
+        setVisible(true);
+        return;
       }
-      if (!shownAt.current) shownAt.current = Date.now();
-      setVisible(true);
-      return;
-    }
 
-    const elapsed = shownAt.current ? Date.now() - shownAt.current : MIN_VISIBLE_MS;
-    const wait = Math.max(0, MIN_VISIBLE_MS - elapsed);
-    hideTimer.current = setTimeout(() => {
-      shownAt.current = 0;
-      hideTimer.current = null;
-      setVisible(false);
-    }, wait);
+      const elapsed = shownAt.current ? Date.now() - shownAt.current : MIN_VISIBLE_MS;
+      const wait = Math.max(0, MIN_VISIBLE_MS - elapsed);
+      hideTimer.current = setTimeout(() => {
+        shownAt.current = 0;
+        hideTimer.current = null;
+        setVisible(false);
+      }, wait);
+    };
+
+    queueMicrotask(apply);
   }, []);
 
   const beginApi = useCallback(() => {

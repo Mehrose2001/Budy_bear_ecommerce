@@ -17,6 +17,8 @@ import {
 import { listOrders } from "@/lib/orders";
 import { withBackend } from "@/lib/withBackend";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { revalidatePath } from "next/cache";
+import { invalidateCatalogSnapshot } from "@/lib/catalog";
 import { getProducts } from "@/services/productService";
 import { getAllOrders } from "@/services/orderService";
 import { deleteReview as deleteDbReview, getAllReviews, updateReview as updateDbReview } from "@/services/reviewService";
@@ -128,13 +130,28 @@ export async function POST(request) {
     const token = getAccessToken(request);
     if (isSupabaseConfigured()) {
       if (body.resource === "coupons") return NextResponse.json({ coupon: await upsertDbCoupon(body.data, token) });
-      if (body.resource === "banners") return NextResponse.json({ banner: await upsertDbBanner(body.data, token) });
+      if (body.resource === "banners") {
+        const banner = await upsertDbBanner(body.data, token);
+        invalidateCatalogSnapshot();
+        revalidatePath("/");
+        return NextResponse.json({ banner });
+      }
       if (body.resource === "settings") return NextResponse.json({ settings: await updateStoreSettings(body.data, token) });
-      if (body.resource === "reviews") return NextResponse.json({ review: await updateDbReview(body.data.id, body.data, token) });
+      if (body.resource === "reviews") {
+        const review = await updateDbReview(body.data.id, body.data, token);
+        invalidateCatalogSnapshot();
+        revalidatePath("/");
+        return NextResponse.json({ review });
+      }
       return NextResponse.json({ error: "Unknown resource" }, { status: 400 });
     }
     if (body.resource === "coupons") return NextResponse.json({ coupon: upsertCoupon(body.data) });
-    if (body.resource === "banners") return NextResponse.json({ banner: upsertBanner(body.data) });
+    if (body.resource === "banners") {
+      const banner = upsertBanner(body.data);
+      invalidateCatalogSnapshot();
+      revalidatePath("/");
+      return NextResponse.json({ banner });
+    }
     if (body.resource === "settings") return NextResponse.json({ settings: updateSettings(body.data) });
     if (body.resource === "reviews") return NextResponse.json({ review: updateReview(body.data.id, body.data) });
     return NextResponse.json({ error: "Unknown resource" }, { status: 400 });
@@ -152,12 +169,24 @@ export async function DELETE(request) {
     const token = getAccessToken(request);
     if (isSupabaseConfigured()) {
       if (resource === "coupons") await deleteDbCoupon(id, token);
-      if (resource === "banners") await deleteDbBanner(id, token);
-      if (resource === "reviews") await deleteDbReview(id, token);
+      if (resource === "banners") {
+        await deleteDbBanner(id, token);
+        invalidateCatalogSnapshot();
+        revalidatePath("/");
+      }
+      if (resource === "reviews") {
+        await deleteDbReview(id, token);
+        invalidateCatalogSnapshot();
+        revalidatePath("/");
+      }
       return NextResponse.json({ ok: true });
     }
     if (resource === "coupons") deleteCoupon(id);
-    if (resource === "banners") deleteBanner(id);
+    if (resource === "banners") {
+      deleteBanner(id);
+      invalidateCatalogSnapshot();
+      revalidatePath("/");
+    }
     if (resource === "reviews") deleteReview(id);
     return NextResponse.json({ ok: true });
   });

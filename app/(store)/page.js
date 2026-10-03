@@ -8,18 +8,29 @@ import {
   getBestSellers,
   getNewArrivals,
   listCategories,
+  listStoreBanners,
+  listStoreTestimonials,
 } from "@/lib/catalog";
 
 export default async function HomePage() {
-  const [newArrivals, bestSellers, categories] = await Promise.all([
-    getNewArrivals(),
-    getBestSellers(),
-    listCategories(),
+  const [newArrivals, bestSellers, categories, banners, testimonialReviews] = await Promise.all([
+    getNewArrivals().catch(() => []),
+    getBestSellers().catch(() => []),
+    listCategories().catch(() => []),
+    listStoreBanners().catch(() => []),
+    listStoreTestimonials().catch(() => []),
   ]);
+
+  const testimonials = (testimonialReviews || []).map((review) => ({
+    name: review.author,
+    city: review.productName || "Verified buyer",
+    rating: review.rating,
+    quote: review.comment,
+  }));
 
   return (
     <>
-      <Hero />
+      <Hero banners={banners} />
       <CategoryGrid categories={categories} />
       <ProductSection
         title="New Arrivals"
@@ -34,7 +45,7 @@ export default async function HomePage() {
         products={bestSellers.slice(0, 8)}
         viewAllHref="/products?bestSeller=true"
       />
-      <Testimonials />
+      <Testimonials items={testimonials} />
       <Newsletter />
     </>
   );

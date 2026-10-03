@@ -6,11 +6,17 @@ export default function OrderSummary({
   items = [],
   subtotal,
   discount,
+  productDiscount,
+  couponDiscount,
+  couponCode,
   shipping,
   total,
   deliveryMethod,
 }) {
-  const remaining = Math.max(0, FREE_DELIVERY_THRESHOLD - (subtotal - discount));
+  const saleOff = Number(productDiscount ?? 0);
+  const promoOff = Number(couponDiscount ?? 0);
+  const combined = Number(discount ?? saleOff + promoOff);
+  const remaining = Math.max(0, FREE_DELIVERY_THRESHOLD - (subtotal - combined));
 
   return (
     <aside className="rounded-3xl border border-neutral-200 bg-white p-6">
@@ -42,10 +48,23 @@ export default function OrderSummary({
           <dt className="text-neutral-500">Subtotal</dt>
           <dd>{formatPrice(subtotal)}</dd>
         </div>
-        <div className="flex justify-between">
-          <dt className="text-neutral-500">Discount</dt>
-          <dd className="text-brand-primary">-{formatPrice(discount)}</dd>
-        </div>
+        {saleOff > 0 ? (
+          <div className="flex justify-between">
+            <dt className="text-neutral-500">Sale discount</dt>
+            <dd className="text-brand-primary">-{formatPrice(saleOff)}</dd>
+          </div>
+        ) : null}
+        {promoOff > 0 ? (
+          <div className="flex justify-between">
+            <dt className="text-neutral-500">Promo {couponCode || ""}</dt>
+            <dd className="text-brand-primary">-{formatPrice(promoOff)}</dd>
+          </div>
+        ) : combined > 0 && saleOff === 0 ? (
+          <div className="flex justify-between">
+            <dt className="text-neutral-500">Discount</dt>
+            <dd className="text-brand-primary">-{formatPrice(combined)}</dd>
+          </div>
+        ) : null}
         <div className="flex justify-between">
           <dt className="text-neutral-500">
             Delivery {deliveryMethod === "express" ? "(Express)" : ""}

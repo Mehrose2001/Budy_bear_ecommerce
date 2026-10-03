@@ -2,21 +2,47 @@
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
-import { DEMO_ADMIN } from "@/data/admin";
 import {
   AUTH_CHANGED_EVENT,
   clearAuthSessions,
   emitAuthChanged,
+  expireAdminSession,
   isAdminRole,
   isAdminSessionFresh,
   readAdminSession,
   toAdminSession,
   touchAdminSession,
   writeAdminSession,
-  writeCustomerSessionFromAdmin,
 } from "@/lib/adminSession";
+import { adminFetch } from "@/lib/adminApi";
 
 const AdminAuthContext = createContext(null);
+
+async function verifyAdminSession(session) {
+  if (!session?.token || !isAdminSessionFresh(session)) return null;
+  try {
+    const response = await fetch("/api/auth/me", {
+      headers: { Authorization: `Bearer ${session.token}` },
+      cache: "no-store",
+    });
+    if (response.status === 401 || response.status === 403) return null;
+    if (!response.ok) {
+      return isAdminSessionFresh(session) ? session : null;
+    }
+    const data = await response.json().catch(() => ({}));
+    if (!isAdminRole(data.user?.role)) return null;
+    return {
+      ...session,
+      id: data.user.id || session.id,
+      email: data.user.email || session.email,
+      name: data.user.name || session.name,
+      phone: data.user.phone || session.phone,
+      role: "admin",
+    };
+  } catch {
+    return isAdminSessionFresh(session) ? session : null;
+  }
+}
 
 export function AdminAuthProvider({ children }) {
   const pathname = usePathname();
@@ -24,14 +50,45 @@ export function AdminAuthProvider({ children }) {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    const sync = () => {
-      setAdmin(readAdminSession());
+    let cancelled = false;
+
+    const boot = async () => {
+      const onAdmin = window.location.pathname.startsWith("/admin");
+      const nav = performance.getEntriesByType("navigation")[0];
+      if (onAdmin && nav?.type === "reload") {
+        expireAdminSession();
+        if (!cancelled) {
+          setAdmin(null);
+          setIsReady(true);
+        }
+        return;
+      }
+
+      const verified = await verifyAdminSession(readAdminSession());
+      if (cancelled) return;
+      if (verified) {
+        writeAdminSession(verified);
+        setAdmin(verified);
+      } else {
+        expireAdminSession();
+        setAdmin(null);
+      }
       setIsReady(true);
     };
-    sync();
+
+    boot();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const sync = () => {
+      setAdmin(readAdminSession());
+    };
     window.addEventListener(AUTH_CHANGED_EVENT, sync);
     return () => window.removeEventListener(AUTH_CHANGED_EVENT, sync);
-  }, [pathname]);
+  }, []);
 
   useEffect(() => {
     const poll = () => {
@@ -66,27 +123,20 @@ export function AdminAuthProvider({ children }) {
         const response = await fetch("/api/auth/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
+          body: JSON.stringify({
+            email: String(email || "").trim(),
+            password,
+          }),
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
           return { ok: false, error: data.error || "Invalid email or password." };
         }
-        if (!isAdminRole(data.user?.role)) {
+        const session = toAdminSession(data.user, data.accessToken);
+        if (!session) {
           return { ok: false, error: "This account is not an admin." };
         }
-
-        const session = toAdminSession(data.user, data.accessToken) || {
-          id: data.user?.id || DEMO_ADMIN.id,
-          email: data.user?.email || email,
-          name: data.user?.name || DEMO_ADMIN.name,
-          role: "admin",
-          phone: data.user?.phone || DEMO_ADMIN.phone,
-          title: DEMO_ADMIN.title,
-          token: data.accessToken,
-        };
         writeAdminSession(session);
-        writeCustomerSessionFromAdmin(session);
         setAdmin(session);
         emitAuthChanged();
         return { ok: true };
@@ -95,15 +145,66 @@ export function AdminAuthProvider({ children }) {
       }
     };
 
-    const updateProfile = (input) => {
-      setAdmin((current) => {
-        if (!current) return current;
-        const next = { ...current, ...input };
+    const updateProfile = async (input) => {
+      if (!admin?.token) return { ok: false, error: "Please sign in." };
+      try {
+        const data = await adminFetch(
+          "/api/auth/me",
+          {
+            method: "PATCH",
+            body: JSON.stringify({
+              name: input.name,
+              phone: input.phone,
+            }),
+          },
+          admin.token
+        );
+        const next = {
+          ...admin,
+          name: data.user?.name ?? input.name,
+          phone: data.user?.phone ?? input.phone,
+          title: input.title ?? admin.title,
+        };
         writeAdminSession(next);
-        writeCustomerSessionFromAdmin(next);
-        return next;
-      });
-      emitAuthChanged();
+        setAdmin(next);
+        emitAuthChanged();
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, error: error.message || "Unable to update profile." };
+      }
+    };
+
+    const updateCredentials = async (input) => {
+      if (!admin?.token) return { ok: false, error: "Please sign in." };
+      try {
+        const data = await adminFetch(
+          "/api/auth/me",
+          {
+            method: "PATCH",
+            body: JSON.stringify({
+              email: input.email,
+              currentPassword: input.currentPassword,
+              newPassword: input.newPassword,
+            }),
+          },
+          admin.token
+        );
+        const session = toAdminSession(data.user, data.accessToken || admin.token);
+        if (session) {
+          writeAdminSession({ ...session, title: admin.title });
+          setAdmin({ ...session, title: admin.title });
+        }
+        emitAuthChanged();
+        return {
+          ok: true,
+          email: data.user?.email,
+          message: data.needsEmailConfirm
+            ? "Login details updated. Confirm the new email if you received a verification message."
+            : "Login details updated.",
+        };
+      } catch (error) {
+        return { ok: false, error: error.message || "Unable to update login details." };
+      }
     };
 
     const logout = () => {
@@ -119,6 +220,7 @@ export function AdminAuthProvider({ children }) {
       login,
       logout,
       updateProfile,
+      updateCredentials,
     };
   }, [admin, isReady]);
 

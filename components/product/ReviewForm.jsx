@@ -6,9 +6,10 @@ import Button from "@/components/ui/Button";
 import StarRating from "@/components/ui/StarRating";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
 import { useToast } from "@/context/ToastContext";
+import { expireCustomerSession, isAccessTokenFresh } from "@/lib/adminSession";
 
 export default function ReviewForm({ productId, onCreated }) {
-  const { user, authHeaders } = useCustomerAuth();
+  const { user, token } = useCustomerAuth();
   const { showToast } = useToast();
   const [form, setForm] = useState({
     author: user?.name || "",
@@ -28,12 +29,25 @@ export default function ReviewForm({ productId, onCreated }) {
     event.preventDefault();
     setIsSubmitting(true);
     try {
-      const response = await fetch("/api/reviews", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeaders },
-        body: JSON.stringify({ ...form, productId }),
-      });
-      const data = await response.json().catch(() => ({}));
+      const headers = { "Content-Type": "application/json" };
+      if (token && isAccessTokenFresh(token)) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      const submit = (requestHeaders) =>
+        fetch("/api/reviews", {
+          method: "POST",
+          headers: requestHeaders,
+          body: JSON.stringify({ ...form, productId }),
+        });
+
+      let response = await submit(headers);
+      let data = await response.json().catch(() => ({}));
+      if (!response.ok && /jwt expired/i.test(String(data.error || ""))) {
+        expireCustomerSession();
+        response = await submit({ "Content-Type": "application/json" });
+        data = await response.json().catch(() => ({}));
+      }
       if (!response.ok) throw new Error(data.error || "Unable to save review.");
       showToast("Thank you. Your review is now on this product.");
       onCreated?.(data.review);

@@ -11,38 +11,9 @@ function RouteLoaderInner() {
   const first = useRef(true);
 
   useEffect(() => {
-    const origPush = history.pushState.bind(history);
-    const origReplace = history.replaceState.bind(history);
-
-    history.pushState = (...args) => {
-      const url = args[2];
-      if (url) {
-        try {
-          const next = new URL(String(url), window.location.href);
-          if (next.pathname.startsWith("/admin")) beginNav();
-        } catch {
-          // ignore malformed urls
-        }
-      }
-      return origPush(...args);
-    };
-    history.replaceState = (...args) => {
-      const url = args[2];
-      if (url) {
-        try {
-          const next = new URL(String(url), window.location.href);
-          if (next.pathname.startsWith("/admin")) beginNav();
-        } catch {
-          // ignore malformed urls
-        }
-      }
-      return origReplace(...args);
-    };
-
     const onPop = () => {
       if (window.location.pathname.startsWith("/admin")) beginNav();
     };
-    window.addEventListener("popstate", onPop);
 
     const onClick = (event) => {
       if (event.defaultPrevented || event.button !== 0) return;
@@ -63,11 +34,10 @@ function RouteLoaderInner() {
     };
 
     document.addEventListener("click", onClick);
+    window.addEventListener("popstate", onPop);
     return () => {
-      history.pushState = origPush;
-      history.replaceState = origReplace;
-      window.removeEventListener("popstate", onPop);
       document.removeEventListener("click", onClick);
+      window.removeEventListener("popstate", onPop);
     };
   }, [beginNav]);
 

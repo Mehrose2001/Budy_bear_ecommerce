@@ -95,6 +95,7 @@ export default function AdminCategoriesPage() {
           body: JSON.stringify({
             ...form,
             id: form.id || form.slug || slugify(form.name),
+            originalSlug: form.id || form.slug,
             slug: form.slug || slugify(form.name),
             subcategories: form.subcategories
               .split(",")

@@ -6,12 +6,11 @@ import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import BrandLogo from "@/components/layout/BrandLogo";
 import { useAdminAuth } from "@/context/AdminAuthContext";
-import { DEMO_ADMIN } from "@/data/admin";
 
 export default function AdminLoginPage() {
   const router = useRouter();
   const { login, isAuthenticated, isReady } = useAdminAuth();
-  const [email, setEmail] = useState(DEMO_ADMIN.email);
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -43,16 +42,17 @@ export default function AdminLoginPage() {
           Admin login
         </h1>
         <p className="mt-2 text-sm text-neutral-600">
-          Sign in to manage products, orders, and store content. The session
-          expires after 15 minutes idle, 30 minutes total, closing the tab, or
-          when the login token expires.
+          Sign in with your admin email and password. The session ends on page
+          reload, after 15 minutes idle, or after 30 minutes, and when the
+          login token expires.
         </p>
 
-        <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+        <form onSubmit={handleSubmit} autoComplete="off" className="mt-8 space-y-4">
           <Input
             label="Email"
             type="email"
-            name="email"
+            name="admin-email"
+            autoComplete="username"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             required
@@ -60,7 +60,8 @@ export default function AdminLoginPage() {
           <Input
             label="Password"
             type="password"
-            name="password"
+            name="admin-password"
+            autoComplete="current-password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             required
@@ -70,12 +71,6 @@ export default function AdminLoginPage() {
             {isSubmitting ? "Signing in..." : "Sign in"}
           </Button>
         </form>
-
-        <div className="mt-6 rounded-2xl bg-brand-cream px-4 py-3 text-xs text-neutral-600">
-          <p className="font-semibold text-brand-primary">Demo access</p>
-          <p className="mt-1">{DEMO_ADMIN.email}</p>
-          <p>{DEMO_ADMIN.password}</p>
-        </div>
       </div>
     </div>
   );

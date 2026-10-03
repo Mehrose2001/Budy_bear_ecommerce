@@ -87,5 +87,13 @@ export const footerLinks = {
       label: "Facebook",
       href: "https://www.facebook.com/share/1DKmeoJnaC/?mibextid=wwXIfr",
     },
+    {
+      label: "TikTok",
+      href: "https://www.tiktok.com/@budybear_kidswear_",
+    },
+    {
+      label: "X",
+      href: "https://x.com/budybear_",
+    },
   ],
 };

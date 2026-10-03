@@ -22,12 +22,30 @@ function FacebookIcon({ className }) {
   );
 }
 
+function TikTokIcon({ className }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
+      <path d="M14.5 3c.4 2.4 1.8 4.1 4.2 4.4v2.4c-1.4 0-2.7-.4-3.8-1.2v6.5c0 3.3-2.7 5.9-6.1 5.9S2.7 18.4 2.7 15.1c0-3.2 2.5-5.8 5.7-5.9v2.5c-1.8.1-3.2 1.6-3.2 3.4 0 1.9 1.5 3.4 3.4 3.4s3.4-1.5 3.4-3.4V3h2.5z" />
+    </svg>
+  );
+}
+
+function XIcon({ className }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
+      <path d="M14.7 10.3 21.2 3h-1.5l-5.6 6.4L9.6 3H3.5l6.8 9.9L3.5 21h1.5l6-6.8 4.7 6.8h6.1l-7.1-10.7zm-2.1 2.4-.7-1L5.6 4.2h2.4l4.5 6.4.7 1 5.9 8.3h-2.4l-4.1-6.2z" />
+    </svg>
+  );
+}
+
 const SOCIAL_ICONS = {
   Instagram: InstagramIcon,
   Facebook: FacebookIcon,
+  TikTok: TikTokIcon,
+  X: XIcon,
 };
 
-export default function Footer() {
+export default function Footer({ shopLinks }) {
   return (
     <footer className="mt-auto border-t border-brand-primary/20 bg-brand-primary-dark text-neutral-300">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
@@ -78,7 +96,7 @@ export default function Footer() {
               Shop
             </h3>
             <ul className="mt-4 space-y-3">
-              {footerLinks.shop.map((item) => (
+              {(shopLinks || footerLinks.shop).map((item) => (
                 <li key={item.label}>
                   <Link
                     href={item.href}

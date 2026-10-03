@@ -7,7 +7,7 @@ import Button from "@/components/ui/Button";
 import { useCart } from "@/context/CartContext";
 import { useToast } from "@/context/ToastContext";
 import { DELIVERY_METHODS, PAKISTAN_PROVINCES, PAYMENT_METHODS, isExpressAvailable } from "@/data/checkout";
-import { getShippingCost } from "@/lib/orders";
+import { computeCheckoutTotals } from "@/lib/checkoutTotals";
 import { saveLocalOrder } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
@@ -95,17 +95,16 @@ export function useCheckoutForm(totals) {
     (method) => method.id === form.paymentMethod
   );
 
-  const liveTotals = useMemo(() => {
-    const afterSale = totals.subtotal - totals.discount;
-    const discount = totals.discount + couponDiscount;
-    const shipping = getShippingCost(afterSale - couponDiscount, form.deliveryMethod);
-    return {
-      ...totals,
-      discount,
-      shipping,
-      total: totals.subtotal - discount + shipping,
-    };
-  }, [couponDiscount, form.deliveryMethod, totals]);
+  const liveTotals = useMemo(
+    () =>
+      computeCheckoutTotals({
+        items,
+        couponPercent: coupon?.discountPercent,
+        couponDiscount,
+        deliveryMethod: form.deliveryMethod,
+      }),
+    [coupon?.discountPercent, couponDiscount, form.deliveryMethod, items]
+  );
 
   const applyCoupon = async () => {
     setCouponError("");
@@ -115,7 +114,11 @@ export function useCheckoutForm(totals) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           code: couponCode,
-          subtotal: totals.subtotal - totals.discount,
+          subtotal: items.reduce(
+            (sum, item) =>
+              sum + Number(item.unitPrice ?? item.price ?? 0) * Number(item.quantity || 1),
+            0
+          ),
         }),
       });
       const data = await response.json().catch(() => ({}));
@@ -154,6 +157,7 @@ export function useCheckoutForm(totals) {
           deliveryMethod: form.deliveryMethod,
           paymentMethod: form.paymentMethod,
           couponCode: coupon?.code || "",
+          couponDiscount: liveTotals.couponDiscount,
           customer: {
             fullName: form.fullName.trim(),
             email: form.email.trim(),
@@ -217,7 +221,7 @@ export function CheckoutFields({
   applyCoupon,
 }) {
   return (
-    <form onSubmit={handleSubmit} className="space-y-8" noValidate>
+    <form id="checkout-form" onSubmit={handleSubmit} className="space-y-8" noValidate>
       <section className="rounded-3xl border border-neutral-200 bg-white p-6">
         <h2 className="text-lg font-black text-neutral-900">Contact details</h2>
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -440,7 +444,7 @@ export function CheckoutFields({
         />
       </section>
 
-      <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
+      <Button type="submit" size="lg" className="hidden w-full xl:inline-flex" disabled={isSubmitting}>
         {isSubmitting
           ? "Placing order..."
           : selectedPayment?.id === "cod"

@@ -146,3 +146,60 @@ export async function bootstrapAdmin() {
   if (error) throw error;
   return { id: userId, email, role: "admin" };
 }
+
+export async function updateAdminAccount(user, input = {}) {
+  if (!user?.id || user.role !== "admin") {
+    throw new HttpError(403, "Admin access required.");
+  }
+  if (!isSupabaseConfigured()) {
+    throw new HttpError(503, "Account updates need Supabase Auth.");
+  }
+
+  const currentPassword = String(input.currentPassword || "");
+  const nextEmail = String(input.email || "").trim().toLowerCase();
+  const nextPassword = String(input.newPassword || "");
+  const nextName = input.name == null ? null : String(input.name).trim();
+  const nextPhone = input.phone == null ? null : String(input.phone).trim();
+  const currentEmail = String(user.email || "").trim().toLowerCase();
+  const emailChanged = Boolean(nextEmail) && nextEmail !== currentEmail;
+  const passwordChanged = Boolean(nextPassword);
+
+  if (emailChanged || passwordChanged) {
+    if (!currentPassword) {
+      throw new HttpError(400, "Enter your current password to change email or password.");
+    }
+    if (passwordChanged && nextPassword.length < 8) {
+      throw new HttpError(400, "Password must be at least 8 characters.");
+    }
+    const { error: verifyError } = await getAnonClient().auth.signInWithPassword({
+      email: currentEmail,
+      password: currentPassword,
+    });
+    if (verifyError) throw new HttpError(401, "Current password is incorrect.");
+  }
+
+  const supabase = getServiceClient();
+  if (emailChanged || passwordChanged) {
+    const update = {};
+    if (emailChanged) update.email = nextEmail;
+    if (passwordChanged) update.password = nextPassword;
+    const { error: updateError } = await supabase.auth.admin.updateUserById(user.id, update);
+    if (updateError) throw new HttpError(400, updateError.message || "Unable to update login details.");
+  }
+
+  const profilePatch = {};
+  if (nextName != null) profilePatch.full_name = nextName;
+  if (nextPhone != null) profilePatch.phone = nextPhone || null;
+  if (emailChanged) profilePatch.email = nextEmail;
+  if (Object.keys(profilePatch).length) {
+    const { error: profileError } = await supabase.from("profiles").update(profilePatch).eq("id", user.id);
+    if (profileError) throw new HttpError(500, "Unable to update profile.");
+  }
+
+  const profile = await loadProfile(user.id);
+  return {
+    accessToken: user.token,
+    user: profile,
+    needsEmailConfirm: emailChanged,
+  };
+}

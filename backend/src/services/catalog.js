@@ -79,7 +79,7 @@ export async function listPublishedReviews(productId) {
     .from("reviews")
     .select("*")
     .eq("product_id", Number(productId))
-    .or("is_approved.eq.true,status.eq.Published")
+    .or("is_approved.eq.true,is_testimonial.eq.true,status.eq.Published,status.eq.Testimonial")
     .order("created_at", { ascending: false });
   if (error) throw new HttpError(500, "Unable to load reviews.");
   return (data || []).map(mapReview);
@@ -220,15 +220,31 @@ export async function updateReview(id, input) {
     rating: input.rating,
   };
   if (input.status) {
-    patch.status = input.status;
-    patch.is_approved = input.status === "Published";
+    const isTestimonial = /testimonial/i.test(String(input.status));
+    patch.status = isTestimonial || input.status === "Published" ? "Published" : input.status;
+    if (!["Published", "Hidden", "Pending"].includes(patch.status)) {
+      patch.status = "Published";
+    }
+    patch.is_approved = input.status === "Published" || isTestimonial;
+    patch.is_testimonial = isTestimonial;
   }
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("reviews")
     .update(patch)
     .eq("id", id)
     .select("*")
     .single();
+  if (error && /is_testimonial|reviews_status_check/i.test(error.message || "")) {
+    delete patch.is_testimonial;
+    patch.status = "Published";
+    const current = await supabase.from("reviews").select("comment").eq("id", id).maybeSingle();
+    const marker = "[[bb-testimonial]]";
+    const base = String(current.data?.comment || patch.comment || "").replace(/\s*\[\[bb-testimonial\]\]\s*/g, "").trim();
+    patch.comment = /testimonial/i.test(String(input.status))
+      ? `${base}\n\n${marker}`
+      : base;
+    ({ data, error } = await supabase.from("reviews").update(patch).eq("id", id).select("*").single());
+  }
   if (error) throw new HttpError(400, error.message);
   invalidateCatalogCache();
   return mapReview(data);

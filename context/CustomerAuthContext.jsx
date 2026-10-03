@@ -13,6 +13,8 @@ import {
   AUTH_CHANGED_EVENT,
   clearAuthSessions,
   emitAuthChanged,
+  expireCustomerSession,
+  isAccessTokenFresh,
   isAdminRole,
 } from "@/lib/adminSession";
 
@@ -23,9 +25,14 @@ function readCustomerSession() {
     const raw = window.localStorage.getItem(CUSTOMER_SESSION_KEY);
     if (!raw) return { user: null, accessToken: "" };
     const session = JSON.parse(raw);
+    const accessToken = session.accessToken || "";
+    if (accessToken && !isAccessTokenFresh(accessToken)) {
+      expireCustomerSession();
+      return { user: null, accessToken: "" };
+    }
     return {
       user: session.user || null,
-      accessToken: session.accessToken || "",
+      accessToken,
     };
   } catch {
     return { user: null, accessToken: "" };
@@ -96,7 +103,10 @@ export function CustomerAuthProvider({ children }) {
   const logout = useCallback(() => persist(null), [persist]);
 
   const authHeaders = useMemo(
-    () => (token ? { Authorization: `Bearer ${token}` } : {}),
+    () =>
+      token && isAccessTokenFresh(token)
+        ? { Authorization: `Bearer ${token}` }
+        : {},
     [token]
   );
 

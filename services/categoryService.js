@@ -33,7 +33,7 @@ export async function getCategories({ includeInactive = false, accessToken } = {
   if (!includeInactive) query = query.eq("is_active", true);
   const { data, error } = await query;
   throwIf(error, "Unable to load categories.", 500);
-  return (data || []).map(mapCategory);
+  return (data || []).map(mapCategory).filter(Boolean);
 }
 
 export async function getCategoryBySlug(slug, options = {}) {

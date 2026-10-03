@@ -34,7 +34,7 @@ export default function CheckoutPage() {
           </Button>
         </div>
       ) : (
-        <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="mt-8 grid gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
           <CheckoutFields
             form={checkout.form}
             errors={checkout.errors}
@@ -48,11 +48,14 @@ export default function CheckoutPage() {
             couponError={checkout.couponError}
             applyCoupon={checkout.applyCoupon}
           />
-          <div className="lg:sticky lg:top-36 h-fit">
+          <div className="h-fit xl:sticky xl:top-36">
             <OrderSummary
               items={items}
               subtotal={checkout.liveTotals.subtotal}
               discount={checkout.liveTotals.discount}
+              productDiscount={checkout.liveTotals.productDiscount}
+              couponDiscount={checkout.liveTotals.couponDiscount}
+              couponCode={checkout.coupon?.code}
               shipping={checkout.liveTotals.shipping}
               total={checkout.liveTotals.total}
               deliveryMethod={checkout.form.deliveryMethod}
@@ -60,6 +63,19 @@ export default function CheckoutPage() {
             <p className="mt-3 text-center text-xs text-neutral-500">
               {itemCount} item{itemCount === 1 ? "" : "s"} in this order
             </p>
+            <Button
+              type="submit"
+              form="checkout-form"
+              size="lg"
+              className="mt-4 w-full xl:hidden"
+              disabled={checkout.isSubmitting}
+            >
+              {checkout.isSubmitting
+                ? "Placing order..."
+                : checkout.selectedPayment?.id === "cod"
+                  ? "Place COD order"
+                  : "Place order"}
+            </Button>
           </div>
         </div>
       )}

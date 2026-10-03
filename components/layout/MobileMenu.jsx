@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import BrandLogo from "./BrandLogo";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
 
-export default function MobileMenu({ isOpen, onClose }) {
+export default function MobileMenu({ isOpen, onClose, items = mainNavItems }) {
   const [openSection, setOpenSection] = useState(null);
   const { isAuthenticated } = useCustomerAuth();
 
@@ -50,7 +50,7 @@ export default function MobileMenu({ isOpen, onClose }) {
 
         <nav className="flex-1 overflow-y-auto px-2 py-4" aria-label="Mobile navigation">
           <ul className="space-y-1">
-            {mainNavItems.map((item) => {
+            {items.map((item) => {
               const isExpanded = openSection === item.label;
               const itemClass = cn(
                 "flex w-full items-center justify-between rounded-xl px-4 py-3 text-left text-sm font-bold tracking-wide text-neutral-800 transition-colors hover:bg-brand-cream",

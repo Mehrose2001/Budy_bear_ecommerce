@@ -8,13 +8,14 @@ import { cn } from "@/lib/utils";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
+import { mainNavItems } from "@/data/navigation";
 import AnnouncementBar from "./AnnouncementBar";
 import BrandLogo from "./BrandLogo";
 import Navbar from "./Navbar";
 import MobileMenu from "./MobileMenu";
 import SearchBar from "./SearchBar";
 
-export default function Header() {
+export default function Header({ navItems = mainNavItems }) {
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
@@ -181,7 +182,7 @@ export default function Header() {
           )}
 
           <div className="hidden border-t border-border lg:block">
-            <Navbar />
+            <Navbar items={navItems} />
           </div>
         </div>
       </div>
@@ -189,6 +190,7 @@ export default function Header() {
       <MobileMenu
         isOpen={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
+        items={navItems}
       />
     </header>
   );

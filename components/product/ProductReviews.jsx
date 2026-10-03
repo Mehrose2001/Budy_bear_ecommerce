@@ -12,7 +12,7 @@ export default function ProductReviews({ product, reviews = [] }) {
   });
 
   const visible = useMemo(
-    () => items.filter((review) => review.status !== "Hidden"),
+    () => items.filter((review) => review.status !== "Hidden" && review.status !== "Pending"),
     [items]
   );
 

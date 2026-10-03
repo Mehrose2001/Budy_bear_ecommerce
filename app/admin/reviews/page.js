@@ -5,6 +5,14 @@ import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import AdminTable from "@/components/admin/AdminTable";
 import { adminFetch } from "@/lib/adminApi";
 import { useAdminAuth } from "@/context/AdminAuthContext";
+import { REVIEW_STATUS, TESTIMONIAL_LIMIT } from "@/lib/reviewStatus";
+
+const STATUS_OPTIONS = [
+  { value: REVIEW_STATUS.PENDING, label: "Pending" },
+  { value: REVIEW_STATUS.PUBLISHED, label: "Published" },
+  { value: REVIEW_STATUS.TESTIMONIAL, label: "Published in Testimonials" },
+  { value: REVIEW_STATUS.HIDDEN, label: "Hidden" },
+];
 
 export default function AdminReviewsPage() {
   const { admin } = useAdminAuth();
@@ -25,7 +33,7 @@ export default function AdminReviewsPage() {
       "/api/admin/content",
       {
         method: "POST",
-        body: JSON.stringify({ resource: "reviews", data: { ...review, status } }),
+        body: JSON.stringify({ resource: "reviews", data: { id: review.id, status } }),
       },
       admin.token
     );
@@ -39,7 +47,10 @@ export default function AdminReviewsPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <AdminPageHeader title="Reviews" description="Moderate customer feedback before it stays on product pages." />
+      <AdminPageHeader
+        title="Reviews"
+        description={`Moderate product reviews. Choose Published in Testimonials for up to ${TESTIMONIAL_LIMIT} reviews on the homepage.`}
+      />
       <AdminTable>
         <table className="min-w-full text-left text-sm">
           <thead className="sticky top-0 z-10 border-b border-border bg-brand-cream">
@@ -64,11 +75,13 @@ export default function AdminReviewsPage() {
                   <select
                     value={review.status}
                     onChange={(event) => setStatus(review, event.target.value)}
-                    className="h-10 rounded-xl border border-border px-3"
+                    className="h-10 max-w-[14rem] rounded-xl border border-border px-3"
                   >
-                    <option>Pending</option>
-                    <option>Published</option>
-                    <option>Hidden</option>
+                    {STATUS_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
                   </select>
                 </td>
                 <td className="px-4 py-3">

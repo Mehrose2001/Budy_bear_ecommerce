@@ -5,6 +5,9 @@ import { withBackend } from "@/lib/withBackend";
 import { sendOrderPlacedEmail } from "@/lib/orderEmail";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { getRequestUser, getBearerToken } from "@/lib/supabase/server";
+import { computeCheckoutTotals } from "@/lib/checkoutTotals";
+import { validateCoupon } from "@/services/contentService";
+import { listCoupons } from "@/lib/catalogStore";
 import { createOrder } from "@/services/orderService";
 
 function validateOrder(body) {
@@ -42,10 +45,47 @@ export async function POST(request) {
     const error = validateOrder(body);
     if (error) return NextResponse.json({ error }, { status: 400 });
 
+    let couponPercent = 0;
+    if (body.couponCode) {
+      try {
+        if (isSupabaseConfigured()) {
+          const saleSubtotal = (body.items || []).reduce(
+            (sum, item) => sum + Number(item.unitPrice || item.price || 0) * Number(item.quantity || 1),
+            0
+          );
+          const checked = await validateCoupon(body.couponCode, saleSubtotal);
+          couponPercent = Number(checked.coupon?.discountPercent || 0);
+        } else {
+          const memory = listCoupons().find(
+            (item) =>
+              item.active && item.code.toUpperCase() === String(body.couponCode).toUpperCase()
+          );
+          couponPercent = Number(memory?.discountPercent || 0);
+        }
+      } catch {
+        couponPercent = 0;
+      }
+    }
+
+    const priced = computeCheckoutTotals({
+      items: body.items,
+      couponPercent,
+      couponDiscount: body.couponDiscount || 0,
+      deliveryMethod: body.deliveryMethod,
+    });
+    const payload = {
+      ...body,
+      subtotal: priced.subtotal,
+      discount: priced.discount,
+      shipping: priced.shipping,
+      total: priced.total,
+      couponCode: body.couponCode || "",
+    };
+
     if (isSupabaseConfigured()) {
       const user = await getRequestUser(request);
       const order = await createOrder(
-        { ...body, userId: user?.id || body.userId || "" },
+        { ...payload, userId: user?.id || body.userId || "" },
         body.items,
         getBearerToken(request)
       );
@@ -60,7 +100,7 @@ export async function POST(request) {
       return NextResponse.json({ order }, { status: 201 });
     }
 
-    const order = createMemoryOrder(body);
+    const order = createMemoryOrder(payload);
     try {
       const emailed = await sendOrderPlacedEmail(order);
       if (!emailed) {

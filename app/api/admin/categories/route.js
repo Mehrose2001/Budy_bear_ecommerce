@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { isAdminRequest, getAccessToken } from "@/lib/adminAuth";
 import {
   deleteCategory as deleteMemoryCategory,
@@ -7,6 +8,7 @@ import {
 } from "@/lib/catalogStore";
 import { withBackend } from "@/lib/withBackend";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { invalidateCatalogSnapshot } from "@/lib/catalog";
 import {
   createCategory,
   deleteCategory,
@@ -14,6 +16,13 @@ import {
   getCategoryRecord,
   updateCategory,
 } from "@/services/categoryService";
+
+function refreshStoreCategories() {
+  invalidateCatalogSnapshot();
+  revalidatePath("/", "layout");
+  revalidatePath("/");
+  revalidatePath("/products");
+}
 
 export async function GET(request) {
   return withBackend(request, "/admin/categories", async () => {
@@ -49,9 +58,12 @@ export async function POST(request) {
       const category = existing
         ? await updateCategory(existing.id, body, token)
         : await createCategory(body, token);
+      refreshStoreCategories();
       return NextResponse.json({ category });
     }
-    return NextResponse.json({ category: upsertMemoryCategory(body) });
+    const category = upsertMemoryCategory(body);
+    refreshStoreCategories();
+    return NextResponse.json({ category });
   });
 }
 
@@ -64,9 +76,11 @@ export async function DELETE(request) {
     const slug = searchParams.get("slug");
     if (isSupabaseConfigured()) {
       await deleteCategory(slug, getAccessToken(request));
+      refreshStoreCategories();
       return NextResponse.json({ ok: true });
     }
     deleteMemoryCategory(slug);
+    refreshStoreCategories();
     return NextResponse.json({ ok: true });
   });
 }

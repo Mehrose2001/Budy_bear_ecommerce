@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { asyncHandler } from "../lib/http.js";
-import { login, register } from "../services/auth.js";
-import { requireUser } from "../middleware/auth.js";
+import { login, register, updateAdminAccount } from "../services/auth.js";
+import { requireAdmin, requireUser } from "../middleware/auth.js";
 
 export const authRouter = Router();
 
@@ -26,5 +26,14 @@ authRouter.get(
   requireUser,
   asyncHandler(async (req, res) => {
     res.json({ user: req.user });
+  })
+);
+
+authRouter.patch(
+  "/me",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const result = await updateAdminAccount(req.user, req.body || {});
+    res.json(result);
   })
 );
