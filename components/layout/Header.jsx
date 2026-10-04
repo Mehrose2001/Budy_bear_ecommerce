@@ -62,7 +62,7 @@ export default function Header({ navItems = mainNavItems }) {
         )}
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="relative flex h-16 items-center justify-between lg:hidden">
+          <div className="relative flex h-16 items-center justify-between xl:hidden">
             <button
               type="button"
               onClick={() => setMobileMenuOpen(true)}
@@ -90,38 +90,13 @@ export default function Header({ navItems = mainNavItems }) {
                   <Search className="h-5 w-5" />
                 )}
               </button>
-              <Link
-                href="/wishlist"
-                className="relative inline-flex h-10 w-10 items-center justify-center rounded-full text-brand-primary transition-colors hover:bg-brand-cream"
-                aria-label={`Favourites, ${wishlistCount} items`}
-              >
-                <Heart className="h-5 w-5" />
-                {wishlistCount > 0 && (
-                  <span className="absolute -right-0.5 -top-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-accent px-1 text-[10px] font-bold text-white">
-                    {wishlistCount}
-                  </span>
-                )}
-              </Link>
-              <button
-                type="button"
-                onClick={openDrawer}
-                className="relative inline-flex h-10 w-10 items-center justify-center rounded-full text-brand-primary transition-colors hover:bg-brand-cream"
-                aria-label={`Shopping cart, ${itemCount} items`}
-              >
-                <ShoppingBag className="h-5 w-5" />
-                {itemCount > 0 && (
-                  <span className="absolute -right-0.5 -top-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-accent px-1 text-[10px] font-bold text-white">
-                    {itemCount}
-                  </span>
-                )}
-              </button>
             </div>
           </div>
 
-          <div className="hidden h-[88px] items-center justify-between gap-4 lg:flex">
+          <div className="hidden h-[88px] items-center justify-between gap-4 xl:flex">
             <BrandLogo size={64} showWordmark priority />
 
-            <div className="hidden flex-1 max-w-xl lg:block">
+            <div className="hidden flex-1 max-w-xl xl:block">
               <SearchBar
                 id="desktop-search"
                 value={searchQuery}
@@ -169,7 +144,7 @@ export default function Header({ navItems = mainNavItems }) {
           </div>
 
           {mobileSearchOpen && (
-            <div className="pb-3 lg:hidden">
+            <div className="pb-3 xl:hidden">
               <SearchBar
                 id="mobile-header-search"
                 value={searchQuery}
@@ -181,7 +156,7 @@ export default function Header({ navItems = mainNavItems }) {
             </div>
           )}
 
-          <div className="hidden border-t border-border lg:block">
+          <div className="hidden border-t border-border xl:block">
             <Navbar items={navItems} />
           </div>
         </div>

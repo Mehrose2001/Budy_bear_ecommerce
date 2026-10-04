@@ -8,6 +8,12 @@ import { useAdminAuth } from "@/context/AdminAuthContext";
 import { adminUploadFile } from "@/lib/adminApi";
 import { compressImageFile } from "@/lib/compressImage";
 import { COLOR_SWATCHES } from "@/data/store";
+import { slugify } from "@/lib/utils";
+import {
+  buildVariantStock,
+  seedVariantStock,
+  sumVariantStock,
+} from "@/lib/variantStock";
 
 const emptyProduct = {
   name: "",
@@ -17,8 +23,9 @@ const emptyProduct = {
   subcategory: "",
   price: "",
   salePrice: "",
-  stock: 10,
+  stock: 0,
   sizes: "0-3M, 3-6M, 6-12M, 2-3Y, 4-5Y, 6-7Y",
+  variantStock: {},
   brand: "Budy Bear",
   featured: false,
   newArrival: true,
@@ -84,12 +91,17 @@ function toForm(product) {
     };
   }
 
+  const imageItems = toImageItems(product);
+  const colors = uniqueColors(imageItems.map((item) => item.color));
+  const sizes = product.sizes || [];
+
   return {
     ...emptyProduct,
     ...product,
     salePrice: product.salePrice ?? "",
-    sizes: (product.sizes || []).join(", "),
-    imageItems: toImageItems(product),
+    sizes: sizes.join(", "),
+    imageItems,
+    variantStock: buildVariantStock(colors, sizes, seedVariantStock(product)),
   };
 }
 
@@ -117,8 +129,40 @@ export default function ProductForm({ product, categories, onCancel, onSave }) {
     ]);
   }, [form.imageItems]);
 
+  const inventoryColors = useMemo(
+    () => uniqueColors(form.imageItems.map((item) => item.color)),
+    [form.imageItems]
+  );
+  const inventorySizes = useMemo(() => parseList(form.sizes), [form.sizes]);
+  const variantStock = useMemo(
+    () => buildVariantStock(inventoryColors, inventorySizes, form.variantStock),
+    [inventoryColors, inventorySizes, form.variantStock]
+  );
+  const inventoryTotal = useMemo(() => sumVariantStock(variantStock), [variantStock]);
+
   const updateField = (name, value) => {
     setForm((current) => ({ ...current, [name]: value }));
+  };
+
+  const updateVariantQty = (color, size, value) => {
+    setForm((current) => ({
+      ...current,
+      variantStock: {
+        ...buildVariantStock(
+          uniqueColors(current.imageItems.map((item) => item.color)),
+          parseList(current.sizes),
+          current.variantStock
+        ),
+        [color]: {
+          ...buildVariantStock(
+            uniqueColors(current.imageItems.map((item) => item.color)),
+            parseList(current.sizes),
+            current.variantStock
+          )[color],
+          [size]: Math.max(0, Math.floor(Number(value) || 0)),
+        },
+      },
+    }));
   };
 
   const updateImageItem = (id, patch) => {
@@ -200,6 +244,11 @@ export default function ProductForm({ product, categories, onCancel, onSave }) {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    const slug = slugify(form.slug);
+    if (!slug) {
+      setError("Slug is required so the product page can open.");
+      return;
+    }
     const imageItems = form.imageItems.filter((item) => item.url);
     if (!imageItems.length) {
       setError("Upload at least one product image.");
@@ -223,10 +272,12 @@ export default function ProductForm({ product, categories, onCancel, onSave }) {
       await onSave({
         ...rest,
         id: product?.id,
+        slug,
         price: Number(form.price),
         salePrice: form.salePrice === "" ? null : Number(form.salePrice),
-        stock: Number(form.stock),
+        stock: sumVariantStock(variantStock),
         sizes: parseList(form.sizes),
+        variantStock,
         colors,
         images: imageItems.map((item) => item.url),
         colorImages: imageItems.map((item) => ({
@@ -250,15 +301,26 @@ export default function ProductForm({ product, categories, onCancel, onSave }) {
         label="Product name"
         name="name"
         value={form.name}
-        onChange={(event) => updateField("name", event.target.value)}
+        onChange={(event) => {
+          const name = event.target.value;
+          setForm((current) => {
+            const previousAuto = slugify(current.name);
+            const next = { ...current, name };
+            if (!current.slug || current.slug === previousAuto) {
+              next.slug = slugify(name);
+            }
+            return next;
+          });
+        }}
         required
       />
       <Input
         label="Slug"
         name="slug"
         value={form.slug}
-        onChange={(event) => updateField("slug", event.target.value)}
-        placeholder="auto-from-name"
+        onChange={(event) => updateField("slug", slugify(event.target.value))}
+        placeholder="girls-floral-summer-dress"
+        required
       />
       <div className="md:col-span-2">
         <label className="mb-2 block text-sm font-medium text-neutral-700" htmlFor="description">
@@ -326,14 +388,6 @@ export default function ProductForm({ product, categories, onCancel, onSave }) {
         onChange={(event) => updateField("salePrice", event.target.value)}
       />
       <Input
-        label="Stock"
-        type="number"
-        name="stock"
-        min="0"
-        value={form.stock}
-        onChange={(event) => updateField("stock", event.target.value)}
-      />
-      <Input
         label="Brand"
         name="brand"
         value={form.brand}
@@ -345,7 +399,65 @@ export default function ProductForm({ product, categories, onCancel, onSave }) {
         value={form.sizes}
         onChange={(event) => updateField("sizes", event.target.value)}
         placeholder="0-3M, 3-6M, 2-3Y, 4-5Y"
+        className="md:col-span-2"
       />
+
+      <div className="md:col-span-2 overflow-x-auto rounded-2xl border border-neutral-200 bg-brand-cream/40 p-4">
+        <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <p className="text-sm font-bold text-neutral-900">Color size stock</p>
+            <p className="mt-1 text-xs text-neutral-500">
+              Enter quantity for each size in that color. 0 means sold out for that size. If every size is 0, the color shows as sold out on the store.
+            </p>
+          </div>
+          <p className="text-sm font-semibold text-brand-primary">Total stock: {inventoryTotal}</p>
+        </div>
+        {inventoryColors.length && inventorySizes.length ? (
+          <table className="min-w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-neutral-200 text-neutral-600">
+                <th className="py-2 pr-3 font-medium">Color</th>
+                {inventorySizes.map((size) => (
+                  <th key={size} className="px-1 py-2 font-medium">
+                    {size}
+                  </th>
+                ))}
+                <th className="py-2 pl-3 font-medium">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {inventoryColors.map((color) => {
+                const rowTotal = inventorySizes.reduce(
+                  (sum, size) => sum + Number(variantStock[color]?.[size] || 0),
+                  0
+                );
+                return (
+                  <tr key={color} className="border-b border-neutral-100">
+                    <td className="py-2 pr-3 font-semibold text-brand-primary">{color}</td>
+                    {inventorySizes.map((size) => (
+                      <td key={size} className="px-1 py-2">
+                        <input
+                          type="number"
+                          min="0"
+                          value={variantStock[color]?.[size] ?? 0}
+                          onChange={(event) => updateVariantQty(color, size, event.target.value)}
+                          className="h-10 w-16 rounded-lg border border-neutral-200 px-2 text-sm"
+                          aria-label={`${color} ${size} stock`}
+                        />
+                      </td>
+                    ))}
+                    <td className="py-2 pl-3 font-medium">{rowTotal}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        ) : (
+          <p className="text-sm text-neutral-500">
+            Add sizes and assign colors to images to enter stock.
+          </p>
+        )}
+      </div>
 
       <div className="md:col-span-2 rounded-2xl border border-neutral-200 bg-brand-cream/40 p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">

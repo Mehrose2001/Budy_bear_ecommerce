@@ -111,7 +111,16 @@ export default function AdminProductsPage() {
                   {product.category} / {product.subcategory}
                 </td>
                 <td className="px-4 py-3">{formatPrice(product.salePrice || product.price)}</td>
-                <td className="px-4 py-3">{product.stock}</td>
+                <td className="px-4 py-3 text-xs">
+                  {product.variantStock && Object.keys(product.variantStock).length
+                    ? Object.entries(product.variantStock)
+                        .map(([color, sizes]) => {
+                          const total = Object.values(sizes).reduce((sum, qty) => sum + Number(qty || 0), 0);
+                          return `${color}: ${total}`;
+                        })
+                        .join(" · ")
+                    : product.stock}
+                </td>
                 <td className="px-4 py-3 text-xs">
                   {[product.featured && "Featured", product.newArrival && "New", product.bestSeller && "Best"].filter(Boolean).join(" · ") || "—"}
                 </td>

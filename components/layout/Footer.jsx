@@ -47,7 +47,7 @@ const SOCIAL_ICONS = {
 
 export default function Footer({ shopLinks }) {
   return (
-    <footer className="mt-auto border-t border-brand-primary/20 bg-brand-primary-dark text-neutral-300">
+    <footer className="mt-auto mb-24 border-t border-brand-primary/20 bg-brand-primary-dark text-neutral-300 xl:mb-0">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-5">
           <div className="lg:col-span-2">

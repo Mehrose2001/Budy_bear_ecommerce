@@ -24,17 +24,33 @@ export async function getStoreSettings() {
 
 export async function updateStoreSettings(input, accessToken) {
   const supabase = client(accessToken);
+  const payload = {
+    store_name: input.storeName,
+    announcement: input.announcement,
+    support_email: input.supportEmail,
+    support_phone: input.supportPhone,
+    seasonal_collection: String(input.seasonalCollection || "").toLowerCase() === "summer" ? "summer" : "winter",
+  };
   const { data, error } = await supabase
     .from("store_settings")
-    .update({
-      store_name: input.storeName,
-      announcement: input.announcement,
-      support_email: input.supportEmail,
-      support_phone: input.supportPhone,
-    })
+    .update(payload)
     .eq("id", 1)
     .select("*")
     .single();
+  if (error && /seasonal_collection/i.test(String(error.message || error.details || ""))) {
+    const { seasonal_collection: _season, ...legacy } = payload;
+    const retry = await supabase
+      .from("store_settings")
+      .update(legacy)
+      .eq("id", 1)
+      .select("*")
+      .single();
+    throwIf(retry.error, "Unable to update settings.");
+    return {
+      ...mapSettings(retry.data),
+      seasonalCollection: payload.seasonal_collection,
+    };
+  }
   throwIf(error, "Unable to update settings.");
   return mapSettings(data);
 }

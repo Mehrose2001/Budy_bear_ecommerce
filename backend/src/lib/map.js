@@ -1,3 +1,37 @@
+function slugify(text) {
+  return String(text || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+function normalizeSeasonalCollection(value) {
+  return String(value || "").toLowerCase() === "summer" ? "summer" : "winter";
+}
+
+function normalizeVariantStock(input) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return {};
+  const next = {};
+  Object.entries(input).forEach(([colorKey, sizes]) => {
+    const color = String(colorKey || "").trim();
+    if (!color || !sizes || typeof sizes !== "object" || Array.isArray(sizes)) return;
+    const row = {};
+    Object.entries(sizes).forEach(([sizeKey, qty]) => {
+      const size = String(sizeKey || "").trim();
+      const amount = Math.max(0, Math.floor(Number(qty) || 0));
+      if (size) row[size] = amount;
+    });
+    if (Object.keys(row).length) next[color] = row;
+  });
+  return next;
+}
+
+function sumVariantStock(variantStock) {
+  return Object.values(normalizeVariantStock(variantStock)).reduce((total, sizes) => {
+    return total + Object.values(sizes).reduce((sum, qty) => sum + Number(qty || 0), 0);
+  }, 0);
+}
+
 function colorsFromImages(row) {
   const seen = new Set();
   const fromImages = (row.color_images || row.colorImages || [])
@@ -29,7 +63,10 @@ export function mapProduct(row) {
     colorSwatches: row.color_swatches || {},
     sizes: row.sizes || [],
     colors: colorsFromImages(row),
-    stock: Number(row.stock_quantity ?? row.stock ?? 0),
+    variantStock: normalizeVariantStock(row.variant_stock || row.variantStock),
+    stock: Object.keys(normalizeVariantStock(row.variant_stock || row.variantStock)).length
+      ? sumVariantStock(row.variant_stock || row.variantStock)
+      : Number(row.stock_quantity ?? row.stock ?? 0),
     rating: Number(row.rating || 0),
     reviewCount: Number(row.review_count || 0),
     brand: row.brand || "Budy Bear",
@@ -41,9 +78,17 @@ export function mapProduct(row) {
 }
 
 export function productToRow(input, existing = {}) {
+  const variantStock = normalizeVariantStock(
+    input.variantStock ?? input.variant_stock ?? existing.variantStock ?? existing.variant_stock
+  );
+  const hasVariants = Object.keys(variantStock).length > 0;
+  const totalStock = hasVariants
+    ? sumVariantStock(variantStock)
+    : Number(input.stock ?? input.stock_quantity ?? existing.stock ?? 0);
+
   return {
     name: input.name ?? existing.name,
-    slug: input.slug ?? existing.slug,
+    slug: slugify(input.slug ?? existing.slug ?? ""),
     description: input.description ?? existing.description ?? "",
     category_id: input.category ?? input.category_id ?? existing.category_id,
     subcategory: input.subcategory ?? existing.subcategory ?? "",
@@ -62,6 +107,7 @@ export function productToRow(input, existing = {}) {
     color_swatches:
       input.colorSwatches ?? input.color_swatches ?? existing.color_swatches ?? {},
     sizes: input.sizes ?? existing.sizes ?? ["One Size"],
+    variant_stock: variantStock,
     colors:
       input.colors?.length
         ? input.colors
@@ -69,8 +115,8 @@ export function productToRow(input, existing = {}) {
             color_images: input.colorImages ?? input.color_images ?? existing.color_images,
             colors: existing.colors,
           }),
-    stock: Number(input.stock ?? existing.stock ?? 0),
-    stock_quantity: Number(input.stock ?? input.stock_quantity ?? existing.stock_quantity ?? existing.stock ?? 0),
+    stock: totalStock,
+    stock_quantity: totalStock,
     rating: Number(input.rating ?? existing.rating ?? 5),
     review_count: Number(input.reviewCount ?? input.review_count ?? existing.review_count ?? 0),
     brand: input.brand ?? existing.brand ?? "Budy Bear",
@@ -124,6 +170,7 @@ export function mapSettings(row) {
       announcement: "Free Delivery on Orders Above Rs. 3,000",
       supportEmail: "budybear2026@gmail.com",
       supportPhone: "+92 333 0370236",
+      seasonalCollection: "winter",
     };
   }
   return {
@@ -131,6 +178,9 @@ export function mapSettings(row) {
     announcement: row.announcement,
     supportEmail: row.support_email,
     supportPhone: row.support_phone,
+    seasonalCollection: normalizeSeasonalCollection(
+      row.seasonal_collection || row.seasonalCollection
+    ),
   };
 }
 

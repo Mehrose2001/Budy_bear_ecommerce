@@ -67,6 +67,7 @@ export const footerLinks = {
     { label: "Sale", href: "/products?filter=sale" },
   ],
   customerCare: [
+    { label: "Track your order", href: "/track-order" },
     { label: "Contact Us", href: "/contact" },
     { label: "FAQs", href: "/faqs" },
     { label: "Shipping & Delivery", href: "/shipping" },

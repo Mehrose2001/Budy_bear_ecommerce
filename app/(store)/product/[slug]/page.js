@@ -13,7 +13,9 @@ export const revalidate = 30;
 
 export async function generateStaticParams() {
   const products = await listProducts();
-  return products.map((product) => ({ slug: product.slug }));
+  return products
+    .filter((product) => product.slug)
+    .map((product) => ({ slug: product.slug }));
 }
 
 export async function generateMetadata({ params }) {
@@ -72,7 +74,7 @@ export default async function ProductPage({ params }) {
               ["Type", formatLabel(product.subcategory)],
               ["Available sizes", product.sizes.join(", ")],
               ["Available colors", getProductColors(product).join(", ") || "—"],
-              ["Stock", String(product.stock)],
+              ["Stock", product.stock > 0 ? String(product.stock) : "Sold out"],
             ].map(([label, value]) => (
               <div key={label} className="grid grid-cols-2 gap-4 px-5 py-3 text-sm">
                 <dt className="text-neutral-500">{label}</dt>

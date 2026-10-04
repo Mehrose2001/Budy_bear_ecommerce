@@ -1,7 +1,8 @@
 import { AppError, throwIf } from "@/lib/errors";
 import { mapOrder, toDbOrderStatus, toDbPaymentStatus } from "@/lib/mappers";
-import { createServerClient, createUserClient } from "@/lib/supabase/server";
+import { createServerClient, createServiceClient, createUserClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { orderPhone, phonesMatch, toPublicTrackOrder } from "@/lib/orderTracking";
 
 function client(accessToken) {
   if (!isSupabaseConfigured()) {
@@ -54,8 +55,29 @@ export async function getOrderById(id, accessToken) {
   if (!error && data) return withItems(data);
 
   const rpc = await supabase.rpc("get_order", { p_id: id });
-  throwIf(rpc.error, "Unable to load order.", 500);
+  if (rpc.error || !rpc.data) return null;
   return withItems(rpc.data);
+}
+
+export async function trackOrder(orderId, phone) {
+  const id = String(orderId || "").trim();
+  const supabase = createServiceClient() || client();
+  const { data, error } = await supabase
+    .from("orders")
+    .select("*, order_items(*)")
+    .eq("id", id)
+    .maybeSingle();
+
+  let order = !error && data ? withItems(data) : null;
+  if (!order) {
+    const rpc = await supabase.rpc("get_order", { p_id: id });
+    if (rpc.data) order = withItems(rpc.data);
+  }
+
+  if (!order || !phonesMatch(orderPhone(order), phone)) {
+    throw new AppError("Order not found.", 404);
+  }
+  return toPublicTrackOrder(order);
 }
 
 export async function getUserOrders(userId, accessToken) {

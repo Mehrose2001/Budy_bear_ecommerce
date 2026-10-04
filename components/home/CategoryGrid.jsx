@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { shopCategories } from "@/data/navigation";
+import useInfiniteMarquee from "@/hooks/useInfiniteMarquee";
 import { cn } from "@/lib/utils";
 
 function toCards(categories) {
@@ -52,156 +52,106 @@ function CategoryCard({ category, isDuplicate, onCardClick }) {
   );
 }
 
-export default function CategoryGrid({ categories = [] }) {
+function CircleCard({ category, isDuplicate, onCardClick }) {
+  return (
+    <Link
+      href={category.href}
+      className="flex w-[4.75rem] shrink-0 flex-col items-center gap-1.5 md:w-28"
+      tabIndex={isDuplicate ? -1 : undefined}
+      aria-hidden={isDuplicate ? true : undefined}
+      onClick={onCardClick}
+      draggable={false}
+    >
+      <span className="relative h-14 w-14 overflow-hidden rounded-full bg-[#eaf0f6] ring-2 ring-white md:h-24 md:w-24">
+        <Image
+          src={category.image}
+          alt={isDuplicate ? "" : category.label}
+          fill
+          sizes="(min-width: 768px) 96px, 56px"
+          draggable={false}
+          className="object-cover"
+          style={{ objectPosition: category.objectPosition || "center top" }}
+        />
+      </span>
+      <span className="line-clamp-2 text-center text-[10px] font-semibold leading-tight text-brand-primary md:text-sm">
+        {isDuplicate ? "\u00a0" : category.label}
+      </span>
+    </Link>
+  );
+}
+
+function marqueeCopies(items, copies) {
+  return Array.from({ length: copies }, (_, copy) =>
+    items.map((category) => ({ ...category, loopKey: `${copy}-${category.label}` }))
+  ).flat();
+}
+
+export function CategoryCircles({ categories = [] }) {
   const items = toCards(categories);
-  const viewportRef = useRef(null);
-  const trackRef = useRef(null);
-  const offsetRef = useRef(0);
-  const pausedRef = useRef(false);
-  const hoveringRef = useRef(false);
-  const draggingRef = useRef(false);
-  const movedRef = useRef(false);
-  const axisRef = useRef(null);
-  const lastXRef = useRef(0);
-  const lastYRef = useRef(0);
-  const resumeTimerRef = useRef(null);
-  const [paused, setPaused] = useState(false);
+  const {
+    viewportRef,
+    trackRef,
+    onCardClick,
+    onPointerEnter,
+    onPointerLeave,
+  } = useInfiniteMarquee({ speed: 0.7 });
 
-  useEffect(() => {
-    pausedRef.current = paused;
-  }, [paused]);
+  if (!items.length) return null;
 
-  const applyOffset = () => {
-    const track = trackRef.current;
-    if (!track) return;
-    const half = track.scrollWidth / 2;
-    if (half > 0) {
-      while (-offsetRef.current >= half) offsetRef.current += half;
-      while (offsetRef.current > 0) offsetRef.current -= half;
-    }
-    track.style.transform = `translate3d(${offsetRef.current}px,0,0)`;
-  };
-
-  useEffect(() => {
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    if (media.matches) {
-      pausedRef.current = true;
-      setPaused(true);
-    }
-
-    let frame;
-    const tick = () => {
-      if (!pausedRef.current && !draggingRef.current && !hoveringRef.current) {
-        offsetRef.current -= 0.55;
-        applyOffset();
-      }
-      frame = requestAnimationFrame(tick);
-    };
-
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, []);
-
-  useEffect(() => {
-    const viewport = viewportRef.current;
-    if (!viewport) return;
-
-    const clearResume = () => {
-      if (resumeTimerRef.current) {
-        clearTimeout(resumeTimerRef.current);
-        resumeTimerRef.current = null;
-      }
-    };
-
-    const resumeSoon = () => {
-      draggingRef.current = false;
-      axisRef.current = null;
-      clearResume();
-      resumeTimerRef.current = setTimeout(() => {
-        pausedRef.current = false;
-        setPaused(false);
-      }, 350);
-    };
-
-    const startDrag = (x, y) => {
-      draggingRef.current = true;
-      movedRef.current = false;
-      axisRef.current = null;
-      lastXRef.current = x;
-      lastYRef.current = y;
-      clearResume();
-    };
-
-    const moveDrag = (x, y, event) => {
-      if (!draggingRef.current) return;
-      const dx = x - lastXRef.current;
-      const dy = y - lastYRef.current;
-      if (!axisRef.current) {
-        if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
-        axisRef.current = Math.abs(dx) >= Math.abs(dy) ? "x" : "y";
-      }
-      if (axisRef.current !== "x") return;
-      if (event.cancelable) event.preventDefault();
-      movedRef.current = true;
-      offsetRef.current += dx;
-      lastXRef.current = x;
-      lastYRef.current = y;
-      applyOffset();
-    };
-
-    const onTouchStart = (event) => {
-      const touch = event.touches[0];
-      if (!touch) return;
-      startDrag(touch.clientX, touch.clientY);
-    };
-
-    const onTouchMove = (event) => {
-      const touch = event.touches[0];
-      if (!touch) return;
-      moveDrag(touch.clientX, touch.clientY, event);
-    };
-
-    const onPointerDown = (event) => {
-      if (event.pointerType !== "mouse" || event.button !== 0) return;
-      startDrag(event.clientX, event.clientY);
-    };
-
-    const onPointerMove = (event) => {
-      if (event.pointerType !== "mouse") return;
-      moveDrag(event.clientX, event.clientY, event);
-    };
-
-    viewport.addEventListener("touchstart", onTouchStart, { passive: true });
-    viewport.addEventListener("touchmove", onTouchMove, { passive: false });
-    viewport.addEventListener("touchend", resumeSoon, { passive: true });
-    viewport.addEventListener("touchcancel", resumeSoon, { passive: true });
-    viewport.addEventListener("pointerdown", onPointerDown);
-    viewport.addEventListener("pointermove", onPointerMove, { passive: false });
-    viewport.addEventListener("pointerup", resumeSoon);
-    viewport.addEventListener("pointercancel", resumeSoon);
-
-    return () => {
-      clearResume();
-      viewport.removeEventListener("touchstart", onTouchStart);
-      viewport.removeEventListener("touchmove", onTouchMove);
-      viewport.removeEventListener("touchend", resumeSoon);
-      viewport.removeEventListener("touchcancel", resumeSoon);
-      viewport.removeEventListener("pointerdown", onPointerDown);
-      viewport.removeEventListener("pointermove", onPointerMove);
-      viewport.removeEventListener("pointerup", resumeSoon);
-      viewport.removeEventListener("pointercancel", resumeSoon);
-    };
-  }, []);
-
-  const onCardClick = (event) => {
-    if (movedRef.current) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-  };
+  const trackItems = marqueeCopies(items, 4);
+  const loopItems = marqueeCopies(items, 4).map((category) => ({
+    ...category,
+    loopKey: `loop-${category.loopKey}`,
+  }));
 
   return (
-    <section className="overflow-hidden bg-brand-cream py-6 sm:py-8">
+    <section className="w-full overflow-hidden border-b border-border bg-brand-cream py-4 md:hidden">
+      <div
+        ref={viewportRef}
+        className="relative w-full cursor-grab select-none overflow-hidden active:cursor-grabbing"
+        style={{ touchAction: "pan-y" }}
+        onPointerEnter={onPointerEnter}
+        onPointerLeave={onPointerLeave}
+      >
+        <div
+          ref={trackRef}
+          className="flex w-max gap-4 px-4 will-change-transform md:gap-8 md:px-6"
+        >
+          {trackItems.map((category) => (
+            <CircleCard
+              key={category.loopKey}
+              category={category}
+              onCardClick={onCardClick}
+            />
+          ))}
+          {loopItems.map((category) => (
+            <CircleCard
+              key={category.loopKey}
+              category={category}
+              isDuplicate
+              onCardClick={onCardClick}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export default function CategoryGrid({ categories = [] }) {
+  const items = toCards(categories);
+  const {
+    viewportRef,
+    trackRef,
+    paused,
+    setPaused,
+    onCardClick,
+    onPointerEnter,
+    onPointerLeave,
+  } = useInfiniteMarquee({ speed: 0.55 });
+
+  return (
+    <section className="hidden w-full overflow-hidden bg-brand-cream py-6 sm:py-8 md:block">
       <div className="mb-4 px-5 text-center sm:mb-6 sm:px-6">
         <h2 className="text-xl font-black tracking-tight text-brand-primary sm:text-2xl">
           Shop By Category
@@ -220,13 +170,8 @@ export default function CategoryGrid({ categories = [] }) {
         ref={viewportRef}
         className={cn("relative cursor-grab select-none overflow-hidden active:cursor-grabbing")}
         style={{ touchAction: "pan-y" }}
-        onPointerEnter={(event) => {
-          if (event.pointerType === "mouse") hoveringRef.current = true;
-        }}
-        onPointerLeave={() => {
-          hoveringRef.current = false;
-          draggingRef.current = false;
-        }}
+        onPointerEnter={onPointerEnter}
+        onPointerLeave={onPointerLeave}
       >
         <div
           ref={trackRef}

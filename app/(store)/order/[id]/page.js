@@ -94,6 +94,9 @@ export default function OrderConfirmationPage() {
 
       <div className="mt-8 flex flex-wrap gap-3">
         <OrderSlipDownload order={order} label="Download receipt" />
+        <Button href={`/track-order?id=${encodeURIComponent(order.id)}`}>
+          Track your order
+        </Button>
         <Button href="/products">Continue Shopping</Button>
         <Button href="/wishlist" variant="outline">
           View favourites

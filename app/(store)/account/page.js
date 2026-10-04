@@ -69,7 +69,15 @@ export default function AccountPage() {
                   </Link>
                   <p className="text-sm text-neutral-500">{order.orderStatus}</p>
                 </div>
-                <p className="font-bold">{formatPrice(order.total)}</p>
+                <div className="flex flex-col items-end gap-2">
+                  <p className="font-bold">{formatPrice(order.total)}</p>
+                  <Link
+                    href={`/track-order?id=${encodeURIComponent(order.id)}`}
+                    className="text-sm font-semibold text-brand-primary"
+                  >
+                    Track
+                  </Link>
+                </div>
               </li>
             ))}
           </ul>

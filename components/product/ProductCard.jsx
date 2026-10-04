@@ -11,6 +11,7 @@ import { useQuickView } from "@/context/QuickViewContext";
 import { useToast } from "@/context/ToastContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { formatPrice, getDiscountPercent, cn } from "@/lib/utils";
+import { getProductStock } from "@/lib/variantStock";
 import StarRating from "@/components/ui/StarRating";
 
 export default function ProductCard({ product, className }) {
@@ -26,6 +27,7 @@ export default function ProductCard({ product, className }) {
   const discount = getDiscountPercent(product.price, product.salePrice);
   const displayPrice = product.salePrice ?? product.price;
   const secondaryImage = product.images[1] || product.images[0];
+  const inStock = getProductStock(product) > 0;
 
   useEffect(() => {
     if (!showActions) return undefined;
@@ -43,6 +45,7 @@ export default function ProductCard({ product, className }) {
   const handleAddToCart = (event) => {
     event.preventDefault();
     event.stopPropagation();
+    if (!inStock) return;
     addItem(product, { quantity: 1 });
     showToast(`${product.name} added to cart`);
   };
@@ -85,6 +88,7 @@ export default function ProductCard({ product, className }) {
           {product.featured && !product.newArrival && (
             <Badge variant="featured">Featured</Badge>
           )}
+          {!inStock && <Badge variant="sale">Sold out</Badge>}
         </div>
 
         <button
@@ -132,9 +136,10 @@ export default function ProductCard({ product, className }) {
             size="sm"
             className="w-full rounded-xl"
             onClick={handleAddToCart}
+            disabled={!inStock}
           >
             <ShoppingBag className="h-4 w-4" />
-            Add to Cart
+            {inStock ? "Add to Cart" : "Sold out"}
           </Button>
         </div>
       </div>

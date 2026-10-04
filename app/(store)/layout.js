@@ -1,6 +1,7 @@
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import WhatsAppFloat from "@/components/layout/WhatsAppFloat";
+import MobileBottomBar from "@/components/layout/MobileBottomBar";
 import { listCategories } from "@/lib/catalog";
 import { buildFooterShop, buildMainNav } from "@/lib/storeNav";
 
@@ -14,9 +15,12 @@ export default async function StoreLayout({ children }) {
   return (
     <>
       <Header navItems={navItems} />
-      <main className="flex-1">{children}</main>
+      <main className="flex-1 pb-20 xl:pb-0">{children}</main>
       <Footer shopLinks={shopLinks} />
-      <WhatsAppFloat />
+      <MobileBottomBar />
+      <div className="hidden xl:block">
+        <WhatsAppFloat />
+      </div>
     </>
   );
 }

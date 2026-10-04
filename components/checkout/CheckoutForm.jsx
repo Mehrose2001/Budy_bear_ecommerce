@@ -444,13 +444,15 @@ export function CheckoutFields({
         />
       </section>
 
-      <Button type="submit" size="lg" className="hidden w-full xl:inline-flex" disabled={isSubmitting}>
-        {isSubmitting
-          ? "Placing order..."
-          : selectedPayment?.id === "cod"
-            ? "Place COD order"
-            : "Place order"}
-      </Button>
+      <div className="hidden xl:block">
+        <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
+          {isSubmitting
+            ? "Placing order..."
+            : selectedPayment?.id === "cod"
+              ? "Place COD order"
+              : "Place order"}
+        </Button>
+      </div>
     </form>
   );
 }

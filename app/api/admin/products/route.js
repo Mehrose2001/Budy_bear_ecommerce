@@ -39,9 +39,14 @@ export async function POST(request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const body = await request.json();
+    const slug = String(body.slug || "").trim();
     if (!body.name || !body.category || !body.price) {
       return NextResponse.json({ error: "Name, category and price are required." }, { status: 400 });
     }
+    if (!slug) {
+      return NextResponse.json({ error: "Slug is required." }, { status: 400 });
+    }
+    body.slug = slug;
     if (isSupabaseConfigured()) {
       const product = await createProduct(body, getAccessToken(request));
       return NextResponse.json({ product }, { status: 201 });
@@ -56,6 +61,11 @@ export async function PUT(request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const body = await request.json();
+    const slug = String(body.slug || "").trim();
+    if (!slug) {
+      return NextResponse.json({ error: "Slug is required." }, { status: 400 });
+    }
+    body.slug = slug;
     if (isSupabaseConfigured()) {
       const product = await updateProduct(body.id, body, getAccessToken(request));
       return NextResponse.json({ product });

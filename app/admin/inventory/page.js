@@ -54,17 +54,28 @@ export default function AdminInventoryPage() {
                 <td className="px-4 py-3 font-semibold text-brand-primary">{product.name}</td>
                 <td className="px-4 py-3">{product.id}</td>
                 <td className="px-4 py-3">
-                  <input
-                    type="number"
-                    min="0"
-                    defaultValue={product.stock}
-                    key={`${product.id}-${product.stock}`}
-                    onBlur={(event) => {
-                      const next = Number(event.target.value);
-                      if (next !== product.stock) updateStock(product, next);
-                    }}
-                    className="h-10 w-24 rounded-xl border border-border px-3"
-                  />
+                  {product.variantStock && Object.keys(product.variantStock).length ? (
+                    <p className="text-xs text-neutral-600">
+                      {Object.entries(product.variantStock)
+                        .map(([color, sizes]) => {
+                          const total = Object.values(sizes).reduce((sum, qty) => sum + Number(qty || 0), 0);
+                          return `${color} ${total}`;
+                        })
+                        .join(" · ")}
+                    </p>
+                  ) : (
+                    <input
+                      type="number"
+                      min="0"
+                      defaultValue={product.stock}
+                      key={`${product.id}-${product.stock}`}
+                      onBlur={(event) => {
+                        const next = Number(event.target.value);
+                        if (next !== product.stock) updateStock(product, next);
+                      }}
+                      className="h-10 w-24 rounded-xl border border-border px-3"
+                    />
+                  )}
                 </td>
                 <td className="px-4 py-3">
                   {product.stock === 0

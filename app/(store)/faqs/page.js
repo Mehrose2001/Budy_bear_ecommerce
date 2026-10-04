@@ -27,7 +27,7 @@ const faqs = [
   },
   {
     q: "How do I track or change an order?",
-    a: `Message us on WhatsApp at ${brand.whatsapp} with your order ID. We will confirm status or help with an address update if the parcel has not shipped.`,
+    a: `Use Track your order in the footer with your order ID and checkout phone number. Status moves Pending → Confirmed → Dispatch, or Canceled if the order is cancelled. You can also message us on WhatsApp at ${brand.whatsapp}.`,
   },
 ];
 

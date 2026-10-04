@@ -95,6 +95,9 @@ adminRouter.post(
     if (!req.body?.name || !req.body?.category || !req.body?.price) {
       throw new HttpError(400, "Name, category and price are required.");
     }
+    if (!String(req.body?.slug || "").trim()) {
+      throw new HttpError(400, "Slug is required.");
+    }
     const product = await createProduct(req.body);
     res.status(201).json({ product });
   })
@@ -104,6 +107,9 @@ adminRouter.put(
   "/products",
   requireAdmin,
   asyncHandler(async (req, res) => {
+    if (!String(req.body?.slug || "").trim()) {
+      throw new HttpError(400, "Slug is required.");
+    }
     const product = await updateProduct(req.body.id, req.body);
     res.json({ product });
   })

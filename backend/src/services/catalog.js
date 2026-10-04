@@ -259,17 +259,37 @@ export async function deleteReview(id) {
 
 export async function updateSettings(input) {
   const supabase = await requireSupabase();
+  const payload = {
+    store_name: input.storeName ?? input.store_name,
+    announcement: input.announcement,
+    support_email: input.supportEmail ?? input.support_email,
+    support_phone: input.supportPhone ?? input.support_phone,
+    seasonal_collection:
+      String(input.seasonalCollection ?? input.seasonal_collection || "").toLowerCase() === "summer"
+        ? "summer"
+        : "winter",
+  };
   const { data, error } = await supabase
     .from("store_settings")
-    .update({
-      store_name: input.storeName ?? input.store_name,
-      announcement: input.announcement,
-      support_email: input.supportEmail ?? input.support_email,
-      support_phone: input.supportPhone ?? input.support_phone,
-    })
+    .update(payload)
     .eq("id", 1)
     .select("*")
     .single();
+  if (error && /seasonal_collection/i.test(String(error.message || ""))) {
+    const { seasonal_collection: _season, ...legacy } = payload;
+    const retry = await supabase
+      .from("store_settings")
+      .update(legacy)
+      .eq("id", 1)
+      .select("*")
+      .single();
+    if (retry.error) throw new HttpError(400, retry.error.message);
+    invalidateCatalogCache();
+    return {
+      ...mapSettings(retry.data),
+      seasonalCollection: payload.seasonal_collection,
+    };
+  }
   if (error) throw new HttpError(400, error.message);
   invalidateCatalogCache();
   return mapSettings(data);

@@ -10,6 +10,11 @@ function client(accessToken) {
   return accessToken ? createUserClient(accessToken) : createServerClient();
 }
 
+function isMissingVariantStockColumn(error) {
+  const message = String(error?.message || error?.details || "");
+  return /variant_stock/i.test(message);
+}
+
 export async function getProducts({ includeInactive = false, accessToken } = {}) {
   const supabase = client(accessToken);
   let query = supabase.from("products").select("*").order("id", { ascending: true });
@@ -77,6 +82,12 @@ export async function createProduct(input, accessToken) {
     .insert({ id, ...row })
     .select("*")
     .single();
+  if (isMissingVariantStockColumn(error)) {
+    const { variant_stock: _variantStock, ...legacy } = row;
+    const retry = await supabase.from("products").insert({ id, ...legacy }).select("*").single();
+    throwIf(retry.error, "Unable to create product.");
+    return mapProduct(retry.data);
+  }
   throwIf(error, "Unable to create product.");
   return mapProduct(data);
 }
@@ -92,6 +103,7 @@ export async function updateProduct(id, input, accessToken) {
     compare_at_price: existing.salePrice,
     color_images: existing.colorImages,
     color_swatches: existing.colorSwatches,
+    variant_stock: existing.variantStock,
     new_arrival: existing.newArrival,
     best_seller: existing.bestSeller,
     review_count: existing.reviewCount,
@@ -105,6 +117,17 @@ export async function updateProduct(id, input, accessToken) {
     .eq("id", Number(id))
     .select("*")
     .single();
+  if (isMissingVariantStockColumn(error)) {
+    const { variant_stock: _variantStock, ...legacy } = row;
+    const retry = await supabase
+      .from("products")
+      .update(legacy)
+      .eq("id", Number(id))
+      .select("*")
+      .single();
+    throwIf(retry.error, "Unable to update product.");
+    return mapProduct(retry.data);
+  }
   throwIf(error, "Unable to update product.");
   return mapProduct(data);
 }

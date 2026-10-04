@@ -12,6 +12,7 @@ import { FREE_DELIVERY_THRESHOLD, SHIPPING_FEE } from "@/data/store";
 import { readCart, writeCart } from "@/lib/storage";
 import { getEffectivePrice } from "@/lib/productFilters";
 import { getProductColors } from "@/lib/productImages";
+import { firstInStockColor, firstInStockSize, getVariantQty } from "@/lib/variantStock";
 
 const CartContext = createContext(null);
 
@@ -39,8 +40,11 @@ export function CartProvider({ children }) {
   const closeDrawer = useCallback(() => setIsDrawerOpen(false), []);
 
   const addItem = useCallback((product, { size, color, quantity = 1, openDrawer: shouldOpen = true } = {}) => {
-    const selectedSize = size || product.sizes[0];
-    const selectedColor = color || getProductColors(product)[0];
+    const colors = getProductColors(product);
+    const selectedColor = color || firstInStockColor(product, colors);
+    const selectedSize = size || firstInStockSize(product, selectedColor, product.sizes);
+    const maxStock = getVariantQty(product, selectedColor, selectedSize);
+    if (maxStock <= 0) return;
     const lineId = createLineId(product, selectedSize, selectedColor);
     const unitPrice = getEffectivePrice(product);
 
@@ -51,7 +55,8 @@ export function CartProvider({ children }) {
           item.id === lineId
             ? {
                 ...item,
-                quantity: Math.min(item.quantity + quantity, product.stock),
+                quantity: Math.min(item.quantity + quantity, maxStock),
+                stock: maxStock,
               }
             : item
         );
@@ -70,8 +75,8 @@ export function CartProvider({ children }) {
           unitPrice,
           size: selectedSize,
           color: selectedColor,
-          quantity: Math.min(quantity, product.stock),
-          stock: product.stock,
+          quantity: Math.min(quantity, maxStock),
+          stock: maxStock,
         },
       ];
     });

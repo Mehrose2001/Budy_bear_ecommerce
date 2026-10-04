@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Heart, Minus, Plus, Truck, RefreshCcw } from "lucide-react";
 import Button from "@/components/ui/Button";
@@ -12,6 +12,14 @@ import { useToast } from "@/context/ToastContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { COLOR_SWATCHES, FREE_DELIVERY_THRESHOLD } from "@/data/store";
 import { getProductColors } from "@/lib/productImages";
+import {
+  firstInStockColor,
+  firstInStockSize,
+  getProductStock,
+  getVariantQty,
+  isColorSoldOut,
+  isSizeSoldOut,
+} from "@/lib/variantStock";
 import { formatLabel, formatPrice, getDiscountPercent, cn } from "@/lib/utils";
 
 export default function ProductInfo({ product, compact = false, onAdded, onColorChange }) {
@@ -19,16 +27,27 @@ export default function ProductInfo({ product, compact = false, onAdded, onColor
   const { showToast } = useToast();
   const { hasItem, toggleItem } = useWishlist();
   const colors = getProductColors(product);
-  const [size, setSize] = useState(product.sizes[0]);
-  const [color, setColor] = useState(colors[0]);
+  const [color, setColor] = useState(() => firstInStockColor(product, colors));
+  const [size, setSize] = useState(() =>
+    firstInStockSize(product, firstInStockColor(product, colors), product.sizes)
+  );
   const [quantity, setQuantity] = useState(1);
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
   const wishlisted = hasItem(product.id);
 
   const discount = getDiscountPercent(product.price, product.salePrice);
   const displayPrice = product.salePrice ?? product.price;
+  const available = getVariantQty(product, color, size);
+  const totalStock = getProductStock(product);
+  const canAdd = available > 0;
 
-  const canAdd = product.stock > 0;
+  const handleColorChange = (option) => {
+    if (isColorSoldOut(product, option)) return;
+    setColor(option);
+    setSize(firstInStockSize(product, option, product.sizes));
+    setQuantity(1);
+    onColorChange?.(option);
+  };
 
   const handleAdd = (buyNow = false) => {
     if (!canAdd) return;
@@ -37,10 +56,7 @@ export default function ProductInfo({ product, compact = false, onAdded, onColor
     onAdded?.(buyNow);
   };
 
-  const quantityOptions = useMemo(
-    () => Math.min(product.stock, 10),
-    [product.stock]
-  );
+  const quantityOptions = Math.max(1, Math.min(available || 1, 10));
 
   return (
     <div>
@@ -76,28 +92,34 @@ export default function ProductInfo({ product, compact = false, onAdded, onColor
       </div>
 
       <p className="mt-2 text-sm text-neutral-500">
-        {product.stock > 0 ? `${product.stock} in stock` : "Out of stock"}
+        {available > 0
+          ? `${available} in stock${color ? ` for ${color}` : ""}${size ? ` / ${size}` : ""}`
+          : totalStock > 0
+            ? "This size is sold out"
+            : "Out of stock"}
       </p>
 
       {colors.length > 0 && (
       <fieldset className="mt-6">
         <legend className="mb-3 text-sm font-bold text-neutral-900">Color</legend>
         <div className="flex flex-wrap gap-2">
-          {colors.map((option) => (
+          {colors.map((option) => {
+            const soldOut = isColorSoldOut(product, option);
+            return (
             <button
               key={option}
               type="button"
-              onClick={() => {
-                setColor(option);
-                onColorChange?.(option);
-              }}
+              onClick={() => handleColorChange(option)}
+              disabled={soldOut}
               className={cn(
                 "inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-medium",
-                color === option
+                soldOut && "cursor-not-allowed opacity-50",
+                !soldOut && color === option
                   ? "border-brand-primary bg-brand-cream"
                   : "border-neutral-200 hover:border-brand-primary"
               )}
               aria-pressed={color === option}
+              aria-disabled={soldOut}
             >
               <span
                 className="h-4 w-4 rounded-full border border-neutral-200"
@@ -107,8 +129,10 @@ export default function ProductInfo({ product, compact = false, onAdded, onColor
                 }}
               />
               {option}
+              {soldOut ? " · Sold out" : ""}
             </button>
-          ))}
+            );
+          })}
         </div>
       </fieldset>
       )}
@@ -125,22 +149,32 @@ export default function ProductInfo({ product, compact = false, onAdded, onColor
           </button>
         </div>
         <div className="flex flex-wrap gap-2">
-          {product.sizes.map((option) => (
+          {product.sizes.map((option) => {
+            const soldOut = isSizeSoldOut(product, color, option);
+            return (
             <button
               key={option}
               type="button"
-              onClick={() => setSize(option)}
+              onClick={() => {
+                if (soldOut) return;
+                setSize(option);
+                setQuantity(1);
+              }}
+              disabled={soldOut}
               className={cn(
                 "min-w-12 rounded-xl border px-3 py-2 text-sm font-semibold",
-                size === option
+                soldOut && "cursor-not-allowed opacity-40 line-through",
+                !soldOut && size === option
                   ? "border-brand-primary bg-brand-primary text-white"
                   : "border-neutral-200 hover:border-brand-primary"
               )}
               aria-pressed={size === option}
+              aria-disabled={soldOut}
             >
               {option}
             </button>
-          ))}
+            );
+          })}
         </div>
       </fieldset>
 
@@ -182,7 +216,7 @@ export default function ProductInfo({ product, compact = false, onAdded, onColor
           disabled={!canAdd}
           className="w-full"
         >
-          Add to Cart
+          {canAdd ? "Add to Cart" : "Sold out"}
         </Button>
         <Button
           onClick={() => handleAdd(true)}
@@ -190,7 +224,7 @@ export default function ProductInfo({ product, compact = false, onAdded, onColor
           variant="accent"
           className="w-full"
         >
-          Buy Now
+          {canAdd ? "Buy Now" : "Sold out"}
         </Button>
         <button
           type="button"
