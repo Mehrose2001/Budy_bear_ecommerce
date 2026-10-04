@@ -5,8 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "dev:api": "npm run dev --prefix backend",
-    "build": "next build",
-    "start": "next start",
+    "build": "next build --webpack",
+    "start": "next start -H 0.0.0.0",
     "lint": "eslint"
   },
   "dependencies": {

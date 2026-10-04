@@ -34,6 +34,16 @@ function mediaRemotePatterns() {
     hostname: "*.supabase.co",
     pathname: "/storage/v1/object/public/**",
   });
+  patterns.push({
+    protocol: "https",
+    hostname: "budybear.com",
+    pathname: "/**",
+  });
+  patterns.push({
+    protocol: "https",
+    hostname: "www.budybear.com",
+    pathname: "/**",
+  });
 
   return patterns;
 }
