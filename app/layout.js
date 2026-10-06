@@ -15,6 +15,11 @@ export const metadata = {
     template: `%s | ${brand.name}`,
   },
   description: `${brand.slogan} Shop premium kids clothing and accessories. Free delivery on orders above Rs. 3,000 across Pakistan.`,
+  icons: {
+    icon: [{ url: "/images/brand/browser_icon.png", type: "image/png" }],
+    shortcut: "/images/brand/browser_icon.png",
+    apple: "/images/brand/browser_icon.png",
+  },
   keywords: [
     "kids wear",
     "children clothing",

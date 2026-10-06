@@ -307,6 +307,20 @@ export function CheckoutFields({
             autoComplete="postal-code"
             required
           />
+          <div className="sm:col-span-2">
+            <label htmlFor="notes" className="mb-2 block text-sm font-medium text-neutral-700">
+              Order note
+            </label>
+            <textarea
+              id="notes"
+              name="notes"
+              rows={4}
+              value={form.notes}
+              onChange={(event) => updateField("notes", event.target.value)}
+              placeholder="Apartment, landmark, or delivery instructions (optional)"
+              className="w-full rounded-xl border border-neutral-200 px-4 py-3 text-sm outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
+            />
+          </div>
         </div>
       </section>
 
@@ -393,10 +407,9 @@ export function CheckoutFields({
 
         {form.paymentMethod === "cod" && (
           <p className="mt-4 rounded-xl bg-brand-cream px-4 py-3 text-sm text-neutral-700">
-            Cash on Delivery. We email Budy Bear when you place the order. After
-            we confirm it in the admin panel, you will receive a WhatsApp message
-            from our store number. You can also download the receipt after placing
-            the order.
+            Cash on Delivery. After we confirm it in the admin panel, you will
+            receive a WhatsApp message from our store number. You can also
+            download the receipt after placing the order.
           </p>
         )}
 
@@ -427,21 +440,6 @@ export function CheckoutFields({
           </p>
         )}
         {couponError && <p className="mt-2 text-sm text-error">{couponError}</p>}
-      </section>
-
-      <section className="rounded-3xl border border-neutral-200 bg-white p-6">
-        <label htmlFor="notes" className="text-lg font-black text-neutral-900">
-          Order notes
-        </label>
-        <textarea
-          id="notes"
-          name="notes"
-          rows={4}
-          value={form.notes}
-          onChange={(event) => updateField("notes", event.target.value)}
-          placeholder="Apartment, landmark, or delivery instructions (optional)"
-          className="mt-4 w-full rounded-xl border border-neutral-200 px-4 py-3 text-sm outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
-        />
       </section>
 
       <div className="hidden xl:block">
