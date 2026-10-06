@@ -11,11 +11,15 @@ import { listCoupons } from "@/lib/catalogStore";
 import { createOrder } from "@/services/orderService";
 
 function validateOrder(body) {
-  const requiredCustomer = ["fullName", "email", "phone"];
-  const requiredAddress = ["address", "city", "province", "postalCode"];
+  const requiredCustomer = ["fullName", "phone"];
+  const requiredAddress = ["address", "city", "province"];
   if (!body?.items?.length) return "Your cart is empty.";
   if (!body.customer || requiredCustomer.some((key) => !body.customer[key]?.trim())) {
     return "Please complete your contact details.";
+  }
+  const email = body.customer.email?.trim();
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return "Enter a valid email address.";
   }
   if (!body.shippingAddress || requiredAddress.some((key) => !body.shippingAddress[key]?.trim())) {
     return "Please complete your delivery address.";

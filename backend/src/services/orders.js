@@ -7,11 +7,15 @@ const EXPRESS_CITIES = new Set(["karachi"]);
 
 function assertOrder(body) {
   if (!body?.items?.length) throw new HttpError(400, "Your cart is empty.");
-  const requiredCustomer = ["fullName", "email", "phone"];
+  const requiredCustomer = ["fullName", "phone"];
   if (!body.customer || requiredCustomer.some((key) => !body.customer[key]?.trim())) {
     throw new HttpError(400, "Please complete your contact details.");
   }
-  const requiredAddress = ["address", "city", "province", "postalCode"];
+  const email = body.customer.email?.trim();
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new HttpError(400, "Enter a valid email address.");
+  }
+  const requiredAddress = ["address", "city", "province"];
   if (
     !body.shippingAddress ||
     requiredAddress.some((key) => !body.shippingAddress[key]?.trim())

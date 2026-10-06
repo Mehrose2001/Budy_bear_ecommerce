@@ -29,7 +29,7 @@ function validate(form) {
   const errors = {};
 
   if (!form.fullName.trim()) errors.fullName = "Full name is required.";
-  if (!form.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+  if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
     errors.email = "Enter a valid email address.";
   }
   if (!/^0?3\d{9}$/.test(form.phone.replace(/\s|-/g, ""))) {
@@ -38,7 +38,6 @@ function validate(form) {
   if (!form.address.trim()) errors.address = "Street address is required.";
   if (!form.city.trim()) errors.city = "City is required.";
   if (!form.province) errors.province = "Select a province.";
-  if (!form.postalCode.trim()) errors.postalCode = "Postal code is required.";
   if (
     form.deliveryMethod === "express" &&
     !isExpressAvailable(form.province, form.city)
@@ -235,14 +234,13 @@ export function CheckoutFields({
             required
           />
           <Input
-            label="Email"
+            label="Email (optional)"
             type="email"
             name="email"
             value={form.email}
             onChange={(event) => updateField("email", event.target.value)}
             error={errors.email}
             autoComplete="email"
-            required
           />
           <Input
             label="Phone"
@@ -299,13 +297,12 @@ export function CheckoutFields({
             </select>
           </div>
           <Input
-            label="Postal Code"
+            label="Postal Code (optional)"
             name="postalCode"
             value={form.postalCode}
             onChange={(event) => updateField("postalCode", event.target.value)}
             error={errors.postalCode}
             autoComplete="postal-code"
-            required
           />
           <div className="sm:col-span-2">
             <label htmlFor="notes" className="mb-2 block text-sm font-medium text-neutral-700">
