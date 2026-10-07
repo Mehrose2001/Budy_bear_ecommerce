@@ -73,7 +73,7 @@ export default function AdminOrdersPage() {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex min-h-0 flex-col">
       <AdminPageHeader
         title="Orders"
         description={`Confirming an order opens WhatsApp Business so you can message the customer from ${brand.whatsapp}. Use the Budy Bear WhatsApp Business login on this phone, not personal WhatsApp or WhatsApp Web.`}

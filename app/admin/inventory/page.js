@@ -33,7 +33,7 @@ export default function AdminInventoryPage() {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex min-h-0 flex-col">
       <AdminPageHeader
         title="Inventory"
         description="Adjust stock levels for products currently on the store."

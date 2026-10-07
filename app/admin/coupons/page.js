@@ -49,7 +49,7 @@ export default function AdminCouponsPage() {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex min-h-0 flex-col">
       <AdminPageHeader title="Coupons" description="Create discount codes for checkout promotions." />
       <form
         onSubmit={save}

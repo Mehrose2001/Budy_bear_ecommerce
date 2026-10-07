@@ -58,7 +58,7 @@ export default function AdminProductsPage() {
   );
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex min-h-0 flex-col">
       <AdminPageHeader
         title="Products"
         description="Add, edit, and manage catalog items shown on the store."

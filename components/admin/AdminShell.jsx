@@ -131,9 +131,9 @@ export default function AdminShell({ children }) {
   return (
     <div
       data-admin-root
-      className="h-dvh overflow-hidden bg-brand-cream lg:grid lg:grid-cols-[260px_minmax(0,1fr)]"
+      className="h-dvh overflow-hidden bg-brand-cream lg:grid lg:grid-cols-[260px_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]"
     >
-      <aside className="hidden h-full lg:block">{sidebar}</aside>
+      <aside className="hidden h-full min-h-0 overflow-hidden lg:block">{sidebar}</aside>
 
       {mobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
@@ -169,7 +169,7 @@ export default function AdminShell({ children }) {
             View store
           </Link>
         </header>
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 py-6 lg:px-8">
+        <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-4 py-6 lg:px-8">
           {children}
         </div>
       </div>

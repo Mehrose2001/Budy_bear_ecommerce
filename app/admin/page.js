@@ -29,7 +29,7 @@ export default function AdminDashboardPage() {
   }, [admin?.token]);
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex min-h-0 flex-col">
       <AdminPageHeader
         title={`Welcome back, ${admin?.name?.split(" ")[0] || "Admin"}`}
         description="Track sales, orders, and catalog health for Budy Bear."
@@ -63,7 +63,7 @@ export default function AdminDashboardPage() {
         })}
       </div>
 
-      <div className="mt-8 flex min-h-0 flex-1 flex-col rounded-2xl border border-border bg-white p-5 shadow-sm">
+      <div className="mt-8 rounded-2xl border border-border bg-white p-5 shadow-sm">
         <div className="mb-4 flex shrink-0 items-center justify-between">
           <h3 className="text-lg font-black text-brand-primary">Recent orders</h3>
           <Link href="/admin/orders" className="text-sm font-semibold text-brand-accent">

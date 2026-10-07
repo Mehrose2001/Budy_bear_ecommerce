@@ -46,7 +46,7 @@ export default function AdminReviewsPage() {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex min-h-0 flex-col">
       <AdminPageHeader
         title="Reviews"
         description={`Moderate product reviews. Choose Published in Testimonials for up to ${TESTIMONIAL_LIMIT} reviews on the homepage.`}

@@ -19,7 +19,7 @@ export default function AdminCustomersPage() {
   }, [admin?.token]);
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex min-h-0 flex-col">
       <AdminPageHeader
         title="Customers"
         description="Shoppers collected from completed checkout orders."

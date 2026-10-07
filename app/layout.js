@@ -21,6 +21,10 @@ export const metadata = {
     "kids fashion Pakistan",
     brand.name,
   ],
+  icons: {
+    icon: [{ url: "/favicon.ico", sizes: "any" }],
+    apple: "/apple-icon.png",
+  },
   openGraph: {
     title: `${brand.name} | Premium Kids Wear`,
     description: brand.description,

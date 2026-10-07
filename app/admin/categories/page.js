@@ -135,7 +135,7 @@ export default function AdminCategoriesPage() {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex min-h-0 flex-col">
       <AdminPageHeader
         title="Categories"
         description="These categories power shop navigation. Thumbnails appear only in the homepage slider below the banner."
