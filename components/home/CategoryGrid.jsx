@@ -73,8 +73,8 @@ function CircleCard({ category, isDuplicate, onCardClick }) {
           style={{ objectPosition: category.objectPosition || "center top" }}
         />
       </span>
-      <span className="line-clamp-2 text-center text-[10px] font-semibold leading-tight text-brand-primary md:text-sm">
-        {isDuplicate ? "\u00a0" : category.label}
+      <span className="line-clamp-2 min-h-[2em] text-center text-[10px] font-semibold leading-tight text-brand-primary md:text-sm">
+        {category.label}
       </span>
     </Link>
   );

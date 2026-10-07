@@ -26,12 +26,15 @@ import {
   deleteBanner as deleteDbBanner,
   deleteCoupon as deleteDbCoupon,
   getStoreSettings,
+  getStorePage,
   listBanners as listDbBanners,
   listCoupons as listDbCoupons,
   updateStoreSettings,
+  upsertStorePage,
   upsertBanner as upsertDbBanner,
   upsertCoupon as upsertDbCoupon,
 } from "@/services/contentService";
+import { getDefaultLegalPage, mergeLegalPage } from "@/data/legalPages";
 
 function statsFrom(orders, products) {
   const sales = orders
@@ -69,6 +72,10 @@ export async function GET(request) {
       if (resource === "banners") return NextResponse.json({ banners: await listDbBanners({ includeInactive: true, accessToken: token }) });
       if (resource === "reviews") return NextResponse.json({ reviews: await getAllReviews(token) });
       if (resource === "settings") return NextResponse.json({ settings: await getStoreSettings() });
+      if (resource === "pages") {
+        const slug = searchParams.get("slug");
+        return NextResponse.json({ page: await getStorePage(slug) });
+      }
       if (resource === "customers") {
         const orders = await getAllOrders(token);
         const map = new Map();
@@ -98,6 +105,12 @@ export async function GET(request) {
     if (resource === "banners") return NextResponse.json({ banners: listBanners() });
     if (resource === "reviews") return NextResponse.json({ reviews: listReviews() });
     if (resource === "settings") return NextResponse.json({ settings: getSettings() });
+    if (resource === "pages") {
+      const slug = searchParams.get("slug");
+      return NextResponse.json({
+        page: mergeLegalPage(slug, getSettings()?.legalPages?.[slug]) || getDefaultLegalPage(slug),
+      });
+    }
     if (resource === "customers") {
       const map = new Map();
       listOrders().forEach((order) => {
@@ -137,6 +150,12 @@ export async function POST(request) {
         return NextResponse.json({ banner });
       }
       if (body.resource === "settings") return NextResponse.json({ settings: await updateStoreSettings(body.data, token) });
+      if (body.resource === "pages") {
+        const page = await upsertStorePage(body.data, token);
+        invalidateCatalogSnapshot();
+        revalidatePath(page.href);
+        return NextResponse.json({ page });
+      }
       if (body.resource === "reviews") {
         const review = await updateDbReview(body.data.id, body.data, token);
         invalidateCatalogSnapshot();
@@ -153,6 +172,20 @@ export async function POST(request) {
       return NextResponse.json({ banner });
     }
     if (body.resource === "settings") return NextResponse.json({ settings: updateSettings(body.data) });
+    if (body.resource === "pages") {
+      const slug = body.data?.slug;
+      const defaults = getDefaultLegalPage(slug);
+      if (!defaults) return NextResponse.json({ error: "Unknown page." }, { status: 400 });
+      const legalPages = {
+        ...(getSettings().legalPages || {}),
+        [slug]: { intro: body.data.intro || "", body: body.data.body || "" },
+      };
+      updateSettings({ legalPages });
+      const page = mergeLegalPage(slug, legalPages[slug]);
+      invalidateCatalogSnapshot();
+      revalidatePath(page.href);
+      return NextResponse.json({ page });
+    }
     if (body.resource === "reviews") return NextResponse.json({ review: updateReview(body.data.id, body.data) });
     return NextResponse.json({ error: "Unknown resource" }, { status: 400 });
   });

@@ -1,8 +1,9 @@
-import { throwIf } from "@/lib/errors";
+import { throwIf, AppError } from "@/lib/errors";
 import { mapBanner, mapCoupon, mapSettings } from "@/lib/mappers";
 import { createServerClient, createServiceClient, createUserClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { AppError } from "@/lib/errors";
+import { getDefaultLegalPage, mergeLegalPage } from "@/data/legalPages";
+import { getSettings as getMemorySettings, updateSettings as updateMemorySettings } from "@/lib/catalogStore";
 
 function client(accessToken) {
   if (!isSupabaseConfigured()) {
@@ -147,6 +148,75 @@ export async function addWishlistItem(userId, productId, accessToken) {
     .from("wishlists")
     .upsert({ user_id: userId, product_id: Number(productId) });
   throwIf(error, "Unable to save favourite.");
+}
+
+async function saveLegalPagesJson(supabase, slug, intro, body) {
+  const current = await getStoreSettings();
+  const legalPages = {
+    ...(current.legalPages || {}),
+    [slug]: { intro, body },
+  };
+  const retry = await supabase
+    .from("store_settings")
+    .update({ legal_pages: legalPages })
+    .eq("id", 1)
+    .select("*")
+    .single();
+  return retry;
+}
+
+export async function getStorePage(slug) {
+  const defaults = getDefaultLegalPage(slug);
+  if (!defaults) return null;
+  if (!isSupabaseConfigured()) {
+    return mergeLegalPage(slug, getMemorySettings()?.legalPages?.[slug]);
+  }
+  try {
+    const settings = await getStoreSettings();
+    const fromSettings = settings.legalPages?.[slug];
+    if (String(fromSettings?.intro || "").trim() || String(fromSettings?.body || "").trim()) {
+      return mergeLegalPage(slug, fromSettings);
+    }
+    const supabase = client();
+    const fromTable = await supabase.from("store_pages").select("*").eq("slug", slug).maybeSingle();
+    if (!fromTable.error && fromTable.data) {
+      return mergeLegalPage(slug, fromTable.data);
+    }
+    return mergeLegalPage(slug, fromSettings);
+  } catch {
+    return mergeLegalPage(slug, getMemorySettings()?.legalPages?.[slug]);
+  }
+}
+
+export async function upsertStorePage(input, accessToken) {
+  const slug = String(input.slug || "");
+  const defaults = getDefaultLegalPage(slug);
+  if (!defaults) throw new AppError("Unknown page.", 400);
+  const row = {
+    slug,
+    title: defaults.title,
+    intro: String(input.intro ?? ""),
+    body: String(input.body ?? ""),
+  };
+
+  if (!isSupabaseConfigured()) {
+    const legalPages = {
+      ...(getMemorySettings().legalPages || {}),
+      [slug]: { intro: row.intro, body: row.body },
+    };
+    updateMemorySettings({ legalPages });
+    return mergeLegalPage(slug, row);
+  }
+
+  const supabase = writeClient(accessToken);
+  const jsonSave = await saveLegalPagesJson(supabase, slug, row.intro, row.body);
+  const tableSave = await supabase.from("store_pages").upsert(row).select("*").single();
+  if (!jsonSave.error || !tableSave.error) return mergeLegalPage(slug, row);
+
+  throw new AppError(
+    "Unable to save page. Run backend/sql/012_store_pages.sql in the Supabase SQL editor.",
+    400
+  );
 }
 
 export async function removeWishlistItem(userId, productId, accessToken) {

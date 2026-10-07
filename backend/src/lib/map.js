@@ -171,6 +171,7 @@ export function mapSettings(row) {
       supportEmail: "budybear2026@gmail.com",
       supportPhone: "+92 333 0370236",
       seasonalCollection: "winter",
+      legalPages: {},
     };
   }
   return {
@@ -181,6 +182,7 @@ export function mapSettings(row) {
     seasonalCollection: normalizeSeasonalCollection(
       row.seasonal_collection || row.seasonalCollection
     ),
+    legalPages: row.legal_pages || row.legalPages || {},
   };
 }
 

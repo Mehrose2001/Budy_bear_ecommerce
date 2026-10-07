@@ -62,58 +62,62 @@ export default function Header({ navItems = mainNavItems }) {
         )}
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid h-16 grid-cols-5 items-center xl:hidden">
+          <div className="relative flex h-16 items-center justify-between xl:hidden">
             <button
               type="button"
               onClick={() => setMobileMenuOpen(true)}
-              className="inline-flex h-10 w-10 items-center justify-center justify-self-center rounded-full text-brand-primary transition-colors hover:bg-brand-cream"
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-brand-primary transition-colors hover:bg-brand-cream"
               aria-label="Open menu"
             >
               <Menu className="h-5 w-5" />
             </button>
 
-            <Link
-              href="/wishlist"
-              className="relative inline-flex h-10 w-10 items-center justify-center justify-self-center rounded-full text-brand-primary transition-colors hover:bg-brand-cream"
-              aria-label={`Favourites, ${wishlistCount} items`}
-            >
-              <Heart className="h-5 w-5" />
-              {wishlistCount > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-accent px-1 text-[10px] font-bold text-white">
-                  {wishlistCount}
-                </span>
-              )}
-            </Link>
+            <div className="pointer-events-none absolute inset-y-0 left-1/2 flex -translate-x-1/2 items-center">
+              <div className="pointer-events-auto">
+                <BrandLogo size={48} priority />
+              </div>
+            </div>
 
-            <BrandLogo size={48} priority className="justify-self-center" />
-
-            <button
-              type="button"
-              onClick={openDrawer}
-              className="relative inline-flex h-10 w-10 items-center justify-center justify-self-center rounded-full text-brand-primary transition-colors hover:bg-brand-cream"
-              aria-label={`Shopping cart, ${itemCount} items`}
-            >
-              <ShoppingBag className="h-5 w-5" />
-              {itemCount > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-accent px-1 text-[10px] font-bold text-white">
-                  {itemCount}
-                </span>
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setMobileSearchOpen((open) => !open)}
-              className="inline-flex h-10 w-10 items-center justify-center justify-self-center rounded-full text-brand-primary transition-colors hover:bg-brand-cream"
-              aria-label={mobileSearchOpen ? "Close search" : "Search"}
-              aria-expanded={mobileSearchOpen}
-            >
-              {mobileSearchOpen ? (
-                <X className="h-5 w-5" />
-              ) : (
-                <Search className="h-5 w-5" />
-              )}
-            </button>
+            <div className="flex shrink-0 items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setMobileSearchOpen((open) => !open)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full text-brand-primary transition-colors hover:bg-brand-cream"
+                aria-label={mobileSearchOpen ? "Close search" : "Search"}
+                aria-expanded={mobileSearchOpen}
+              >
+                {mobileSearchOpen ? (
+                  <X className="h-5 w-5" />
+                ) : (
+                  <Search className="h-5 w-5" />
+                )}
+              </button>
+              <Link
+                href="/wishlist"
+                className="relative inline-flex h-10 w-10 items-center justify-center rounded-full text-brand-primary transition-colors hover:bg-brand-cream"
+                aria-label={`Favourites, ${wishlistCount} items`}
+              >
+                <Heart className="h-5 w-5" />
+                {wishlistCount > 0 && (
+                  <span className="absolute -right-0.5 -top-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-accent px-1 text-[10px] font-bold text-white">
+                    {wishlistCount}
+                  </span>
+                )}
+              </Link>
+              <button
+                type="button"
+                onClick={openDrawer}
+                className="relative inline-flex h-10 w-10 items-center justify-center rounded-full text-brand-primary transition-colors hover:bg-brand-cream"
+                aria-label={`Shopping cart, ${itemCount} items`}
+              >
+                <ShoppingBag className="h-5 w-5" />
+                {itemCount > 0 && (
+                  <span className="absolute -right-0.5 -top-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-accent px-1 text-[10px] font-bold text-white">
+                    {itemCount}
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
 
           <div className="hidden h-[88px] items-center justify-between gap-4 xl:flex">

@@ -11,6 +11,7 @@ import {
   productToRow,
 } from "../lib/map.js";
 import { requireSupabase } from "../supabase.js";
+import { getDefaultLegalPage, mergeLegalPage } from "../../../data/legalPages.js";
 
 async function fetchAll(table, orderColumn = "id") {
   const supabase = await requireSupabase();
@@ -293,6 +294,55 @@ export async function updateSettings(input) {
   if (error) throw new HttpError(400, error.message);
   invalidateCatalogCache();
   return mapSettings(data);
+}
+
+export async function getStorePage(slug) {
+  const defaults = getDefaultLegalPage(slug);
+  if (!defaults) throw new HttpError(400, "Unknown page.");
+  const supabase = await requireSupabase();
+  const settings = await supabase.from("store_settings").select("*").eq("id", 1).maybeSingle();
+  const fromSettings = mapSettings(settings.data).legalPages?.[slug];
+  if (String(fromSettings?.intro || "").trim() || String(fromSettings?.body || "").trim()) {
+    return mergeLegalPage(slug, fromSettings);
+  }
+  const fromTable = await supabase.from("store_pages").select("*").eq("slug", slug).maybeSingle();
+  if (!fromTable.error && fromTable.data) {
+    return mergeLegalPage(slug, fromTable.data);
+  }
+  return mergeLegalPage(slug, fromSettings);
+}
+
+export async function upsertStorePage(input) {
+  const slug = String(input.slug || "");
+  const defaults = getDefaultLegalPage(slug);
+  if (!defaults) throw new HttpError(400, "Unknown page.");
+  const row = {
+    slug,
+    title: defaults.title,
+    intro: String(input.intro ?? ""),
+    body: String(input.body ?? ""),
+  };
+  const supabase = await requireSupabase();
+  const current = await supabase.from("store_settings").select("*").eq("id", 1).maybeSingle();
+  const legalPages = {
+    ...(mapSettings(current.data).legalPages || {}),
+    [slug]: { intro: row.intro, body: row.body },
+  };
+  const jsonSave = await supabase
+    .from("store_settings")
+    .update({ legal_pages: legalPages })
+    .eq("id", 1)
+    .select("*")
+    .single();
+  const saved = await supabase.from("store_pages").upsert(row).select("*").single();
+  if (!jsonSave.error || !saved.error) {
+    invalidateCatalogCache();
+    return mergeLegalPage(slug, row);
+  }
+  throw new HttpError(
+    400,
+    "Unable to save page. Run backend/sql/012_store_pages.sql in the Supabase SQL editor."
+  );
 }
 
 export async function listWishlist(userId) {

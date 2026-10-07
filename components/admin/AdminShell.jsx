@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   BadgePercent,
+  BookOpen,
   ClipboardList,
   FolderTree,
   Image as ImageIcon,
@@ -13,7 +14,9 @@ import {
   Menu,
   MessageSquare,
   Package,
+  ScrollText,
   Settings,
+  Shield,
   ShoppingBag,
   Users,
   UserRound,
@@ -35,6 +38,9 @@ const NAV_ITEMS = [
   { href: "/admin/coupons", label: "Coupons", icon: BadgePercent },
   { href: "/admin/banners", label: "Banners", icon: ImageIcon },
   { href: "/admin/reviews", label: "Reviews", icon: MessageSquare },
+  { href: "/admin/about", label: "About Budy Bear", icon: BookOpen },
+  { href: "/admin/privacy", label: "Privacy Policy", icon: Shield },
+  { href: "/admin/terms", label: "Terms & Conditions", icon: ScrollText },
   { href: "/admin/settings", label: "Settings", icon: Settings },
   { href: "/admin/profile", label: "Profile", icon: UserRound },
 ];
