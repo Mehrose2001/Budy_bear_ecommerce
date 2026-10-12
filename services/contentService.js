@@ -1,5 +1,5 @@
 import { throwIf, AppError } from "@/lib/errors";
-import { mapBanner, mapCoupon, mapSettings } from "@/lib/mappers";
+import { mapBanner, mapCoupon, mapProduct, mapSettings } from "@/lib/mappers";
 import { createServerClient, createServiceClient, createUserClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { getDefaultLegalPage, mergeLegalPage } from "@/data/legalPages";
@@ -133,17 +133,18 @@ export async function deleteBanner(id, accessToken) {
 }
 
 export async function listWishlist(userId, accessToken) {
-  const supabase = client(accessToken);
+  const supabase = writeClient(accessToken);
   const { data, error } = await supabase
     .from("wishlists")
-    .select("product_id")
-    .eq("user_id", userId);
+    .select("product_id, products(*)")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
   throwIf(error, "Unable to load wishlist.", 500);
-  return (data || []).map((row) => Number(row.product_id));
+  return (data || []).map((row) => mapProduct(row.products)).filter(Boolean);
 }
 
 export async function addWishlistItem(userId, productId, accessToken) {
-  const supabase = client(accessToken);
+  const supabase = writeClient(accessToken);
   const { error } = await supabase
     .from("wishlists")
     .upsert({ user_id: userId, product_id: Number(productId) });
@@ -220,7 +221,7 @@ export async function upsertStorePage(input, accessToken) {
 }
 
 export async function removeWishlistItem(userId, productId, accessToken) {
-  const supabase = client(accessToken);
+  const supabase = writeClient(accessToken);
   const { error } = await supabase
     .from("wishlists")
     .delete()

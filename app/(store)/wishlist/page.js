@@ -55,11 +55,11 @@ export default function WishlistPage() {
               className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center"
             >
               <Link
-                href={`/product/${product.slug}`}
+                href={product.slug ? `/product/${product.slug}` : "/products"}
                 className="relative h-28 w-28 shrink-0 overflow-hidden rounded-2xl bg-neutral-100"
               >
                 <Image
-                  src={product.images[0]}
+                  src={product.images?.[0] || "/images/brand/logo.jpg"}
                   alt={product.name}
                   fill
                   className="object-cover"
@@ -68,7 +68,7 @@ export default function WishlistPage() {
               </Link>
               <div className="min-w-0 flex-1">
                 <Link
-                  href={`/product/${product.slug}`}
+                  href={product.slug ? `/product/${product.slug}` : "/products"}
                   className="font-semibold text-neutral-900 hover:text-brand-primary"
                 >
                   {product.name}

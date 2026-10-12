@@ -3,6 +3,7 @@
 import { ToastProvider } from "@/context/ToastContext";
 import { CartProvider } from "@/context/CartContext";
 import { WishlistProvider } from "@/context/WishlistContext";
+import { OrdersProvider } from "@/context/OrdersContext";
 import { QuickViewProvider } from "@/context/QuickViewContext";
 import { AdminAuthProvider } from "@/context/AdminAuthContext";
 import { CustomerAuthProvider } from "@/context/CustomerAuthContext";
@@ -18,11 +19,13 @@ export default function AppProviders({ children }) {
           <CustomerAuthProvider>
             <CartProvider>
               <WishlistProvider>
-                <QuickViewProvider>
-                  {children}
-                  <CartDrawer />
-                  <RouteLoader />
-                </QuickViewProvider>
+                <OrdersProvider>
+                  <QuickViewProvider>
+                    {children}
+                    <CartDrawer />
+                    <RouteLoader />
+                  </QuickViewProvider>
+                </OrdersProvider>
               </WishlistProvider>
             </CartProvider>
           </CustomerAuthProvider>

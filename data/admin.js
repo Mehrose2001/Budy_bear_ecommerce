@@ -3,7 +3,7 @@ export const ADMIN_TOKEN = "bb-admin-demo";
 
 export const DEMO_ADMIN = {
   id: "admin-1",
-  email: "admin@budybear.pk",
+  email: "BudyBear2026@gmail.com",
   name: "Budy Bear",
   role: "admin",
   phone: "+92 333 0370236",

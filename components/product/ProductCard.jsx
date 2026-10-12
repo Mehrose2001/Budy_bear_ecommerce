@@ -94,7 +94,7 @@ export default function ProductCard({ product, className }) {
         <button
           type="button"
           onClick={() => {
-            toggleItem(product.id);
+            toggleItem(product);
             showToast(
               isWishlisted
                 ? `${product.name} removed from favourites`

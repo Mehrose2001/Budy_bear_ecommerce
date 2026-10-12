@@ -1,16 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
+import { useWishlist } from "@/context/WishlistContext";
+import { useOrders } from "@/context/OrdersContext";
 import { formatPrice } from "@/lib/utils";
 
 export default function AccountPage() {
   const router = useRouter();
-  const { user, isReady, isAuthenticated, authHeaders, logout } = useCustomerAuth();
-  const [orders, setOrders] = useState([]);
+  const { user, isReady, isAuthenticated, logout } = useCustomerAuth();
+  const { items: favourites, count: favouriteCount, isReady: wishlistReady } = useWishlist();
+  const { orders, isReady: ordersReady } = useOrders();
 
   useEffect(() => {
     if (isReady && !isAuthenticated) {
@@ -18,15 +21,7 @@ export default function AccountPage() {
     }
   }, [isAuthenticated, isReady, router]);
 
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    fetch("/api/orders/mine", { headers: authHeaders })
-      .then((response) => response.json())
-      .then((data) => setOrders(data.orders || []))
-      .catch(() => setOrders([]));
-  }, [authHeaders, isAuthenticated]);
-
-  if (!isReady || !isAuthenticated) {
+  if (!isReady || !isAuthenticated || !wishlistReady || !ordersReady) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16">
         <p className="text-neutral-500">Loading account...</p>
@@ -46,6 +41,25 @@ export default function AccountPage() {
           Sign out
         </Button>
       </div>
+
+      <section className="mt-10">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-black text-neutral-900">Favourites</h2>
+          <Link href="/wishlist" className="text-sm font-semibold text-brand-primary">
+            View all
+          </Link>
+        </div>
+        {favouriteCount === 0 ? (
+          <p className="mt-4 rounded-2xl border border-dashed border-neutral-300 bg-white p-6 text-neutral-500">
+            No saved items yet. Tap the heart on a product to save it to this account.
+          </p>
+        ) : (
+          <p className="mt-4 text-sm text-neutral-600">
+            {favouriteCount} saved {favouriteCount === 1 ? "item" : "items"}
+            {favourites[0]?.name ? `, including ${favourites[0].name}` : ""}.
+          </p>
+        )}
+      </section>
 
       <section className="mt-10">
         <h2 className="text-xl font-black text-neutral-900">Orders</h2>

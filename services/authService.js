@@ -1,6 +1,6 @@
 import { AppError, throwIf } from "@/lib/errors";
 import { mapProfile } from "@/lib/mappers";
-import { createServerClient, createServiceClient, createUserClient } from "@/lib/supabase/server";
+import { createServerClient, createServiceClient, createUserClient, getAuthUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
 const loginAttempts = new Map();
@@ -25,6 +25,57 @@ function assertPassword(password) {
   }
 }
 
+function isBootstrapAdminEmail(email) {
+  return (
+    String(email || "").trim().toLowerCase() ===
+    String(process.env.ADMIN_BOOTSTRAP_EMAIL || "BudyBear2026@gmail.com").trim().toLowerCase()
+  );
+}
+
+function fallbackUser(authUser, extra = {}) {
+  return {
+    id: authUser.id,
+    email: authUser.email,
+    name: extra.fullName || authUser.user_metadata?.full_name || "",
+    phone: extra.phone || authUser.user_metadata?.phone || "",
+    address: "",
+    city: "",
+    role: extra.role || (isBootstrapAdminEmail(authUser.email) ? "admin" : "customer"),
+  };
+}
+
+export async function ensureProfile(authUser, extra = {}) {
+  const row = {
+    id: authUser.id,
+    email: authUser.email,
+    full_name: extra.fullName || authUser.user_metadata?.full_name || "Customer",
+    phone: extra.phone || authUser.user_metadata?.phone || null,
+    role: extra.role || (isBootstrapAdminEmail(authUser.email) ? "admin" : "customer"),
+  };
+  const service = createServiceClient();
+  const db = service || createServerClient();
+  const existing = await db
+    .from("profiles")
+    .select("id, email, full_name, phone, address, city, role")
+    .eq("id", authUser.id)
+    .maybeSingle();
+  if (existing.data) {
+    return mapProfile(existing.data) || fallbackUser(authUser, extra);
+  }
+  if (service) {
+    const { error } = await service.from("profiles").upsert(row);
+    if (!error) {
+      const saved = await service
+        .from("profiles")
+        .select("id, email, full_name, phone, address, city, role")
+        .eq("id", authUser.id)
+        .maybeSingle();
+      if (saved.data) return mapProfile(saved.data);
+    }
+  }
+  return fallbackUser(authUser, extra);
+}
+
 export async function loginWithPassword(email, password, attemptKey = "unknown") {
   guardLogin(String(attemptKey || "unknown"));
   if (!isSupabaseConfigured()) {
@@ -38,10 +89,14 @@ export async function loginWithPassword(email, password, attemptKey = "unknown")
     email: String(email || "").trim(),
     password: String(password || ""),
   });
-  if (error || !data?.session) {
+  if (error || !data?.session || !data.user) {
+    const message = String(error?.message || "");
+    if (/session/i.test(message) && !/invalid/i.test(message)) {
+      throw new AppError("Unable to start a login session. Try again.", 401);
+    }
     throw new AppError("Invalid email or password.", 401);
   }
-  const profile = await loadProfile(data.session.access_token, data.user.id);
+  const profile = await ensureProfile(data.user);
   return {
     accessToken: data.session.access_token,
     user: profile,
@@ -55,32 +110,65 @@ export async function registerWithPassword(input) {
   if (!input.email || !input.password || !input.fullName) {
     throw new AppError("Name, email and password are required.", 400);
   }
+  assertPassword(input.password);
+  const email = String(input.email).trim().toLowerCase();
+  const fullName = String(input.fullName).trim();
+  const phone = String(input.phone || "").trim();
+  const service = createServiceClient();
+
+  if (service) {
+    const { data, error } = await service.auth.admin.createUser({
+      email,
+      password: input.password,
+      email_confirm: true,
+      user_metadata: { full_name: fullName, phone },
+    });
+    if (error) {
+      const message = String(error.message || "");
+      if (/already/i.test(message)) {
+        throw new AppError("An account with this email already exists. Sign in instead.", 400);
+      }
+      throw new AppError(message || "Unable to create account.", 400);
+    }
+    const session = await createServerClient().auth.signInWithPassword({
+      email,
+      password: input.password,
+    });
+    if (session.error || !session.data?.session) {
+      throw new AppError("Account created. Please sign in.", 400);
+    }
+    const profile = await ensureProfile(data.user, { fullName, phone, role: "customer" });
+    return { user: profile, accessToken: session.data.session.access_token, needsConfirm: false };
+  }
+
   const supabase = createServerClient();
   const { data, error } = await supabase.auth.signUp({
-    email: String(input.email).trim(),
+    email,
     password: input.password,
     options: {
-      data: {
-        full_name: input.fullName,
-        phone: input.phone || "",
-      },
+      data: { full_name: fullName, phone },
     },
   });
   throwIf(error, "Unable to create account.");
-  if (!data.session) {
+  if (!data.session || !data.user) {
     return { user: null, accessToken: "", needsConfirm: true };
   }
-  const profile = await loadProfile(data.session.access_token, data.user.id);
+  const profile = await ensureProfile(data.user, { fullName, phone, role: "customer" });
   return { user: profile, accessToken: data.session.access_token, needsConfirm: false };
 }
 
 export async function loadProfile(accessToken, userId) {
-  const supabase = createUserClient(accessToken);
-  const { data, error } = await supabase
+  const service = createServiceClient();
+  const db = service || createUserClient(accessToken) || createServerClient();
+  const { data, error } = await db
     .from("profiles")
     .select("id, email, full_name, phone, address, city, role")
     .eq("id", userId)
     .maybeSingle();
+  if (error && /session/i.test(String(error.message || ""))) {
+    const authUser = { id: userId, email: "", user_metadata: {} };
+    return fallbackUser(authUser);
+  }
   throwIf(error, "Unable to load account.", 500);
   return mapProfile(data);
 }
@@ -99,13 +187,13 @@ export async function updateAdminAccount(accessToken, input = {}) {
   const nextName = input.name == null ? null : String(input.name).trim();
   const nextPhone = input.phone == null ? null : String(input.phone).trim();
 
-  const userClient = createUserClient(accessToken);
-  const { data: authData, error: authError } = await userClient.auth.getUser(accessToken);
-  if (authError || !authData?.user) {
+  const authUser = await getAuthUser(accessToken);
+  if (!authUser) {
     throw new AppError("Please sign in.", 401);
   }
+  const userClient = createUserClient(accessToken);
 
-  const profile = await loadProfile(accessToken, authData.user.id);
+  const profile = await loadProfile(accessToken, authUser.id);
   if (String(profile?.role || "").toLowerCase() !== "admin") {
     throw new AppError("Admin access required.", 403);
   }
@@ -154,11 +242,11 @@ export async function updateAdminAccount(accessToken, input = {}) {
     const { error: profileError } = await writer
       .from("profiles")
       .update(profilePatch)
-      .eq("id", authData.user.id);
+      .eq("id", authUser.id);
     throwIf(profileError, "Unable to update profile.", 500);
   }
 
-  const user = await loadProfile(accessTokenOut, authData.user.id);
+  const user = await loadProfile(accessTokenOut, authUser.id);
   return {
     accessToken: accessTokenOut,
     user,

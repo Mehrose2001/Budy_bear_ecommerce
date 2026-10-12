@@ -9,130 +9,173 @@ import {
   useState,
 } from "react";
 import { getProductById } from "@/data/products";
-import { readWishlist, writeWishlist } from "@/lib/storage";
-import { useCustomerAuth } from "@/context/CustomerAuthContext";
+import {
+  AUTH_CHANGED_EVENT,
+  customerAuthHeaders,
+  readCustomerAccessToken,
+} from "@/lib/adminSession";
+import {
+  readGuestWishlistItems,
+  snapshotProduct,
+  writeGuestWishlistItems,
+} from "@/lib/storage";
 
 const WishlistContext = createContext(null);
 
+function productId(value) {
+  if (value && typeof value === "object") return Number(value.id);
+  return Number(value);
+}
+
+function hydrateItems(items) {
+  return (items || [])
+    .map((item) => {
+      if (item?.name && item?.images?.length) return item;
+      const seeded = getProductById(item?.id ?? item);
+      return seeded ? snapshotProduct(seeded) : snapshotProduct(item);
+    })
+    .filter(Boolean);
+}
+
+async function fetchAccountWishlist(token) {
+  if (!token) return null;
+  const response = await fetch("/api/wishlist", {
+    headers: customerAuthHeaders(token),
+    cache: "no-store",
+  });
+  if (response.status === 401 || response.status === 403) return null;
+  if (!response.ok) throw new Error("Unable to load favourites.");
+  const data = await response.json().catch(() => ({}));
+  return hydrateItems(data.items || []);
+}
+
 export function WishlistProvider({ children }) {
-  const { isAuthenticated, isReady: authReady, authHeaders } = useCustomerAuth();
-  const [ids, setIds] = useState([]);
-  const [remoteItems, setRemoteItems] = useState(null);
+  const [items, setItems] = useState([]);
+  const [isAccount, setIsAccount] = useState(false);
   const [isReady, setIsReady] = useState(false);
 
-  useEffect(() => {
-    if (!authReady) return;
-    setIds(readWishlist());
-    setIsReady(true);
-  }, [authReady]);
-
-  useEffect(() => {
-    if (isReady && !isAuthenticated) {
-      writeWishlist(ids);
-    }
-  }, [ids, isReady, isAuthenticated]);
-
-  useEffect(() => {
-    if (!authReady || !isAuthenticated) {
-      setRemoteItems(null);
+  const load = useCallback(async () => {
+    const token = readCustomerAccessToken();
+    if (!token) {
+      setIsAccount(false);
+      setItems(hydrateItems(readGuestWishlistItems()));
+      setIsReady(true);
       return;
     }
 
-    let cancelled = false;
-    (async () => {
-      try {
-        const localIds = readWishlist();
-        await Promise.all(
-          localIds.map((productId) =>
-            fetch("/api/wishlist", {
-              method: "POST",
-              headers: { "Content-Type": "application/json", ...authHeaders },
-              body: JSON.stringify({ productId }),
-            }).catch(() => null)
-          )
-        );
-        const response = await fetch("/api/wishlist", { headers: authHeaders });
-        const data = await response.json().catch(() => ({}));
-        if (cancelled || !response.ok) return;
-        const items = data.items || [];
-        setRemoteItems(items);
-        setIds(items.map((item) => item.id));
-        writeWishlist(items.map((item) => item.id));
-      } catch {
-        // Keep local favourites if the account wishlist is unavailable.
+    setIsAccount(true);
+    setIsReady(false);
+    try {
+      const remote = await fetchAccountWishlist(token);
+      if (!remote) {
+        setIsAccount(false);
+        setItems(hydrateItems(readGuestWishlistItems()));
+        return;
       }
-    })();
+      setItems(remote);
+    } catch {
+      setItems([]);
+    } finally {
+      setIsReady(true);
+    }
+  }, []);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [authReady, authHeaders, isAuthenticated]);
+  useEffect(() => {
+    load();
+    window.addEventListener(AUTH_CHANGED_EVENT, load);
+    return () => window.removeEventListener(AUTH_CHANGED_EVENT, load);
+  }, [load]);
 
-  const hasItem = useCallback((productId) => ids.includes(productId), [ids]);
+  const persistGuest = useCallback((next) => {
+    writeGuestWishlistItems(next);
+  }, []);
+
+  const hasItem = useCallback(
+    (value) => items.some((item) => Number(item.id) === productId(value)),
+    [items]
+  );
 
   const addItem = useCallback(
-    (productId) => {
-      setIds((current) =>
-        current.includes(productId) ? current : [productId, ...current]
+    (productOrId) => {
+      const snapshot = snapshotProduct(
+        typeof productOrId === "object" ? productOrId : getProductById(productOrId) || { id: productOrId }
       );
-      if (isAuthenticated) {
-        fetch("/api/wishlist", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...authHeaders },
-          body: JSON.stringify({ productId }),
-        }).catch(() => {});
-      }
+      if (!snapshot) return;
+      setItems((current) => {
+        if (current.some((item) => Number(item.id) === snapshot.id)) return current;
+        const next = [snapshot, ...current];
+        if (!readCustomerAccessToken()) persistGuest(next);
+        return next;
+      });
+
+      const token = readCustomerAccessToken();
+      if (!token) return;
+      fetch("/api/wishlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...customerAuthHeaders(token) },
+        body: JSON.stringify({ productId: snapshot.id }),
+      })
+        .then(async (response) => {
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok || !Array.isArray(data.items)) return;
+          setItems(hydrateItems(data.items));
+        })
+        .catch(() => {});
     },
-    [authHeaders, isAuthenticated]
+    [persistGuest]
   );
 
   const removeItem = useCallback(
-    (productId) => {
-      setIds((current) => current.filter((id) => id !== productId));
-      setRemoteItems((current) =>
-        current ? current.filter((item) => item.id !== productId) : current
-      );
-      if (isAuthenticated) {
-        fetch(`/api/wishlist/${productId}`, {
-          method: "DELETE",
-          headers: authHeaders,
-        }).catch(() => {});
-      }
+    (productOrId) => {
+      const id = productId(productOrId);
+      setItems((current) => {
+        const next = current.filter((item) => Number(item.id) !== id);
+        if (!readCustomerAccessToken()) persistGuest(next);
+        return next;
+      });
+
+      const token = readCustomerAccessToken();
+      if (!token) return;
+      fetch(`/api/wishlist/${id}`, {
+        method: "DELETE",
+        headers: customerAuthHeaders(token),
+      })
+        .then(async (response) => {
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok || !Array.isArray(data.items)) return;
+          setItems(hydrateItems(data.items));
+        })
+        .catch(() => {});
     },
-    [authHeaders, isAuthenticated]
+    [persistGuest]
   );
 
   const toggleItem = useCallback(
-    (productId) => {
-      if (ids.includes(productId)) {
-        removeItem(productId);
-      } else {
-        addItem(productId);
-      }
+    (productOrId) => {
+      if (hasItem(productOrId)) removeItem(productOrId);
+      else addItem(productOrId);
     },
-    [addItem, ids, removeItem]
+    [addItem, hasItem, removeItem]
   );
 
-  const items = useMemo(() => {
-    if (remoteItems) return remoteItems;
-    return ids.map(getProductById).filter(Boolean);
-  }, [ids, remoteItems]);
+  const value = useMemo(
+    () => ({
+      ids: items.map((item) => item.id),
+      items,
+      count: items.length,
+      isReady,
+      isAccount,
+      hasItem,
+      addItem,
+      removeItem,
+      toggleItem,
+      reload: load,
+    }),
+    [addItem, hasItem, isAccount, isReady, items, load, removeItem, toggleItem]
+  );
 
   return (
-    <WishlistContext.Provider
-      value={{
-        ids,
-        items,
-        count: items.length,
-        isReady,
-        hasItem,
-        addItem,
-        removeItem,
-        toggleItem,
-      }}
-    >
-      {children}
-    </WishlistContext.Provider>
+    <WishlistContext.Provider value={value}>{children}</WishlistContext.Provider>
   );
 }
 

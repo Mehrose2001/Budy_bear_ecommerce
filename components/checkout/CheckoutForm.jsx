@@ -8,9 +8,10 @@ import { useCart } from "@/context/CartContext";
 import { useToast } from "@/context/ToastContext";
 import { DELIVERY_METHODS, PAKISTAN_PROVINCES, PAYMENT_METHODS, isExpressAvailable } from "@/data/checkout";
 import { computeCheckoutTotals } from "@/lib/checkoutTotals";
-import { saveLocalOrder } from "@/lib/storage";
+import { emitOrdersChanged } from "@/lib/adminSession";
 import { cn } from "@/lib/utils";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
+import { useOrders } from "@/context/OrdersContext";
 
 const INITIAL_FORM = {
   fullName: "",
@@ -56,6 +57,7 @@ export function useCheckoutForm(totals) {
   const { items, clearCart } = useCart();
   const { showToast } = useToast();
   const { user, authHeaders } = useCustomerAuth();
+  const { rememberGuestOrder } = useOrders();
   const [form, setForm] = useState({
     ...INITIAL_FORM,
   });
@@ -179,7 +181,11 @@ export function useCheckoutForm(totals) {
         throw new Error(data.error || "Could not place order.");
       }
 
-      saveLocalOrder(data.order);
+      if (user) {
+        emitOrdersChanged();
+      } else {
+        rememberGuestOrder(data.order);
+      }
       clearCart();
       showToast("Your order has been placed. Budy Bear has been emailed.");
       router.push(`/order/${data.order.id}`);

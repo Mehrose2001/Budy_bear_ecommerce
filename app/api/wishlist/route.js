@@ -6,9 +6,13 @@ import { addWishlistItem, listWishlist } from "@/services/contentService";
 
 export async function GET(request) {
   return withBackend(request, "/wishlist", async () => {
-    if (!isSupabaseConfigured()) return NextResponse.json({ items: [] });
+    if (!isSupabaseConfigured()) {
+      return NextResponse.json({ error: "Sign in to load saved favourites." }, { status: 401 });
+    }
     const user = await getRequestUser(request);
-    if (!user) return NextResponse.json({ items: [] });
+    if (!user) {
+      return NextResponse.json({ error: "Sign in to load saved favourites." }, { status: 401 });
+    }
     const items = await listWishlist(user.id, getBearerToken(request));
     return NextResponse.json({ items });
   });

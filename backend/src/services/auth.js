@@ -27,6 +27,15 @@ async function loadProfile(userId) {
     .eq("id", userId)
     .maybeSingle();
   if (error) throw new HttpError(500, "Unable to load account.");
+  if (!data) {
+    return {
+      id: userId,
+      email: "",
+      name: "",
+      phone: "",
+      role: "customer",
+    };
+  }
   return mapProfile(data);
 }
 
@@ -116,13 +125,19 @@ export async function bootstrapAdmin() {
   if (!password) throw new Error("Set ADMIN_BOOTSTRAP_PASSWORD.");
 
   const supabase = getServiceClient();
-  const { data: existing } = await supabase
+  const { data: usersPage } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+  const wanted = String(email || "").trim().toLowerCase();
+  const existingAuth = (usersPage?.users || []).find((user) => {
+    const userEmail = String(user.email || "").trim().toLowerCase();
+    return userEmail === wanted || userEmail === "admin@budybear.pk";
+  });
+  const { data: existingProfile } = await supabase
     .from("profiles")
     .select("id, email, role")
     .eq("email", email)
     .maybeSingle();
 
-  let userId = existing?.id;
+  let userId = existingAuth?.id || existingProfile?.id;
   if (!userId) {
     const { data, error } = await supabase.auth.admin.createUser({
       email,
@@ -132,6 +147,14 @@ export async function bootstrapAdmin() {
     });
     if (error) throw error;
     userId = data.user.id;
+  } else {
+    const { error } = await supabase.auth.admin.updateUserById(userId, {
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { full_name: config.adminBootstrap.name },
+    });
+    if (error) throw error;
   }
 
   const { error } = await supabase

@@ -229,7 +229,7 @@ export default function ProductInfo({ product, compact = false, onAdded, onColor
         <button
           type="button"
           onClick={() => {
-            toggleItem(product.id);
+            toggleItem(product);
             showToast(
               wishlisted
                 ? `${product.name} removed from favourites`

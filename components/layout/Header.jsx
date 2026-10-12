@@ -136,7 +136,7 @@ export default function Header({ navItems = mainNavItems }) {
               <Link
                 href={isAuthenticated ? "/account" : "/login"}
                 className="inline-flex h-10 w-10 items-center justify-center rounded-full text-brand-primary transition-colors hover:bg-brand-cream"
-                aria-label="Account"
+                aria-label={isAuthenticated ? "My account" : "Sign in"}
               >
                 <User className="h-5 w-5" />
               </Link>

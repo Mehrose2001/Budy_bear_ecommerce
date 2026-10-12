@@ -120,8 +120,25 @@ export default function MobileMenu({ isOpen, onClose, items = mainNavItems }) {
             className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-brand-primary hover:bg-white/70"
           >
             <User className="h-5 w-5" />
-            Account
+            {isAuthenticated ? "My account" : "Sign in"}
           </Link>
+          {!isAuthenticated ? (
+            <Link
+              href="/register"
+              onClick={onClose}
+              className="mt-1 block rounded-xl px-4 py-2 text-sm text-neutral-600 hover:bg-white/70 hover:text-brand-primary"
+            >
+              Create an account
+            </Link>
+          ) : (
+            <Link
+              href="/wishlist"
+              onClick={onClose}
+              className="mt-1 block rounded-xl px-4 py-2 text-sm text-neutral-600 hover:bg-white/70 hover:text-brand-primary"
+            >
+              Saved favourites
+            </Link>
+          )}
         </div>
       </div>
     </>

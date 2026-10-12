@@ -41,7 +41,9 @@ export async function POST(request) {
     }
 
     guardDemoLogin(attemptKey);
-    if (email !== DEMO_ADMIN.email.toLowerCase() || password !== process.env.ADMIN_BOOTSTRAP_PASSWORD) {
+    const adminEmail = String(process.env.ADMIN_BOOTSTRAP_EMAIL || DEMO_ADMIN.email).trim().toLowerCase();
+    const adminPassword = String(process.env.ADMIN_BOOTSTRAP_PASSWORD || "");
+    if (email !== adminEmail || !adminPassword || password !== adminPassword) {
       return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
     }
 

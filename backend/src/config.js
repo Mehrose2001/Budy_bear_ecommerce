@@ -21,7 +21,7 @@ export const config = {
   supabaseAnonKey: process.env.SUPABASE_ANON_KEY || "",
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || "",
   adminBootstrap: {
-    email: process.env.ADMIN_BOOTSTRAP_EMAIL || "admin@budybear.pk",
+    email: process.env.ADMIN_BOOTSTRAP_EMAIL || "BudyBear2026@gmail.com",
     password: process.env.ADMIN_BOOTSTRAP_PASSWORD || "",
     name: process.env.ADMIN_BOOTSTRAP_NAME || "Budy Bear",
     phone: process.env.ADMIN_BOOTSTRAP_PHONE || "+92 333 0370236",

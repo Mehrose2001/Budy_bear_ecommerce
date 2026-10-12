@@ -80,6 +80,9 @@ export function CustomerAuthProvider({ children }) {
     if (!response.ok) {
       return { ok: false, error: data.error || "Invalid email or password." };
     }
+    if (!data.accessToken || !data.user) {
+      return { ok: false, error: "Unable to start a login session. Try again." };
+    }
     persist({ accessToken: data.accessToken, user: data.user });
     return { ok: true, user: data.user };
   }, [persist]);
