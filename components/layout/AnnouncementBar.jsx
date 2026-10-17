@@ -2,8 +2,13 @@
 
 import { announcementMessages } from "@/data/navigation";
 
-export default function AnnouncementBar() {
-  const track = [...announcementMessages, ...announcementMessages];
+export default function AnnouncementBar({ announcement = "" }) {
+  const custom = String(announcement || "").trim();
+  const extras = announcementMessages
+    .slice(1)
+    .filter((message) => message.toLowerCase() !== custom.toLowerCase());
+  const messages = custom ? [custom, ...extras] : announcementMessages;
+  const track = [...messages, ...messages];
 
   return (
     <div className="overflow-hidden bg-brand-primary text-brand-cream">

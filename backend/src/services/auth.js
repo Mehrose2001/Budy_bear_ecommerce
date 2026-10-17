@@ -39,6 +39,60 @@ async function loadProfile(userId) {
   return mapProfile(data);
 }
 
+const GENERIC_RESET_MESSAGE =
+  "If an account exists for that email, we sent a password reset link. Check your inbox and spam folder.";
+
+export async function requestPasswordReset(email, redirectTo, ip) {
+  guardLogin(ip || "unknown");
+  const address = String(email || "").trim().toLowerCase();
+  if (!address || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) {
+    throw new HttpError(400, "Enter a valid email address.");
+  }
+  if (!isSupabaseConfigured()) {
+    throw new HttpError(503, "Password reset needs email to be configured.");
+  }
+  const { error } = await getAnonClient().auth.resetPasswordForEmail(address, {
+    redirectTo,
+  });
+  if (error && /rate|too many/i.test(String(error.message || ""))) {
+    throw new HttpError(429, "Too many reset emails. Try again in a minute.");
+  }
+  return { message: GENERIC_RESET_MESSAGE };
+}
+
+export async function resetPasswordWithToken({ accessToken, tokenHash, password }) {
+  if (!isSupabaseConfigured()) {
+    throw new HttpError(503, "Password reset needs email to be configured.");
+  }
+  if (String(password || "").length < 8) {
+    throw new HttpError(400, "Password must be at least 8 characters.");
+  }
+
+  let userId = "";
+  if (tokenHash) {
+    const { data, error } = await getAnonClient().auth.verifyOtp({
+      type: "recovery",
+      token_hash: String(tokenHash),
+    });
+    if (error || !data?.user) {
+      throw new HttpError(400, "This reset link is invalid or has expired. Request a new one.");
+    }
+    userId = data.user.id;
+  } else if (accessToken) {
+    const { data, error } = await getAnonClient().auth.getUser(accessToken);
+    if (error || !data?.user) {
+      throw new HttpError(400, "This reset link is invalid or has expired. Request a new one.");
+    }
+    userId = data.user.id;
+  } else {
+    throw new HttpError(400, "This reset link is invalid or has expired. Request a new one.");
+  }
+
+  const { error } = await getServiceClient().auth.admin.updateUserById(userId, { password });
+  if (error) throw new HttpError(400, error.message || "Unable to update password.");
+  return { message: "Your password has been updated. You can sign in now." };
+}
+
 export async function login(email, password, ip) {
   guardLogin(ip || "unknown");
   if (!email || !password) throw new HttpError(400, "Email and password are required.");
@@ -206,6 +260,7 @@ export async function updateAdminAccount(user, input = {}) {
     const update = {};
     if (emailChanged) update.email = nextEmail;
     if (passwordChanged) update.password = nextPassword;
+    if (emailChanged) update.email_confirm = true;
     const { error: updateError } = await supabase.auth.admin.updateUserById(user.id, update);
     if (updateError) throw new HttpError(400, updateError.message || "Unable to update login details.");
   }

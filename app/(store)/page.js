@@ -39,7 +39,7 @@ export default async function HomePage() {
       <CategoryGrid categories={categories} />
       <ProductSection
         title="Best Sellers"
-        description="Customer favorites loved by parents across Pakistan."
+        description="Customer favourites loved by parents across Pakistan."
         products={bestSellers.slice(0, 8)}
         viewAllHref="/products?bestSeller=true"
       />

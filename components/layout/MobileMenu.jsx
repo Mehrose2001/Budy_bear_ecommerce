@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, User, X } from "lucide-react";
+import { ChevronDown, PackageSearch, User, X } from "lucide-react";
 import { mainNavItems } from "@/data/navigation";
 import { cn } from "@/lib/utils";
 import BrandLogo from "./BrandLogo";
@@ -20,7 +20,7 @@ export default function MobileMenu({ isOpen, onClose, items = mainNavItems }) {
     <>
       <div
         className={cn(
-          "fixed inset-0 z-[62] bg-black/40 transition-opacity duration-300 xl:hidden",
+          "fixed inset-0 z-[61] bg-black/40 backdrop-blur-md transition-opacity duration-300 xl:hidden",
           isOpen ? "opacity-100" : "pointer-events-none opacity-0"
         )}
         onClick={onClose}
@@ -29,7 +29,7 @@ export default function MobileMenu({ isOpen, onClose, items = mainNavItems }) {
 
       <div
         className={cn(
-          "fixed inset-y-0 left-0 z-[62] flex h-full w-1/2 max-w-[18rem] min-w-[11.5rem] flex-col bg-brand-cream shadow-2xl transition-transform duration-300 xl:hidden",
+          "fixed inset-y-0 left-0 z-[62] flex h-full w-[70%] max-w-[70%] flex-col bg-brand-cream shadow-2xl transition-transform duration-300 xl:hidden",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
         role="dialog"
@@ -114,6 +114,14 @@ export default function MobileMenu({ isOpen, onClose, items = mainNavItems }) {
         </nav>
 
         <div className="border-t border-border p-4">
+          <Link
+            href="/track-order"
+            onClick={onClose}
+            className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-brand-primary hover:bg-white/70"
+          >
+            <PackageSearch className="h-5 w-5" />
+            Track your order
+          </Link>
           <Link
             href={isAuthenticated ? "/account" : "/login"}
             onClick={onClose}

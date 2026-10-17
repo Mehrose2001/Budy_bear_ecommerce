@@ -15,7 +15,7 @@ import Navbar from "./Navbar";
 import MobileMenu from "./MobileMenu";
 import SearchBar from "./SearchBar";
 
-export default function Header({ navItems = mainNavItems }) {
+export default function Header({ navItems = mainNavItems, announcement = "" }) {
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
@@ -53,7 +53,7 @@ export default function Header({ navItems = mainNavItems }) {
 
   return (
     <header className="sticky top-0 z-50">
-      <AnnouncementBar />
+      <AnnouncementBar announcement={announcement} />
 
       <div
         className={cn(

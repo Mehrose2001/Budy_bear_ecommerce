@@ -38,17 +38,29 @@ export default function AdminSettingsPage() {
 
   const persist = async (next) => {
     setSaving(true);
-    await adminFetch(
-      "/api/admin/content",
-      {
-        method: "POST",
-        body: JSON.stringify({ resource: "settings", data: next }),
-      },
-      admin.token
-    );
-    setSaving(false);
-    setSaved(true);
-    window.setTimeout(() => setSaved(false), 2000);
+    try {
+      const data = await adminFetch(
+        "/api/admin/content",
+        {
+          method: "POST",
+          body: JSON.stringify({ resource: "settings", data: next }),
+        },
+        admin.token
+      );
+      if (data.settings) {
+        setSettings({
+          storeName: data.settings.storeName || "",
+          announcement: data.settings.announcement || "",
+          supportEmail: data.settings.supportEmail || "",
+          supportPhone: data.settings.supportPhone || "",
+          seasonalCollection: normalizeSeasonalCollection(data.settings.seasonalCollection),
+        });
+      }
+      setSaved(true);
+      window.setTimeout(() => setSaved(false), 2000);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const save = async (event) => {

@@ -29,7 +29,7 @@ export default function AdminDashboardPage() {
   }, [admin?.token]);
 
   return (
-    <div className="flex min-h-0 flex-col">
+    <div className="flex min-h-0 min-w-0 flex-col">
       <AdminPageHeader
         title={`Welcome back, ${admin?.name?.split(" ")[0] || "Admin"}`}
         description="Track sales, orders, and catalog health for Budy Bear."

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import BrandLogo from "@/components/layout/BrandLogo";
@@ -67,6 +68,11 @@ export default function AdminLoginPage() {
             required
           />
           {error && <p className="text-sm text-error">{error}</p>}
+          <div className="flex justify-end">
+            <Link href="/admin/forgot-password" className="text-sm font-semibold text-brand-primary">
+              Forgot password?
+            </Link>
+          </div>
           <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
             {isSubmitting ? "Signing in..." : "Sign in"}
           </Button>

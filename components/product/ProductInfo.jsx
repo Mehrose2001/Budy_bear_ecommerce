@@ -27,9 +27,10 @@ export default function ProductInfo({ product, compact = false, onAdded, onColor
   const { showToast } = useToast();
   const { hasItem, toggleItem } = useWishlist();
   const colors = getProductColors(product);
+  const sizes = (product.sizes || []).filter(Boolean);
   const [color, setColor] = useState(() => firstInStockColor(product, colors));
   const [size, setSize] = useState(() =>
-    firstInStockSize(product, firstInStockColor(product, colors), product.sizes)
+    firstInStockSize(product, firstInStockColor(product, colors), sizes)
   );
   const [quantity, setQuantity] = useState(1);
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
@@ -44,7 +45,7 @@ export default function ProductInfo({ product, compact = false, onAdded, onColor
   const handleColorChange = (option) => {
     if (isColorSoldOut(product, option)) return;
     setColor(option);
-    setSize(firstInStockSize(product, option, product.sizes));
+    setSize(firstInStockSize(product, option, sizes));
     setQuantity(1);
     onColorChange?.(option);
   };
@@ -57,6 +58,8 @@ export default function ProductInfo({ product, compact = false, onAdded, onColor
   };
 
   const quantityOptions = Math.max(1, Math.min(available || 1, 10));
+  const availableSizes = sizes.filter((option) => !isSizeSoldOut(product, color, option));
+  const showSizePicker = availableSizes.length > 0;
 
   return (
     <div>
@@ -85,7 +88,7 @@ export default function ProductInfo({ product, compact = false, onAdded, onColor
           {formatPrice(displayPrice)}
         </span>
         {product.salePrice && (
-          <span className="text-lg text-neutral-400 line-through">
+          <span className="text-lg text-error line-through">
             {formatPrice(product.price)}
           </span>
         )}
@@ -93,9 +96,11 @@ export default function ProductInfo({ product, compact = false, onAdded, onColor
 
       <p className="mt-2 text-sm text-neutral-500">
         {available > 0
-          ? `${available} in stock${color ? ` for ${color}` : ""}${size ? ` / ${size}` : ""}`
+          ? `${available} in stock${color ? ` for ${color}` : ""}${showSizePicker && size ? ` / ${size}` : ""}`
           : totalStock > 0
-            ? "This size is sold out"
+            ? showSizePicker
+              ? "This size is sold out"
+              : "This option is sold out"
             : "Out of stock"}
       </p>
 
@@ -137,6 +142,7 @@ export default function ProductInfo({ product, compact = false, onAdded, onColor
       </fieldset>
       )}
 
+      {showSizePicker ? (
       <fieldset className="mt-6">
         <div className="mb-3 flex items-center justify-between">
           <legend className="text-sm font-bold text-neutral-900">Size</legend>
@@ -149,34 +155,28 @@ export default function ProductInfo({ product, compact = false, onAdded, onColor
           </button>
         </div>
         <div className="flex flex-wrap gap-2">
-          {product.sizes.map((option) => {
-            const soldOut = isSizeSoldOut(product, color, option);
-            return (
+          {availableSizes.map((option) => (
             <button
               key={option}
               type="button"
               onClick={() => {
-                if (soldOut) return;
                 setSize(option);
                 setQuantity(1);
               }}
-              disabled={soldOut}
               className={cn(
                 "min-w-12 rounded-xl border px-3 py-2 text-sm font-semibold",
-                soldOut && "cursor-not-allowed opacity-40 line-through",
-                !soldOut && size === option
+                size === option
                   ? "border-brand-primary bg-brand-primary text-white"
                   : "border-neutral-200 hover:border-brand-primary"
               )}
               aria-pressed={size === option}
-              aria-disabled={soldOut}
             >
               {option}
             </button>
-            );
-          })}
+          ))}
         </div>
       </fieldset>
+      ) : null}
 
       <div className="mt-6">
         <label className="text-sm font-bold text-neutral-900" htmlFor={`qty-${product.id}`}>
@@ -294,7 +294,7 @@ export default function ProductInfo({ product, compact = false, onAdded, onColor
             </tr>
           </thead>
           <tbody>
-            {product.sizes.map((option, index) => (
+            {availableSizes.map((option, index) => (
               <tr key={option} className="border-b border-neutral-100">
                 <td className="py-2 font-medium">{option}</td>
                 <td className="py-2">{option}</td>

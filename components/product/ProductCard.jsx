@@ -158,7 +158,7 @@ export default function ProductCard({ product, className }) {
             {formatPrice(displayPrice)}
           </span>
           {product.salePrice && (
-            <span className="text-sm text-neutral-400 line-through">
+            <span className="text-sm text-error line-through">
               {formatPrice(product.price)}
             </span>
           )}

@@ -24,12 +24,12 @@ export async function getStoreSettings() {
 }
 
 export async function updateStoreSettings(input, accessToken) {
-  const supabase = client(accessToken);
+  const supabase = writeClient(accessToken);
   const payload = {
     store_name: input.storeName,
     announcement: input.announcement,
-    support_email: input.supportEmail,
-    support_phone: input.supportPhone,
+    support_email: String(input.supportEmail || input.support_email || "").trim(),
+    support_phone: String(input.supportPhone || input.support_phone || "").trim(),
     seasonal_collection: String(input.seasonalCollection || "").toLowerCase() === "summer" ? "summer" : "winter",
   };
   const { data, error } = await supabase

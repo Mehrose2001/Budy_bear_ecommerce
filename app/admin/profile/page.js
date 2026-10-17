@@ -127,7 +127,8 @@ export default function AdminProfilePage() {
           <div>
             <h2 className="text-lg font-bold text-brand-primary">Login details</h2>
             <p className="mt-1 text-sm text-neutral-600">
-              Set a new login email or change your password. Current password is required.
+              This email and password sign you in to the admin panel. Enter your current
+              password, then save a new email and/or a new password (at least 8 characters).
             </p>
           </div>
           <Input

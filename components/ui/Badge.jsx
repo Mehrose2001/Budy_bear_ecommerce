@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
 const variants = {
-  sale: "bg-brand-accent text-white",
+  sale: "bg-error text-white",
   new: "bg-brand-secondary text-white",
   featured: "bg-brand-primary text-white",
   default: "bg-neutral-900 text-white",

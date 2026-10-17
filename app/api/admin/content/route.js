@@ -149,7 +149,13 @@ export async function POST(request) {
         revalidatePath("/");
         return NextResponse.json({ banner });
       }
-      if (body.resource === "settings") return NextResponse.json({ settings: await updateStoreSettings(body.data, token) });
+      if (body.resource === "settings") {
+        const settings = await updateStoreSettings(body.data, token);
+        invalidateCatalogSnapshot();
+        revalidatePath("/", "layout");
+        revalidatePath("/");
+        return NextResponse.json({ settings });
+      }
       if (body.resource === "pages") {
         const page = await upsertStorePage(body.data, token);
         invalidateCatalogSnapshot();
@@ -171,7 +177,13 @@ export async function POST(request) {
       revalidatePath("/");
       return NextResponse.json({ banner });
     }
-    if (body.resource === "settings") return NextResponse.json({ settings: updateSettings(body.data) });
+    if (body.resource === "settings") {
+      const settings = updateSettings(body.data);
+      invalidateCatalogSnapshot();
+      revalidatePath("/", "layout");
+      revalidatePath("/");
+      return NextResponse.json({ settings });
+    }
     if (body.resource === "pages") {
       const slug = body.data?.slug;
       const defaults = getDefaultLegalPage(slug);

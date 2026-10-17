@@ -198,9 +198,13 @@ export async function updateAdminAccount(accessToken, input = {}) {
     throw new AppError("Admin access required.", 403);
   }
 
-  const currentEmail = String(profile.email || authData.user.email || "").trim().toLowerCase();
+  const currentEmail = String(profile.email || authUser.email || "").trim().toLowerCase();
   const emailChanged = Boolean(nextEmail) && nextEmail !== currentEmail;
   const passwordChanged = Boolean(nextPassword);
+
+  if (emailChanged && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nextEmail)) {
+    throw new AppError("Enter a valid login email.", 400);
+  }
 
   if (emailChanged || passwordChanged) {
     if (!currentPassword) {
@@ -221,14 +225,29 @@ export async function updateAdminAccount(accessToken, input = {}) {
   let accessTokenOut = accessToken;
   if (emailChanged || passwordChanged) {
     const update = {};
-    if (emailChanged) update.email = nextEmail;
-    if (passwordChanged) update.password = nextPassword;
-    const { data: updated, error: updateError } = await userClient.auth.updateUser(update);
-    if (updateError) {
-      throw new AppError(updateError.message || "Unable to update login details.", 400);
+    if (emailChanged) {
+      update.email = nextEmail;
+      update.email_confirm = true;
     }
-    if (updated?.session?.access_token) {
-      accessTokenOut = updated.session.access_token;
+    if (passwordChanged) update.password = nextPassword;
+
+    const service = createServiceClient();
+    if (service) {
+      const { error: updateError } = await service.auth.admin.updateUserById(authUser.id, update);
+      if (updateError) {
+        throw new AppError(updateError.message || "Unable to update login details.", 400);
+      }
+    } else {
+      const { data: updated, error: updateError } = await userClient.auth.updateUser({
+        email: update.email,
+        password: update.password,
+      });
+      if (updateError) {
+        throw new AppError(updateError.message || "Unable to update login details.", 400);
+      }
+      if (updated?.session?.access_token) {
+        accessTokenOut = updated.session.access_token;
+      }
     }
   }
 
@@ -250,6 +269,76 @@ export async function updateAdminAccount(accessToken, input = {}) {
   return {
     accessToken: accessTokenOut,
     user,
-    needsEmailConfirm: emailChanged,
+    needsEmailConfirm: false,
   };
+}
+
+const GENERIC_RESET_MESSAGE =
+  "If an account exists for that email, we sent a password reset link. Check your inbox and spam folder.";
+
+export async function requestPasswordReset(email, redirectTo, attemptKey = "unknown") {
+  guardLogin(String(attemptKey || "unknown"));
+  if (!isSupabaseConfigured()) {
+    throw new AppError("Password reset needs email to be configured.", 503);
+  }
+  const address = String(email || "").trim().toLowerCase();
+  if (!address || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) {
+    throw new AppError("Enter a valid email address.", 400);
+  }
+  const target = String(redirectTo || "").trim();
+  if (!/^https?:\/\//i.test(target)) {
+    throw new AppError("Unable to send a reset link from this site address.", 400);
+  }
+
+  const supabase = createServerClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(address, {
+    redirectTo: target,
+  });
+  if (error) {
+    const message = String(error.message || "");
+    if (/rate|too many/i.test(message)) {
+      throw new AppError("Too many reset emails. Try again in a minute.", 429);
+    }
+  }
+  return { message: GENERIC_RESET_MESSAGE };
+}
+
+export async function resetPasswordWithToken({ accessToken, tokenHash, password }) {
+  if (!isSupabaseConfigured()) {
+    throw new AppError("Password reset needs email to be configured.", 503);
+  }
+  assertPassword(password);
+  const nextPassword = String(password || "");
+  const supabase = createServerClient();
+  let userId = "";
+
+  if (tokenHash) {
+    const { data, error } = await supabase.auth.verifyOtp({
+      type: "recovery",
+      token_hash: String(tokenHash),
+    });
+    if (error || !data?.user) {
+      throw new AppError("This reset link is invalid or has expired. Request a new one.", 400);
+    }
+    userId = data.user.id;
+  } else if (accessToken) {
+    const authUser = await getAuthUser(accessToken);
+    if (!authUser) {
+      throw new AppError("This reset link is invalid or has expired. Request a new one.", 400);
+    }
+    userId = authUser.id;
+  } else {
+    throw new AppError("This reset link is invalid or has expired. Request a new one.", 400);
+  }
+
+  const service = createServiceClient();
+  if (service) {
+    const { error } = await service.auth.admin.updateUserById(userId, { password: nextPassword });
+    if (error) throw new AppError(error.message || "Unable to update password.", 400);
+  } else {
+    const { error } = await createUserClient(accessToken).auth.updateUser({ password: nextPassword });
+    if (error) throw new AppError(error.message || "Unable to update password.", 400);
+  }
+
+  return { message: "Your password has been updated. You can sign in now." };
 }

@@ -45,7 +45,10 @@ const SOCIAL_ICONS = {
   X: XIcon,
 };
 
-export default function Footer({ shopLinks }) {
+export default function Footer({ shopLinks, supportEmail, supportPhone }) {
+  const email = String(supportEmail || "").trim() || brand.supportEmail;
+  const phone = String(supportPhone || "").trim() || brand.whatsapp;
+
   return (
     <footer className="mt-auto border-t border-brand-primary/20 bg-brand-primary-dark text-neutral-300">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
@@ -62,13 +65,13 @@ export default function Footer({ shopLinks }) {
                   href={getWhatsAppChatUrl("Hi Budy Bear, I would like to get in touch.")}
                   className="font-semibold text-white hover:text-brand-accent"
                 >
-                  {brand.whatsapp}
+                  {phone}
                 </a>
               </p>
               <p>
                 Email:{" "}
-                <a href={`mailto:${brand.supportEmail}`} className="hover:text-white">
-                  {brand.supportEmail}
+                <a href={`mailto:${email}`} className="hover:text-white">
+                  {email}
                 </a>
               </p>
             </div>

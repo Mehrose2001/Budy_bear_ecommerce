@@ -49,11 +49,17 @@ export default function LoginPage() {
           label="Password"
           type="password"
           name="password"
+          autoComplete="current-password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           required
         />
         {error && <p className="text-sm text-error">{error}</p>}
+        <div className="flex justify-end">
+          <Link href="/forgot-password" className="text-sm font-semibold text-brand-primary">
+            Forgot password?
+          </Link>
+        </div>
         <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
           {isSubmitting ? "Signing in..." : "Sign in"}
         </Button>

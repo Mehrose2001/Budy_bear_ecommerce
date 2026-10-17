@@ -51,16 +51,36 @@ export default function AdminShell({ children }) {
   const { admin, isReady, isAuthenticated, logout } = useAdminAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const isLogin = pathname === "/admin/login";
+  const isPublicAuth =
+    pathname === "/admin/login" ||
+    pathname === "/admin/forgot-password" ||
+    pathname === "/admin/reset-password";
 
   useEffect(() => {
-    if (!isReady || isLogin) return;
+    if (!isReady || isPublicAuth) return;
     if (!isAuthenticated) {
       router.replace("/admin/login");
     }
-  }, [isReady, isAuthenticated, isLogin, router]);
+  }, [isReady, isAuthenticated, isPublicAuth, router]);
 
-  if (isLogin) {
+  useEffect(() => {
+    if (!isReady || isPublicAuth || !isAuthenticated) return undefined;
+    const scroller = document.querySelector("[data-admin-scroll]");
+    if (!scroller) return undefined;
+
+    const onWheel = (event) => {
+      if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
+      const overTable = event.target.closest?.("[data-admin-table]");
+      if (!overTable) return;
+      event.preventDefault();
+      scroller.scrollTop += event.deltaY;
+    };
+
+    scroller.addEventListener("wheel", onWheel, { passive: false, capture: true });
+    return () => scroller.removeEventListener("wheel", onWheel, { capture: true });
+  }, [isReady, isPublicAuth, isAuthenticated, pathname]);
+
+  if (isPublicAuth) {
     return <div data-admin-root>{children}</div>;
   }
 
@@ -131,7 +151,7 @@ export default function AdminShell({ children }) {
   return (
     <div
       data-admin-root
-      className="h-dvh overflow-hidden bg-brand-cream lg:grid lg:grid-cols-[260px_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]"
+      className="h-dvh min-w-0 overflow-hidden bg-brand-cream lg:grid lg:grid-cols-[260px_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]"
     >
       <aside className="hidden h-full min-h-0 overflow-hidden lg:block">{sidebar}</aside>
 
@@ -145,7 +165,7 @@ export default function AdminShell({ children }) {
         </div>
       )}
 
-      <div className="flex h-full min-h-0 flex-col overflow-hidden">
+      <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
         <header className="flex shrink-0 items-center justify-between border-b border-border bg-white px-4 py-3 lg:px-8">
           <button
             type="button"
@@ -169,7 +189,10 @@ export default function AdminShell({ children }) {
             View store
           </Link>
         </header>
-        <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-4 py-6 lg:px-8">
+        <div
+          data-admin-scroll
+          className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-3 py-5 sm:px-4 lg:px-8"
+        >
           {children}
         </div>
       </div>

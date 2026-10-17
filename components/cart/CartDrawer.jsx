@@ -72,7 +72,7 @@ export default function CartDrawer() {
             <div className="py-16 text-center">
               <p className="font-semibold text-neutral-900">Your cart is empty</p>
               <p className="mt-2 text-sm text-neutral-500">
-                Add a few favorites and they will show up here.
+                Add a few favourites and they will show up here.
               </p>
               <Button href="/products" className="mt-6" onClick={closeDrawer}>
                 Shop now

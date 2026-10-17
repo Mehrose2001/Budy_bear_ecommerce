@@ -43,7 +43,7 @@ export default async function ProductsPage({ searchParams }) {
       ? "Discover great savings on premium kids products."
       : presetFilter === "new-arrivals"
         ? "Explore the latest additions to our collection."
-        : "Browse our complete catalog of kids fashion and essentials.";
+        : "Browse our complete catalogue of kids fashion and essentials.";
 
   return (
     <Suspense fallback={<ProductsFallback />}>
