@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "dev:api": "npm run dev --prefix backend",
     "build": "next build --webpack",
     "start": "next start -H 0.0.0.0",
@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "2.49.8",
+    "basic-ftp": "^5.3.1",
     "lucide-react": "^1.43.0",
     "next": "16.3.4",
     "nodemailer": "^7.0.6",

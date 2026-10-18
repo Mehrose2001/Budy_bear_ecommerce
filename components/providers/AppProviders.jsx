@@ -10,6 +10,7 @@ import { CustomerAuthProvider } from "@/context/CustomerAuthContext";
 import { LoadingProvider } from "@/context/LoadingContext";
 import RouteLoader from "@/components/layout/RouteLoader";
 import CartDrawer from "@/components/cart/CartDrawer";
+import RecoveryRedirect from "@/components/auth/RecoveryRedirect";
 
 export default function AppProviders({ children }) {
   return (
@@ -22,6 +23,7 @@ export default function AppProviders({ children }) {
                 <OrdersProvider>
                   <QuickViewProvider>
                     {children}
+                    <RecoveryRedirect />
                     <CartDrawer />
                     <RouteLoader />
                   </QuickViewProvider>

@@ -7,6 +7,7 @@ import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import BrandLogo from "@/components/layout/BrandLogo";
 import { useAdminAuth } from "@/context/AdminAuthContext";
+import { adminLoginEmail, isExactAdminLoginEmail } from "@/data/admin";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -25,6 +26,10 @@ export default function AdminLoginPage() {
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError("");
+    if (!isExactAdminLoginEmail(email)) {
+      setError(`Admin login is restricted to ${adminLoginEmail()}.`);
+      return;
+    }
     setIsSubmitting(true);
     const result = await login(email, password);
     setIsSubmitting(false);
@@ -43,8 +48,9 @@ export default function AdminLoginPage() {
           Admin login
         </h1>
         <p className="mt-2 text-sm text-neutral-600">
-          Sign in with your admin email and password. The session ends on page
-          reload, after 15 minutes idle, or after 30 minutes, and when the
+          Sign in with {adminLoginEmail()} and your password. Mixed-case
+          spellings of this Gmail address are not accepted. The session ends on
+          page reload, after 15 minutes idle, or after 30 minutes, and when the
           login token expires.
         </p>
 

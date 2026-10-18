@@ -132,7 +132,9 @@ export default function AdminShell({ children }) {
       <div className="border-t border-white/10 p-4">
         <p className="truncate text-sm font-semibold">{admin.name}</p>
         <p className="truncate text-xs text-white/60">{admin.phone}</p>
-        <p className="truncate text-xs text-white/60">{admin.email}</p>
+        <p className="truncate text-xs text-white/60">
+          {String(admin.email || "").trim().toLowerCase()}
+        </p>
         <button
           type="button"
           onClick={() => {

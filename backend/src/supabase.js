@@ -24,6 +24,13 @@ export function getAnonClient() {
   return anonClient;
 }
 
+export function getRecoverClient() {
+  if (!isSupabaseConfigured()) return null;
+  return createClient(config.supabaseUrl, config.supabaseAnonKey, {
+    auth: { persistSession: false, autoRefreshToken: false, flowType: "implicit" },
+  });
+}
+
 export async function requireSupabase() {
   const client = getServiceClient();
   if (!client) {

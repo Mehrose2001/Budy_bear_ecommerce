@@ -35,7 +35,7 @@ export default function AdminProfilePage() {
     });
     setSecurity((current) => ({
       ...current,
-      email: admin.email || "",
+      email: String(admin.email || "").trim().toLowerCase(),
     }));
   }, [admin]);
 
@@ -58,17 +58,33 @@ export default function AdminProfilePage() {
     event.preventDefault();
     setSecurityError("");
     setSecuritySaved("");
+    const nextEmail = security.email.trim().toLowerCase();
+    const currentEmail = String(admin?.email || "").trim().toLowerCase();
+    const emailChanged = Boolean(nextEmail) && nextEmail !== currentEmail;
+    const passwordChanged = Boolean(security.newPassword);
     if (!security.currentPassword) {
-      setSecurityError("Enter your current password to change email or password.");
+      setSecurityError("Enter your current password to update email or password.");
+      return;
+    }
+    if (!emailChanged && !passwordChanged) {
+      setSecurityError("Change the login email or enter a new password.");
+      return;
+    }
+    if (security.newPassword && security.newPassword.length < 8) {
+      setSecurityError("New password must be at least 8 characters.");
       return;
     }
     if (security.newPassword && security.newPassword !== security.confirmPassword) {
       setSecurityError("New password and confirmation do not match.");
       return;
     }
+    if (!security.newPassword && security.confirmPassword) {
+      setSecurityError("Enter a new password before confirming it.");
+      return;
+    }
     setSavingSecurity(true);
     const result = await updateCredentials({
-      email: security.email,
+      email: nextEmail,
       currentPassword: security.currentPassword,
       newPassword: security.newPassword,
     });
@@ -127,8 +143,8 @@ export default function AdminProfilePage() {
           <div>
             <h2 className="text-lg font-bold text-brand-primary">Login details</h2>
             <p className="mt-1 text-sm text-neutral-600">
-              This email and password sign you in to the admin panel. Enter your current
-              password, then save a new email and/or a new password (at least 8 characters).
+              This email and password sign you in to the admin panel. Current password is
+              required to update the login email, the password, or both.
             </p>
           </div>
           <Input
@@ -137,11 +153,10 @@ export default function AdminProfilePage() {
             name="admin-new-email"
             autoComplete="off"
             value={security.email}
-            onChange={(event) => setSecurity({ ...security, email: event.target.value })}
-            required
+            disabled
           />
           <Input
-            label="Current password"
+            label="Current password (required)"
             type="password"
             name="admin-current-password"
             autoComplete="current-password"

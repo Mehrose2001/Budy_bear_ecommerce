@@ -1,3 +1,4 @@
+import { adminLoginEmail } from "@/data/admin";
 import { AppError, throwIf } from "@/lib/errors";
 import { mapProfile } from "@/lib/mappers";
 import { createServerClient, createServiceClient, createUserClient, getAuthUser } from "@/lib/supabase/server";
@@ -25,17 +26,74 @@ function assertPassword(password) {
   }
 }
 
+function normalizedEmail(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+async function applyLoginEmail(service, userId, currentEmail, nextEmail) {
+  if (!service) {
+    throw new AppError("Login email changes need the server service role key.", 503);
+  }
+
+  const { data, error } = await service.auth.admin.updateUserById(userId, {
+    email: nextEmail,
+    email_confirm: true,
+  });
+  if (error) {
+    throw new AppError(error.message || "Unable to update login email.", 400);
+  }
+  if (normalizedEmail(data?.user?.email) === nextEmail) return;
+
+  const { data: linkData, error: linkError } = await service.auth.admin.generateLink({
+    type: "email_change_new",
+    email: currentEmail,
+    newEmail: nextEmail,
+  });
+  if (linkError) {
+    throw new AppError(linkError.message || "Unable to update login email.", 400);
+  }
+
+  const otp = linkData?.properties?.email_otp;
+  const tokenHash = linkData?.properties?.hashed_token;
+  const verifier = createServerClient();
+  let verifyError = null;
+  if (otp) {
+    const result = await verifier.auth.verifyOtp({
+      type: "email_change",
+      email: nextEmail,
+      token: String(otp),
+    });
+    verifyError = result.error;
+  } else if (tokenHash) {
+    const result = await verifier.auth.verifyOtp({
+      type: "email_change",
+      token_hash: String(tokenHash),
+    });
+    verifyError = result.error;
+  } else {
+    throw new AppError("Unable to confirm the new login email.", 400);
+  }
+  if (verifyError) {
+    throw new AppError(verifyError.message || "Unable to confirm the new login email.", 400);
+  }
+
+  const { data: again } = await service.auth.admin.getUserById(userId);
+  if (normalizedEmail(again?.user?.email) !== nextEmail) {
+    throw new AppError("Unable to update the login email. Try a different email address.", 400);
+  }
+}
+
 function isBootstrapAdminEmail(email) {
   return (
     String(email || "").trim().toLowerCase() ===
-    String(process.env.ADMIN_BOOTSTRAP_EMAIL || "BudyBear2026@gmail.com").trim().toLowerCase()
+    String(process.env.ADMIN_BOOTSTRAP_EMAIL || "budybear2026@gmail.com").trim().toLowerCase()
   );
 }
 
 function fallbackUser(authUser, extra = {}) {
   return {
     id: authUser.id,
-    email: authUser.email,
+    email: normalizedEmail(authUser.email),
     name: extra.fullName || authUser.user_metadata?.full_name || "",
     phone: extra.phone || authUser.user_metadata?.phone || "",
     address: "",
@@ -44,10 +102,24 @@ function fallbackUser(authUser, extra = {}) {
   };
 }
 
+async function persistCanonicalEmail(authUser, service) {
+  const nextEmail = normalizedEmail(authUser.email);
+  if (!authUser?.id || !nextEmail || !service) return nextEmail;
+  if (String(authUser.email || "") !== nextEmail) {
+    await service.auth.admin.updateUserById(authUser.id, {
+      email: nextEmail,
+      email_confirm: true,
+    });
+  }
+  await service.from("profiles").update({ email: nextEmail }).eq("id", authUser.id);
+  return nextEmail;
+}
+
 export async function ensureProfile(authUser, extra = {}) {
+  const authEmail = normalizedEmail(authUser.email);
   const row = {
     id: authUser.id,
-    email: authUser.email,
+    email: authEmail,
     full_name: extra.fullName || authUser.user_metadata?.full_name || "Customer",
     phone: extra.phone || authUser.user_metadata?.phone || null,
     role: extra.role || (isBootstrapAdminEmail(authUser.email) ? "admin" : "customer"),
@@ -60,7 +132,12 @@ export async function ensureProfile(authUser, extra = {}) {
     .eq("id", authUser.id)
     .maybeSingle();
   if (existing.data) {
-    return mapProfile(existing.data) || fallbackUser(authUser, extra);
+    const mapped = mapProfile(existing.data) || fallbackUser(authUser, extra);
+    const storedEmail = String(existing.data.email || "");
+    if (authEmail && (String(authUser.email || "") !== authEmail || storedEmail !== authEmail)) {
+      await persistCanonicalEmail(authUser, service);
+    }
+    return { ...mapped, email: authEmail || mapped.email };
   }
   if (service) {
     const { error } = await service.from("profiles").upsert(row);
@@ -86,7 +163,7 @@ export async function loginWithPassword(email, password, attemptKey = "unknown")
   }
   const supabase = createServerClient();
   const { data, error } = await supabase.auth.signInWithPassword({
-    email: String(email || "").trim(),
+    email: normalizedEmail(email),
     password: String(password || ""),
   });
   if (error || !data?.session || !data.user) {
@@ -198,17 +275,24 @@ export async function updateAdminAccount(accessToken, input = {}) {
     throw new AppError("Admin access required.", 403);
   }
 
-  const currentEmail = String(profile.email || authUser.email || "").trim().toLowerCase();
+  const currentEmail = String(authUser.email || profile.email || "").trim().toLowerCase();
   const emailChanged = Boolean(nextEmail) && nextEmail !== currentEmail;
+  if (emailChanged && nextEmail !== adminLoginEmail()) {
+    throw new AppError(`Admin login is restricted to ${adminLoginEmail()}.`, 400);
+  }
   const passwordChanged = Boolean(nextPassword);
+  const changingLogin = emailChanged || passwordChanged;
 
-  if (emailChanged && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nextEmail)) {
-    throw new AppError("Enter a valid login email.", 400);
+  if (!changingLogin && (input.email != null || input.newPassword != null)) {
+    throw new AppError("Change the login email or enter a new password.", 400);
   }
 
-  if (emailChanged || passwordChanged) {
+  if (changingLogin) {
     if (!currentPassword) {
-      throw new AppError("Enter your current password to change email or password.", 400);
+      throw new AppError("Enter your current password to update email or password.", 400);
+    }
+    if (emailChanged && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nextEmail)) {
+      throw new AppError("Enter a valid login email.", 400);
     }
     if (passwordChanged) assertPassword(nextPassword);
 
@@ -218,36 +302,44 @@ export async function updateAdminAccount(accessToken, input = {}) {
       password: currentPassword,
     });
     if (verifyError) {
-      throw new AppError("Current password is incorrect.", 401);
+      throw new AppError("Current password is incorrect.", 400);
     }
   }
 
   let accessTokenOut = accessToken;
-  if (emailChanged || passwordChanged) {
-    const update = {};
-    if (emailChanged) {
-      update.email = nextEmail;
-      update.email_confirm = true;
-    }
-    if (passwordChanged) update.password = nextPassword;
-
+  if (changingLogin) {
     const service = createServiceClient();
-    if (service) {
-      const { error: updateError } = await service.auth.admin.updateUserById(authUser.id, update);
-      if (updateError) {
-        throw new AppError(updateError.message || "Unable to update login details.", 400);
+    if (emailChanged) {
+      await applyLoginEmail(service, authUser.id, currentEmail, nextEmail);
+    }
+    if (passwordChanged) {
+      if (service) {
+        const { error: updateError } = await service.auth.admin.updateUserById(authUser.id, {
+          password: nextPassword,
+        });
+        if (updateError) {
+          throw new AppError(updateError.message || "Unable to update password.", 400);
+        }
+      } else {
+        const { data: updated, error: updateError } = await userClient.auth.updateUser({
+          password: nextPassword,
+        });
+        if (updateError) {
+          throw new AppError(updateError.message || "Unable to update password.", 400);
+        }
+        if (updated?.session?.access_token) {
+          accessTokenOut = updated.session.access_token;
+        }
       }
-    } else {
-      const { data: updated, error: updateError } = await userClient.auth.updateUser({
-        email: update.email,
-        password: update.password,
-      });
-      if (updateError) {
-        throw new AppError(updateError.message || "Unable to update login details.", 400);
-      }
-      if (updated?.session?.access_token) {
-        accessTokenOut = updated.session.access_token;
-      }
+    }
+
+    const verifier = createServerClient();
+    const { data: nextAuth } = await verifier.auth.signInWithPassword({
+      email: emailChanged ? nextEmail : currentEmail,
+      password: passwordChanged ? nextPassword : currentPassword,
+    });
+    if (nextAuth?.session?.access_token) {
+      accessTokenOut = nextAuth.session.access_token;
     }
   }
 
@@ -268,7 +360,10 @@ export async function updateAdminAccount(accessToken, input = {}) {
   const user = await loadProfile(accessTokenOut, authUser.id);
   return {
     accessToken: accessTokenOut,
-    user,
+    user: {
+      ...user,
+      email: emailChanged ? nextEmail : user.email,
+    },
     needsEmailConfirm: false,
   };
 }
@@ -290,7 +385,7 @@ export async function requestPasswordReset(email, redirectTo, attemptKey = "unkn
     throw new AppError("Unable to send a reset link from this site address.", 400);
   }
 
-  const supabase = createServerClient();
+  const supabase = createServerClient({ flowType: "implicit" });
   const { error } = await supabase.auth.resetPasswordForEmail(address, {
     redirectTo: target,
   });
@@ -303,13 +398,13 @@ export async function requestPasswordReset(email, redirectTo, attemptKey = "unkn
   return { message: GENERIC_RESET_MESSAGE };
 }
 
-export async function resetPasswordWithToken({ accessToken, tokenHash, password }) {
+export async function resetPasswordWithToken({ accessToken, tokenHash, code, token, email, password }) {
   if (!isSupabaseConfigured()) {
     throw new AppError("Password reset needs email to be configured.", 503);
   }
   assertPassword(password);
   const nextPassword = String(password || "");
-  const supabase = createServerClient();
+  const supabase = createServerClient({ flowType: "implicit" });
   let userId = "";
 
   if (tokenHash) {
@@ -317,6 +412,22 @@ export async function resetPasswordWithToken({ accessToken, tokenHash, password 
       type: "recovery",
       token_hash: String(tokenHash),
     });
+    if (error || !data?.user) {
+      throw new AppError("This reset link is invalid or has expired. Request a new one.", 400);
+    }
+    userId = data.user.id;
+  } else if (token && email) {
+    const { data, error } = await supabase.auth.verifyOtp({
+      type: "recovery",
+      email: String(email).trim().toLowerCase(),
+      token: String(token),
+    });
+    if (error || !data?.user) {
+      throw new AppError("This reset link is invalid or has expired. Request a new one.", 400);
+    }
+    userId = data.user.id;
+  } else if (code) {
+    const { data, error } = await supabase.auth.exchangeCodeForSession(String(code));
     if (error || !data?.user) {
       throw new AppError("This reset link is invalid or has expired. Request a new one.", 400);
     }

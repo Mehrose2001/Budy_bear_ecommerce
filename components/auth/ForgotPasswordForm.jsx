@@ -5,6 +5,7 @@ import Link from "next/link";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import BrandLogo from "@/components/layout/BrandLogo";
+import { adminLoginEmail, isExactAdminLoginEmail } from "@/data/admin";
 
 export default function ForgotPasswordForm({ audience = "customer" }) {
   const isAdmin = audience === "admin";
@@ -18,6 +19,10 @@ export default function ForgotPasswordForm({ audience = "customer" }) {
     event.preventDefault();
     setError("");
     setMessage("");
+    if (isAdmin && !isExactAdminLoginEmail(email)) {
+      setError(`Admin login is restricted to ${adminLoginEmail()}.`);
+      return;
+    }
     setIsSubmitting(true);
     try {
       const response = await fetch("/api/auth/forgot-password", {
@@ -43,7 +48,9 @@ export default function ForgotPasswordForm({ audience = "customer" }) {
       <BrandLogo size={64} showWordmark />
       <h1 className="mt-6 text-2xl font-black text-brand-primary">Forgot password</h1>
       <p className="mt-2 text-sm text-neutral-600">
-        Enter the email you use to sign in. We will send a link to set a new password.
+        {isAdmin
+          ? `Enter ${adminLoginEmail()} exactly. Mixed-case spellings are not accepted.`
+          : "Enter the email you use to sign in. We will send a link to set a new password."}
       </p>
       <form onSubmit={handleSubmit} className="mt-8 space-y-4">
         <Input

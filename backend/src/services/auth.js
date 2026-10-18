@@ -1,7 +1,7 @@
 import { config, isSupabaseConfigured } from "../config.js";
 import { HttpError } from "../lib/http.js";
 import { mapProfile } from "../lib/map.js";
-import { getAnonClient, getServiceClient } from "../supabase.js";
+import { getAnonClient, getRecoverClient, getServiceClient } from "../supabase.js";
 
 const loginAttempts = new Map();
 
@@ -16,6 +16,57 @@ function guardLogin(ip) {
   loginAttempts.set(ip, entry);
   if (entry.count > 12) {
     throw new HttpError(429, "Too many login attempts. Try again in a minute.");
+  }
+}
+
+function normalizedEmail(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+async function applyLoginEmail(userId, currentEmail, nextEmail) {
+  const service = getServiceClient();
+  if (!service) {
+    throw new HttpError(503, "Login email changes need the server service role key.");
+  }
+  const { data, error } = await service.auth.admin.updateUserById(userId, {
+    email: nextEmail,
+    email_confirm: true,
+  });
+  if (error) throw new HttpError(400, error.message || "Unable to update login email.");
+  if (normalizedEmail(data?.user?.email) === nextEmail) return;
+
+  const { data: linkData, error: linkError } = await service.auth.admin.generateLink({
+    type: "email_change_new",
+    email: currentEmail,
+    newEmail: nextEmail,
+  });
+  if (linkError) throw new HttpError(400, linkError.message || "Unable to update login email.");
+
+  const otp = linkData?.properties?.email_otp;
+  const tokenHash = linkData?.properties?.hashed_token;
+  const recover = getRecoverClient();
+  let verifyError = null;
+  if (otp) {
+    const result = await recover.auth.verifyOtp({
+      type: "email_change",
+      email: nextEmail,
+      token: String(otp),
+    });
+    verifyError = result.error;
+  } else if (tokenHash) {
+    const result = await recover.auth.verifyOtp({
+      type: "email_change",
+      token_hash: String(tokenHash),
+    });
+    verifyError = result.error;
+  } else {
+    throw new HttpError(400, "Unable to confirm the new login email.");
+  }
+  if (verifyError) throw new HttpError(400, verifyError.message || "Unable to confirm the new login email.");
+
+  const { data: again } = await service.auth.admin.getUserById(userId);
+  if (normalizedEmail(again?.user?.email) !== nextEmail) {
+    throw new HttpError(400, "Unable to update the login email. Try a different email address.");
   }
 }
 
@@ -51,7 +102,7 @@ export async function requestPasswordReset(email, redirectTo, ip) {
   if (!isSupabaseConfigured()) {
     throw new HttpError(503, "Password reset needs email to be configured.");
   }
-  const { error } = await getAnonClient().auth.resetPasswordForEmail(address, {
+  const { error } = await getRecoverClient().auth.resetPasswordForEmail(address, {
     redirectTo,
   });
   if (error && /rate|too many/i.test(String(error.message || ""))) {
@@ -60,7 +111,7 @@ export async function requestPasswordReset(email, redirectTo, ip) {
   return { message: GENERIC_RESET_MESSAGE };
 }
 
-export async function resetPasswordWithToken({ accessToken, tokenHash, password }) {
+export async function resetPasswordWithToken({ accessToken, tokenHash, code, token, email, password }) {
   if (!isSupabaseConfigured()) {
     throw new HttpError(503, "Password reset needs email to be configured.");
   }
@@ -68,12 +119,29 @@ export async function resetPasswordWithToken({ accessToken, tokenHash, password 
     throw new HttpError(400, "Password must be at least 8 characters.");
   }
 
+  const recover = getRecoverClient();
   let userId = "";
   if (tokenHash) {
-    const { data, error } = await getAnonClient().auth.verifyOtp({
+    const { data, error } = await recover.auth.verifyOtp({
       type: "recovery",
       token_hash: String(tokenHash),
     });
+    if (error || !data?.user) {
+      throw new HttpError(400, "This reset link is invalid or has expired. Request a new one.");
+    }
+    userId = data.user.id;
+  } else if (token && email) {
+    const { data, error } = await recover.auth.verifyOtp({
+      type: "recovery",
+      email: String(email).trim().toLowerCase(),
+      token: String(token),
+    });
+    if (error || !data?.user) {
+      throw new HttpError(400, "This reset link is invalid or has expired. Request a new one.");
+    }
+    userId = data.user.id;
+  } else if (code) {
+    const { data, error } = await recover.auth.exchangeCodeForSession(String(code));
     if (error || !data?.user) {
       throw new HttpError(400, "This reset link is invalid or has expired. Request a new one.");
     }
@@ -106,7 +174,7 @@ export async function login(email, password, ip) {
         accessToken: config.adminDevToken,
         user: {
           id: "admin-dev",
-          email: config.adminBootstrap.email,
+          email: normalizedEmail(config.adminBootstrap.email),
           name: config.adminBootstrap.name,
           phone: config.adminBootstrap.phone,
           role: "admin",
@@ -117,7 +185,7 @@ export async function login(email, password, ip) {
   }
 
   const { data, error } = await getAnonClient().auth.signInWithPassword({
-    email: email.trim(),
+    email: normalizedEmail(email),
     password,
   });
   if (error || !data?.session) {
@@ -174,7 +242,7 @@ export async function bootstrapAdmin() {
   if (!isSupabaseConfigured()) {
     throw new Error("Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY first.");
   }
-  const email = config.adminBootstrap.email;
+  const email = normalizedEmail(config.adminBootstrap.email);
   const password = config.adminBootstrap.password;
   if (!password) throw new Error("Set ADMIN_BOOTSTRAP_PASSWORD.");
 
@@ -188,7 +256,7 @@ export async function bootstrapAdmin() {
   const { data: existingProfile } = await supabase
     .from("profiles")
     .select("id, email, role")
-    .eq("email", email)
+    .ilike("email", email)
     .maybeSingle();
 
   let userId = existingAuth?.id || existingProfile?.id;
@@ -237,13 +305,25 @@ export async function updateAdminAccount(user, input = {}) {
   const nextPassword = String(input.newPassword || "");
   const nextName = input.name == null ? null : String(input.name).trim();
   const nextPhone = input.phone == null ? null : String(input.phone).trim();
-  const currentEmail = String(user.email || "").trim().toLowerCase();
+  const { data: authData } = await getAnonClient().auth.getUser(user.token);
+  const currentEmail = String(authData?.user?.email || user.email || "").trim().toLowerCase();
   const emailChanged = Boolean(nextEmail) && nextEmail !== currentEmail;
   const passwordChanged = Boolean(nextPassword);
+  const changingLogin = emailChanged || passwordChanged;
 
-  if (emailChanged || passwordChanged) {
+  if (!changingLogin && (input.email != null || input.newPassword != null)) {
+    throw new HttpError(400, "Change the login email or enter a new password.");
+  }
+
+  if (emailChanged && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nextEmail)) {
+    throw new HttpError(400, "Enter a valid login email.");
+  }
+
+  const supabase = getServiceClient();
+  let accessTokenOut = user.token;
+  if (changingLogin) {
     if (!currentPassword) {
-      throw new HttpError(400, "Enter your current password to change email or password.");
+      throw new HttpError(400, "Enter your current password to update email or password.");
     }
     if (passwordChanged && nextPassword.length < 8) {
       throw new HttpError(400, "Password must be at least 8 characters.");
@@ -252,17 +332,25 @@ export async function updateAdminAccount(user, input = {}) {
       email: currentEmail,
       password: currentPassword,
     });
-    if (verifyError) throw new HttpError(401, "Current password is incorrect.");
-  }
+    if (verifyError) throw new HttpError(400, "Current password is incorrect.");
 
-  const supabase = getServiceClient();
-  if (emailChanged || passwordChanged) {
-    const update = {};
-    if (emailChanged) update.email = nextEmail;
-    if (passwordChanged) update.password = nextPassword;
-    if (emailChanged) update.email_confirm = true;
-    const { error: updateError } = await supabase.auth.admin.updateUserById(user.id, update);
-    if (updateError) throw new HttpError(400, updateError.message || "Unable to update login details.");
+    if (emailChanged) {
+      await applyLoginEmail(user.id, currentEmail, nextEmail);
+    }
+    if (passwordChanged) {
+      const { error: updateError } = await supabase.auth.admin.updateUserById(user.id, {
+        password: nextPassword,
+      });
+      if (updateError) throw new HttpError(400, updateError.message || "Unable to update password.");
+    }
+
+    const { data: relogin, error: reloginError } = await getAnonClient().auth.signInWithPassword({
+      email: emailChanged ? nextEmail : currentEmail,
+      password: passwordChanged ? nextPassword : currentPassword,
+    });
+    if (!reloginError && relogin?.session?.access_token) {
+      accessTokenOut = relogin.session.access_token;
+    }
   }
 
   const profilePatch = {};
@@ -276,8 +364,11 @@ export async function updateAdminAccount(user, input = {}) {
 
   const profile = await loadProfile(user.id);
   return {
-    accessToken: user.token,
-    user: profile,
-    needsEmailConfirm: emailChanged,
+    accessToken: accessTokenOut,
+    user: {
+      ...profile,
+      email: emailChanged ? nextEmail : profile.email,
+    },
+    needsEmailConfirm: false,
   };
 }

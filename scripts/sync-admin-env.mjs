@@ -34,7 +34,9 @@ function writeEnv(filePath, updates) {
 
 const backend = parseEnv(backendPath);
 const local = parseEnv(localPath);
-const email = process.env.ADMIN_BOOTSTRAP_EMAIL || "BudyBear2026@gmail.com";
+const email = String(process.env.ADMIN_BOOTSTRAP_EMAIL || "budybear2026@gmail.com")
+  .trim()
+  .toLowerCase();
 const password = process.env.ADMIN_BOOTSTRAP_PASSWORD;
 if (!password) {
   console.error("Set ADMIN_BOOTSTRAP_PASSWORD before running this script.");

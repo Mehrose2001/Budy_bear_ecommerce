@@ -15,7 +15,14 @@ export const authRouter = Router();
 authRouter.post(
   "/login",
   asyncHandler(async (req, res) => {
-    const result = await login(req.body?.email, req.body?.password, req.ip);
+    const typedEmail = String(req.body?.email || "").trim();
+    const audience = String(req.body?.audience || "").toLowerCase() === "admin" ? "admin" : "customer";
+    const allowed = String(config.adminBootstrap.email || "budybear2026@gmail.com").trim().toLowerCase();
+    if (audience === "admin" && typedEmail !== allowed) {
+      res.status(401).json({ error: `Admin login is restricted to ${allowed}.` });
+      return;
+    }
+    const result = await login(typedEmail, req.body?.password, req.ip);
     res.json(result);
   })
 );

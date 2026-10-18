@@ -163,12 +163,18 @@ export function mapBanner(row) {
   };
 }
 
+function storefrontSupportEmail(value) {
+  const email = String(value || "").trim();
+  if (!email || /budybear2026@gmail\.com/i.test(email)) return "support@budybear.com";
+  return email;
+}
+
 export function mapSettings(row) {
   if (!row) {
     return {
       storeName: "Budy Bear",
       announcement: "Free Delivery on Orders Above Rs. 3,000",
-      supportEmail: "budybear2026@gmail.com",
+      supportEmail: "support@budybear.com",
       supportPhone: "+92 333 0370236",
       seasonalCollection: "winter",
       legalPages: {},
@@ -177,7 +183,7 @@ export function mapSettings(row) {
   return {
     storeName: row.store_name || row.storeName || "Budy Bear",
     announcement: row.announcement || "",
-    supportEmail: String(row.support_email || row.supportEmail || "").trim(),
+    supportEmail: storefrontSupportEmail(row.support_email || row.supportEmail),
     supportPhone: String(row.support_phone || row.supportPhone || "").trim(),
     seasonalCollection: normalizeSeasonalCollection(
       row.seasonal_collection || row.seasonalCollection
@@ -227,7 +233,7 @@ export function mapProfile(row) {
   if (!row) return null;
   return {
     id: row.id,
-    email: row.email,
+    email: String(row.email || "").trim().toLowerCase(),
     name: row.full_name,
     phone: row.phone,
     role: row.role,

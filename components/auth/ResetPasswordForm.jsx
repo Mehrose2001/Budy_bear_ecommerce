@@ -7,12 +7,17 @@ import Button from "@/components/ui/Button";
 import BrandLogo from "@/components/layout/BrandLogo";
 
 function readRecoveryFromUrl() {
-  if (typeof window === "undefined") return { accessToken: "", tokenHash: "" };
+  if (typeof window === "undefined") {
+    return { accessToken: "", tokenHash: "", code: "", token: "", email: "" };
+  }
   const search = new URLSearchParams(window.location.search);
   const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
   return {
     accessToken: hash.get("access_token") || search.get("access_token") || "",
     tokenHash: search.get("token_hash") || hash.get("token_hash") || "",
+    code: search.get("code") || hash.get("code") || "",
+    token: search.get("token") || hash.get("token") || "",
+    email: search.get("email") || hash.get("email") || "",
   };
 }
 
@@ -25,7 +30,13 @@ export default function ResetPasswordForm({ audience = "customer" }) {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [recovery, setRecovery] = useState({ accessToken: "", tokenHash: "" });
+  const [recovery, setRecovery] = useState({
+    accessToken: "",
+    tokenHash: "",
+    code: "",
+    token: "",
+    email: "",
+  });
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -33,7 +44,9 @@ export default function ResetPasswordForm({ audience = "customer" }) {
     setReady(true);
   }, []);
 
-  const hasLink = Boolean(recovery.accessToken || recovery.tokenHash);
+  const hasLink = Boolean(
+    recovery.accessToken || recovery.tokenHash || recovery.code || (recovery.token && recovery.email)
+  );
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -56,6 +69,9 @@ export default function ResetPasswordForm({ audience = "customer" }) {
           password,
           accessToken: recovery.accessToken,
           tokenHash: recovery.tokenHash,
+          code: recovery.code,
+          token: recovery.token,
+          email: recovery.email,
         }),
       });
       const data = await response.json().catch(() => ({}));

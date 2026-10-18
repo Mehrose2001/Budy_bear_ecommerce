@@ -34,7 +34,7 @@ async function verifyAdminSession(session) {
     return {
       ...session,
       id: data.user.id || session.id,
-      email: data.user.email || session.email,
+      email: String(data.user.email || session.email || "").trim().toLowerCase(),
       name: data.user.name || session.name,
       phone: data.user.phone || session.phone,
       role: "admin",
@@ -126,6 +126,7 @@ export function AdminAuthProvider({ children }) {
           body: JSON.stringify({
             email: String(email || "").trim(),
             password,
+            audience: "admin",
           }),
         });
         const data = await response.json().catch(() => ({}));
@@ -197,7 +198,7 @@ export function AdminAuthProvider({ children }) {
         emitAuthChanged();
         return {
           ok: true,
-          email: data.user?.email,
+          email: data.user?.email || input.email,
           message: data.needsEmailConfirm
             ? "Login details updated. Confirm the new email if you received a verification message."
             : "Login details updated.",

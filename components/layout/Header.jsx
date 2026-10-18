@@ -57,12 +57,19 @@ export default function Header({ navItems = mainNavItems, announcement = "" }) {
 
       <div
         className={cn(
-          "border-b border-border bg-white/95 backdrop-blur transition-shadow duration-300",
-          isScrolled && "shadow-sm"
+          "border-b border-border transition-[background-color,box-shadow,backdrop-filter] duration-300",
+          isScrolled
+            ? "bg-white/60 shadow-md backdrop-blur-xl"
+            : "bg-white/95 backdrop-blur-sm"
         )}
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="relative flex h-16 items-center justify-between xl:hidden">
+          <div
+            className={cn(
+              "relative flex items-center justify-between transition-[height] duration-300 xl:hidden",
+              isScrolled ? "h-12" : "h-16"
+            )}
+          >
             <button
               type="button"
               onClick={() => setMobileMenuOpen(true)}
@@ -74,7 +81,7 @@ export default function Header({ navItems = mainNavItems, announcement = "" }) {
 
             <div className="pointer-events-none absolute inset-y-0 left-1/2 flex -translate-x-1/2 items-center">
               <div className="pointer-events-auto">
-                <BrandLogo size={48} priority />
+                <BrandLogo size={isScrolled ? 36 : 48} priority />
               </div>
             </div>
 
@@ -120,8 +127,13 @@ export default function Header({ navItems = mainNavItems, announcement = "" }) {
             </div>
           </div>
 
-          <div className="hidden h-[88px] items-center justify-between gap-4 xl:flex">
-            <BrandLogo size={64} showWordmark priority />
+          <div
+            className={cn(
+              "hidden items-center justify-between gap-4 transition-[height] duration-300 xl:flex",
+              isScrolled ? "h-[68px]" : "h-[88px]"
+            )}
+          >
+            <BrandLogo size={isScrolled ? 48 : 64} showWordmark priority />
 
             <div className="hidden flex-1 max-w-xl xl:block">
               <SearchBar
@@ -184,7 +196,7 @@ export default function Header({ navItems = mainNavItems, announcement = "" }) {
           )}
 
           <div className="hidden border-t border-border xl:block">
-            <Navbar items={navItems} />
+            <Navbar items={navItems} compact={isScrolled} />
           </div>
         </div>
       </div>

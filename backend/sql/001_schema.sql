@@ -213,7 +213,7 @@ create table if not exists public.store_settings (
   id integer primary key default 1 check (id = 1),
   store_name text not null default 'Budy Bear',
   announcement text not null default '',
-  support_email text not null default 'budybear2026@gmail.com',
+  support_email text not null default 'support@budybear.com',
   support_phone text not null default '+92 333 0370236',
   updated_at timestamptz not null default now()
 );
@@ -228,7 +228,7 @@ values (
   1,
   'Budy Bear',
   'Free Delivery on Orders Above Rs. 3,000',
-  'budybear2026@gmail.com',
+  'support@budybear.com',
   '+92 333 0370236'
 )
 on conflict (id) do nothing;

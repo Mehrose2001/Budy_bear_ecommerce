@@ -29,6 +29,10 @@ const faqs = [
     q: "How do I track or change an order?",
     a: `Use Track your order in the footer with your order ID and checkout phone number. Status moves Pending → Confirmed → Dispatch, or Canceled if the order is cancelled. You can also message us on WhatsApp at ${brand.whatsapp}.`,
   },
+  {
+    q: "How can I contact support?",
+    a: `Email us at ${brand.supportEmail} or message us on WhatsApp at ${brand.whatsapp}. We usually reply on working days.`,
+  },
 ];
 
 export default function FaqsPage() {

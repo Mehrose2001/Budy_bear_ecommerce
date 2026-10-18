@@ -8,6 +8,9 @@ export async function POST(request) {
     const result = await resetPasswordWithToken({
       accessToken: body.accessToken,
       tokenHash: body.tokenHash,
+      code: body.code,
+      token: body.token,
+      email: body.email,
       password: body.password,
     });
     return NextResponse.json(result);

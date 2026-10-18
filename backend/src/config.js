@@ -21,7 +21,9 @@ export const config = {
   supabaseAnonKey: process.env.SUPABASE_ANON_KEY || "",
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || "",
   adminBootstrap: {
-    email: process.env.ADMIN_BOOTSTRAP_EMAIL || "BudyBear2026@gmail.com",
+    email: String(process.env.ADMIN_BOOTSTRAP_EMAIL || "budybear2026@gmail.com")
+      .trim()
+      .toLowerCase(),
     password: process.env.ADMIN_BOOTSTRAP_PASSWORD || "",
     name: process.env.ADMIN_BOOTSTRAP_NAME || "Budy Bear",
     phone: process.env.ADMIN_BOOTSTRAP_PHONE || "+92 333 0370236",
@@ -33,7 +35,9 @@ export const config = {
     password: process.env.HOSTINGER_FTP_PASSWORD || "",
     port: Number(process.env.HOSTINGER_FTP_PORT || 21),
     remoteDir: process.env.HOSTINGER_REMOTE_DIR || "/public_html/media",
-    publicBaseUrl: (process.env.HOSTINGER_PUBLIC_BASE_URL || "").replace(/\/$/, ""),
+    publicBaseUrl: (
+      process.env.HOSTINGER_PUBLIC_BASE_URL || "https://budybear.com/media"
+    ).replace(/\/$/, ""),
   },
   catalogCacheMs: Number(process.env.CATALOG_CACHE_MS || 15000),
 };

@@ -1,9 +1,7 @@
 import path from "path";
-import { mkdir, writeFile } from "fs/promises";
 import { NextResponse } from "next/server";
 import { isAdminRequest, getAccessToken } from "@/lib/adminAuth";
 import { withBackend } from "@/lib/withBackend";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { uploadProductImage } from "@/services/storageService";
 
 export const runtime = "nodejs";
@@ -17,10 +15,6 @@ const ALLOWED_TYPES = new Set([
   "image/svg+xml",
 ]);
 const ALLOWED_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg"]);
-
-function canWriteLocalUploads() {
-  return process.env.VERCEL !== "1" && process.env.NODE_ENV !== "production";
-}
 
 export async function POST(request) {
   return withBackend(request, "/admin/uploads", async () => {
@@ -48,34 +42,12 @@ export async function POST(request) {
       );
     }
 
-    if (isSupabaseConfigured()) {
-      const uploaded = await uploadProductImage(
-        productId,
-        file,
-        getAccessToken(request),
-        folder
-      );
-      return NextResponse.json(uploaded);
-    }
-
-    if (!canWriteLocalUploads()) {
-      return NextResponse.json(
-        {
-          error:
-            "Set SUPABASE_URL and SUPABASE_ANON_KEY on Vercel for Preview and Production, then Redeploy.",
-        },
-        { status: 503 }
-      );
-    }
-
-    const bytes = Buffer.from(await file.arrayBuffer());
-    if (bytes.length > 6 * 1024 * 1024) {
-      return NextResponse.json({ error: "Image must be under 6MB." }, { status: 400 });
-    }
-    const filename = `${Date.now()}-${crypto.randomUUID()}${ext}`;
-    const dir = path.join(process.cwd(), "public", "uploads", "products");
-    await mkdir(dir, { recursive: true });
-    await writeFile(path.join(dir, filename), bytes);
-    return NextResponse.json({ url: `/uploads/products/${filename}`, path: `local/${filename}` });
+    const uploaded = await uploadProductImage(
+      productId,
+      file,
+      getAccessToken(request),
+      folder
+    );
+    return NextResponse.json(uploaded);
   });
 }

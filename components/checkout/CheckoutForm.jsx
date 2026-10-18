@@ -430,7 +430,7 @@ export function CheckoutFields({
             name="couponCode"
             value={couponCode}
             onChange={(event) => setCouponCode(event.target.value.toUpperCase())}
-            placeholder="WELCOME10"
+            placeholder="Enter promo code here"
             className="flex-1"
           />
           <Button type="button" variant="outline" onClick={applyCoupon}>
