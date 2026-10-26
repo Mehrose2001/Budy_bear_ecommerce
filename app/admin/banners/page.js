@@ -12,17 +12,61 @@ import { useToast } from "@/context/ToastContext";
 const emptyForm = {
   title: "",
   image: "",
+  mobileImage: "",
   href: "/products",
   active: true,
 };
 
+function ImageField({ label, hint, image, frameClass, uploading, onFile }) {
+  const inputRef = useRef(null);
+
+  return (
+    <div>
+      <p className="mb-1 text-sm font-medium text-neutral-800">{label}</p>
+      <p className="mb-2 text-xs text-neutral-500">{hint}</p>
+      <div className="flex flex-wrap items-center gap-4">
+        <div className={`relative overflow-hidden rounded-xl bg-brand-cream ring-1 ring-border ${frameClass}`}>
+          {image ? (
+            <Image src={image} alt="" fill className="object-cover" sizes="180px" />
+          ) : (
+            <span className="flex h-full items-center justify-center px-2 text-center text-[10px] text-neutral-400">
+              No image
+            </span>
+          )}
+        </div>
+        <div className="flex min-w-0 flex-col gap-2">
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            className="hidden"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              event.target.value = "";
+              onFile(file);
+            }}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            disabled={Boolean(uploading)}
+            onClick={() => inputRef.current?.click()}
+          >
+            {uploading ? "Uploading..." : "Upload from device"}
+          </Button>
+          {image ? <p className="max-w-xs truncate text-xs text-neutral-500">{image}</p> : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminBannersPage() {
   const { admin } = useAdminAuth();
   const { showToast } = useToast();
-  const fileInputRef = useRef(null);
   const [banners, setBanners] = useState([]);
   const [form, setForm] = useState(emptyForm);
-  const [uploading, setUploading] = useState(false);
+  const [uploading, setUploading] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -38,26 +82,25 @@ export default function AdminBannersPage() {
     });
   }, [load]);
 
-  const uploadImage = async (file) => {
+  const uploadImage = async (file, field) => {
     if (!file) return;
     setError("");
-    setUploading(true);
+    setUploading(field);
     try {
       const data = await adminUploadFile(file, admin?.token, form.id || "banner", "banners");
-      setForm((current) => ({ ...current, image: data.url }));
+      setForm((current) => ({ ...current, [field]: data.url }));
     } catch (uploadError) {
       setError(uploadError.message || "Could not upload the banner image.");
     } finally {
-      setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      setUploading("");
     }
   };
 
   const save = async (event) => {
     event.preventDefault();
     setError("");
-    if (!form.image) {
-      setError("Upload a banner image from your device.");
+    if (!form.image || !form.mobileImage) {
+      setError("Upload both a web image and a mobile image.");
       return;
     }
     setSaving(true);
@@ -90,7 +133,7 @@ export default function AdminBannersPage() {
     <div className="h-full min-h-0 overflow-y-auto">
       <AdminPageHeader
         title="Banners"
-        description="Shows 4:5 on mobile and 16:9 on desktop. Keep the main subject near the center."
+        description="Upload one image for desktop and a separate image for phones. Desktop uses 16:9. Phones and tablets use 4:5."
       />
       <form
         onSubmit={save}
@@ -102,39 +145,23 @@ export default function AdminBannersPage() {
           onChange={(event) => setForm({ ...form, title: event.target.value })}
           required
         />
-        <div>
-          <p className="mb-2 text-sm font-medium text-neutral-800">Banner image</p>
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="relative h-24 w-40 overflow-hidden rounded-xl bg-brand-cream ring-1 ring-border">
-              {form.image ? (
-                <Image src={form.image} alt="" fill className="object-cover" sizes="160px" />
-              ) : (
-                <span className="flex h-full items-center justify-center px-2 text-center text-[10px] text-neutral-400">
-                  No image
-                </span>
-              )}
-            </div>
-            <div className="flex flex-col gap-2">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif"
-                className="hidden"
-                onChange={(event) => uploadImage(event.target.files?.[0])}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                disabled={uploading}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                {uploading ? "Uploading..." : "Upload from device"}
-              </Button>
-              {form.image ? (
-                <p className="max-w-xs truncate text-xs text-neutral-500">{form.image}</p>
-              ) : null}
-            </div>
-          </div>
+        <div className="grid gap-5 md:grid-cols-2">
+          <ImageField
+            label="Web image"
+            hint="Shown on desktop, 1280px and wider."
+            image={form.image}
+            frameClass="h-24 w-40"
+            uploading={uploading === "image"}
+            onFile={(file) => uploadImage(file, "image")}
+          />
+          <ImageField
+            label="Mobile image"
+            hint="Shown on phones and tablets."
+            image={form.mobileImage}
+            frameClass="h-32 w-24"
+            uploading={uploading === "mobileImage"}
+            onFile={(file) => uploadImage(file, "mobileImage")}
+          />
         </div>
         <Input
           label="Link"
@@ -151,7 +178,7 @@ export default function AdminBannersPage() {
         </label>
         {error ? <p className="text-sm text-error">{error}</p> : null}
         <div className="flex gap-3">
-          <Button type="submit" disabled={uploading || saving}>
+          <Button type="submit" disabled={Boolean(uploading) || saving}>
             {saving ? "Saving..." : form.id ? "Update banner" : "Save banner"}
           </Button>
           {form.id ? (
@@ -165,15 +192,44 @@ export default function AdminBannersPage() {
       <div className="grid gap-4 md:grid-cols-2">
         {banners.map((banner) => (
           <article key={banner.id} className="rounded-2xl border border-border bg-white p-4 shadow-sm">
-            <div className="relative mb-3 h-36 overflow-hidden rounded-xl bg-brand-cream">
-              {banner.image ? (
-                <Image src={banner.image} alt="" fill className="object-cover" sizes="400px" />
-              ) : null}
+            <div className="mb-3 grid grid-cols-[1.4fr_0.7fr] gap-3">
+              <div>
+                <p className="mb-1 text-xs font-medium text-neutral-500">Web</p>
+                <div className="relative h-28 overflow-hidden rounded-xl bg-brand-cream">
+                  {banner.image ? (
+                    <Image src={banner.image} alt="" fill className="object-cover" sizes="280px" />
+                  ) : null}
+                </div>
+              </div>
+              <div>
+                <p className="mb-1 text-xs font-medium text-neutral-500">Mobile</p>
+                <div className="relative h-28 overflow-hidden rounded-xl bg-brand-cream">
+                  {banner.mobileImage || banner.image ? (
+                    <Image
+                      src={banner.mobileImage || banner.image}
+                      alt=""
+                      fill
+                      className="object-cover"
+                      sizes="120px"
+                    />
+                  ) : null}
+                </div>
+              </div>
             </div>
             <p className="font-semibold text-brand-primary">{banner.title}</p>
             <p className="mt-1 text-sm">{banner.active ? "Active" : "Hidden"} · {banner.href}</p>
             <div className="mt-3 flex gap-3">
-              <button type="button" className="text-sm font-semibold text-brand-primary" onClick={() => setForm(banner)}>
+              <button
+                type="button"
+                className="text-sm font-semibold text-brand-primary"
+                onClick={() =>
+                  setForm({
+                    ...emptyForm,
+                    ...banner,
+                    mobileImage: banner.mobileImage || "",
+                  })
+                }
+              >
                 Edit
               </button>
               <button type="button" className="text-sm font-semibold text-error" onClick={() => remove(banner.id)}>

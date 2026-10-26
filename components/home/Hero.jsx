@@ -39,24 +39,31 @@ export default function Hero({ banners = [] }) {
         ) : (
           visible.map((banner, slideIndex) => {
             const active = slideIndex === safeIndex;
+            const webImage = banner.image;
+            const mobileImage = banner.mobileImage || banner.image;
             return (
-              <img
-                key={banner.id || banner.image}
-                src={banner.image}
-                alt={active ? banner.title || `${brand.name} banner` : ""}
-                onError={() => {
-                  setFailed((currentFailed) => ({
-                    ...currentFailed,
-                    [banner.id || banner.image]: true,
-                  }));
-                }}
+              <picture
+                key={banner.id || webImage}
                 className={cn(
-                  "absolute inset-0 h-full w-full object-cover transition-[opacity,filter,transform] duration-[2.2s] ease-in-out motion-reduce:transition-none",
+                  "absolute inset-0 h-full w-full transition-[opacity,filter,transform] duration-[2.2s] ease-in-out motion-reduce:transition-none",
                   active
                     ? "opacity-100 blur-0 scale-100"
                     : "pointer-events-none opacity-0 blur-md scale-[1.03]"
                 )}
-              />
+              >
+                <source media="(min-width: 1280px)" srcSet={webImage} />
+                <img
+                  src={mobileImage}
+                  alt={active ? banner.title || `${brand.name} banner` : ""}
+                  onError={() => {
+                    setFailed((currentFailed) => ({
+                      ...currentFailed,
+                      [banner.id || webImage]: true,
+                    }));
+                  }}
+                  className="h-full w-full object-cover"
+                />
+              </picture>
             );
           })
         )}

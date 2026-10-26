@@ -112,8 +112,8 @@ export async function listBanners({ includeInactive = false, accessToken } = {})
   return (data || []).map(mapBanner);
 }
 
-export async function upsertBanner(input, accessToken) {
-  const supabase = writeClient(accessToken);
+function bannerRow(input, { includeMobile = true } = {}) {
+  const mobile = input.mobileImage || input.mobile_image || "";
   const row = {
     id: input.id || `b${Date.now()}`,
     title: input.title,
@@ -121,9 +121,27 @@ export async function upsertBanner(input, accessToken) {
     href: input.href || "/products",
     active: input.active !== false,
   };
-  const { data, error } = await supabase.from("banners").upsert(row).select("*").single();
-  throwIf(error, "Unable to save banner.");
-  return mapBanner(data);
+  if (includeMobile) {
+    row.mobile_image = mobile || null;
+  } else if (mobile && mobile !== input.image) {
+    row.image = JSON.stringify({ web: input.image, mobile });
+  }
+  return row;
+}
+
+export async function upsertBanner(input, accessToken) {
+  const supabase = writeClient(accessToken);
+  const draft = { ...input, id: input.id || `b${Date.now()}` };
+  let saved = await supabase.from("banners").upsert(bannerRow(draft)).select("*").single();
+  if (saved.error && /mobile_image/i.test(String(saved.error.message || ""))) {
+    saved = await supabase
+      .from("banners")
+      .upsert(bannerRow(draft, { includeMobile: false }))
+      .select("*")
+      .single();
+  }
+  throwIf(saved.error, saved.error?.message || "Unable to save banner.");
+  return mapBanner(saved.data);
 }
 
 export async function deleteBanner(id, accessToken) {

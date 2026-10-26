@@ -191,8 +191,8 @@ export async function deleteCoupon(id) {
   invalidateCatalogCache();
 }
 
-export async function upsertBanner(input) {
-  const supabase = await requireSupabase();
+function bannerRow(input, { includeMobile = true } = {}) {
+  const mobile = input.mobileImage || input.mobile_image || "";
   const row = {
     id: input.id || `b${Date.now()}`,
     title: input.title,
@@ -200,10 +200,28 @@ export async function upsertBanner(input) {
     href: input.href || "/products",
     active: input.active !== false,
   };
-  const { data, error } = await supabase.from("banners").upsert(row).select("*").single();
-  if (error) throw new HttpError(400, error.message);
+  if (includeMobile) {
+    row.mobile_image = mobile || null;
+  } else if (mobile && mobile !== input.image) {
+    row.image = JSON.stringify({ web: input.image, mobile });
+  }
+  return row;
+}
+
+export async function upsertBanner(input) {
+  const supabase = await requireSupabase();
+  const draft = { ...input, id: input.id || `b${Date.now()}` };
+  let saved = await supabase.from("banners").upsert(bannerRow(draft)).select("*").single();
+  if (saved.error && /mobile_image/i.test(String(saved.error.message || ""))) {
+    saved = await supabase
+      .from("banners")
+      .upsert(bannerRow(draft, { includeMobile: false }))
+      .select("*")
+      .single();
+  }
+  if (saved.error) throw new HttpError(400, saved.error.message);
   invalidateCatalogCache();
-  return mapBanner(data);
+  return mapBanner(saved.data);
 }
 
 export async function deleteBanner(id) {

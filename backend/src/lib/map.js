@@ -173,12 +173,32 @@ export function mapCoupon(row) {
   };
 }
 
+function bannerImages(row) {
+  let image = row.image || "";
+  let mobileImage = row.mobile_image || row.mobileImage || "";
+  if (typeof image === "string" && image.trim().startsWith("{")) {
+    try {
+      const parsed = JSON.parse(image);
+      image = parsed.web || parsed.image || "";
+      mobileImage = mobileImage || parsed.mobile || parsed.mobileImage || "";
+    } catch {
+      // Keep a plain image URL when the value is not banner JSON.
+    }
+  }
+  return {
+    image: normalizeMediaUrl(image),
+    mobileImage: normalizeMediaUrl(mobileImage),
+  };
+}
+
 export function mapBanner(row) {
   if (!row) return null;
+  const images = bannerImages(row);
   return {
     id: row.id,
     title: row.title,
-    image: normalizeMediaUrl(row.image),
+    image: images.image,
+    mobileImage: images.mobileImage,
     href: row.href,
     active: Boolean(row.active),
   };
