@@ -33,37 +33,57 @@ export default function Hero({ banners = [] }) {
 
   return (
     <section className="group relative overflow-hidden bg-brand-cream">
-      <div className="relative aspect-[4/5] w-full xl:aspect-video">
+      <div className="relative aspect-[4/5] w-full overflow-hidden xl:hidden">
         {visible.length === 0 ? (
           <div className="absolute inset-0 bg-brand-cream" />
         ) : (
           visible.map((banner, slideIndex) => {
             const active = slideIndex === safeIndex;
-            const webImage = banner.image;
             const mobileImage = banner.mobileImage || banner.image;
             return (
-              <picture
-                key={banner.id || webImage}
+              <img
+                key={banner.id || mobileImage}
+                src={mobileImage}
+                alt={active ? banner.title || `${brand.name} banner` : ""}
+                onError={() => {
+                  setFailed((currentFailed) => ({
+                    ...currentFailed,
+                    [banner.id || banner.image]: true,
+                  }));
+                }}
                 className={cn(
-                  "absolute inset-0 h-full w-full transition-[opacity,filter,transform] duration-[2.2s] ease-in-out motion-reduce:transition-none",
-                  active
-                    ? "opacity-100 blur-0 scale-100"
-                    : "pointer-events-none opacity-0 blur-md scale-[1.03]"
+                  "absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-[2.2s] ease-in-out motion-reduce:transition-none",
+                  active ? "opacity-100" : "pointer-events-none opacity-0"
                 )}
-              >
-                <source media="(min-width: 1280px)" srcSet={webImage} />
-                <img
-                  src={mobileImage}
-                  alt={active ? banner.title || `${brand.name} banner` : ""}
-                  onError={() => {
-                    setFailed((currentFailed) => ({
-                      ...currentFailed,
-                      [banner.id || webImage]: true,
-                    }));
-                  }}
-                  className="h-full w-full object-cover"
-                />
-              </picture>
+              />
+            );
+          })
+        )}
+      </div>
+      <div className="relative hidden w-full bg-brand-cream xl:block">
+        {visible.length === 0 ? (
+          <div className="aspect-video w-full bg-brand-cream" />
+        ) : (
+          visible.map((banner, slideIndex) => {
+            const active = slideIndex === safeIndex;
+            return (
+              <img
+                key={banner.id || banner.image}
+                src={banner.image}
+                alt={active ? banner.title || `${brand.name} banner` : ""}
+                onError={() => {
+                  setFailed((currentFailed) => ({
+                    ...currentFailed,
+                    [banner.id || banner.image]: true,
+                  }));
+                }}
+                className={cn(
+                  "w-full bg-brand-cream object-contain object-center transition-opacity duration-[2.2s] ease-in-out motion-reduce:transition-none",
+                  active
+                    ? "relative h-auto max-h-[min(82vh,920px)] opacity-100"
+                    : "pointer-events-none absolute inset-0 h-full opacity-0"
+                )}
+              />
             );
           })
         )}

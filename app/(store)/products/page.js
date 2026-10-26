@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import ProductListing from "@/components/product/ProductListing";
-import { listProducts } from "@/lib/catalog";
+import { listCategories, listProducts } from "@/lib/catalog";
 import { brand } from "@/data/brand";
 
 function ProductsFallback() {
@@ -45,10 +45,13 @@ export default async function ProductsPage({ searchParams }) {
         ? "Explore the latest additions to our collection."
         : "Browse our complete catalogue of kids fashion and essentials.";
 
+  const [products, categories] = await Promise.all([listProducts(), listCategories().catch(() => [])]);
+
   return (
     <Suspense fallback={<ProductsFallback />}>
       <ProductListing
-        products={await listProducts()}
+        products={products}
+        categories={categories}
         title={title}
         description={description}
         basePath="/products"

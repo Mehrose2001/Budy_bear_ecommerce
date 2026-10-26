@@ -96,6 +96,7 @@ function SizeButtons({ sizes, filters, facets, onToggleArrayFilter }) {
 }
 
 export default function ProductFilters({
+  categories = [],
   filters,
   facets,
   onToggleArrayFilter,
@@ -153,6 +154,7 @@ export default function ProductFilters({
 
         <FilterSection title="Category">
           <CategoryRangeFilter
+            categories={categories}
             filters={filters}
             facets={facets}
             lockedCategory={lockedCategory}

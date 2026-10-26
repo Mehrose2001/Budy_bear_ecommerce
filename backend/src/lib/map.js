@@ -204,6 +204,30 @@ export function mapBanner(row) {
   };
 }
 
+function normalizeOffer(value) {
+  const source = value && typeof value === "object" ? value : {};
+  const percent = Math.min(90, Math.max(0, Math.round(Number(source.percent) || 0)));
+  return {
+    enabled: Boolean(source.enabled),
+    message: String(source.message || "").trim().slice(0, 280),
+    percent,
+  };
+}
+
+function readSettingsOffer(row) {
+  const rawLegal = row?.legal_pages || row?.legalPages || {};
+  const legal = rawLegal && typeof rawLegal === "object" && !Array.isArray(rawLegal) ? rawLegal : {};
+  const columnOffer = row?.offer;
+  const hasColumnOffer =
+    columnOffer &&
+    typeof columnOffer === "object" &&
+    ("enabled" in columnOffer || "percent" in columnOffer || "message" in columnOffer);
+  return {
+    legalPages: Object.fromEntries(Object.entries(legal).filter(([key]) => key !== "_offer")),
+    offer: normalizeOffer(hasColumnOffer ? columnOffer : legal._offer),
+  };
+}
+
 function storefrontSupportEmail(value) {
   const email = String(value || "").trim();
   if (!email || /budybear2026@gmail\.com/i.test(email)) return "support@budybear.com";
@@ -219,8 +243,10 @@ export function mapSettings(row) {
       supportPhone: "+92 333 0370236",
       seasonalCollection: "winter",
       legalPages: {},
+      offer: normalizeOffer(null),
     };
   }
+  const stored = readSettingsOffer(row);
   return {
     storeName: row.store_name || row.storeName || "Budy Bear",
     announcement: row.announcement || "",
@@ -229,7 +255,8 @@ export function mapSettings(row) {
     seasonalCollection: normalizeSeasonalCollection(
       row.seasonal_collection || row.seasonalCollection
     ),
-    legalPages: row.legal_pages || row.legalPages || {},
+    legalPages: stored.legalPages,
+    offer: stored.offer,
   };
 }
 

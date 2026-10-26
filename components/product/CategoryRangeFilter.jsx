@@ -114,16 +114,19 @@ function CategoryBranch({
 }
 
 export default function CategoryRangeFilter({
+  categories,
   filters,
   facets,
   lockedCategory,
   onToggleArrayFilter,
 }) {
-  const visibleCategories = lockedCategory
-    ? allCategories
-    : allCategories.filter(
-        (category) => (facets.categories?.[category.slug] || 0) > 0
-      );
+  const source = (categories?.length ? categories : allCategories).filter(
+    (category) => category?.slug && category.isActive !== false
+  );
+  const visibleCategories = source.map((category) => ({
+    ...category,
+    subcategories: Array.isArray(category.subcategories) ? category.subcategories : [],
+  }));
 
   if (!visibleCategories.length) return null;
 

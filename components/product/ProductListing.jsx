@@ -47,6 +47,7 @@ export default function ProductListing({
   lockedCategory = null,
   presetFilter = null,
   searchQuery = "",
+  categories = [],
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -210,6 +211,7 @@ export default function ProductListing({
   }
 
   const filterProps = {
+    categories,
     filters,
     facets,
     onToggleArrayFilter: toggleArrayFilter,

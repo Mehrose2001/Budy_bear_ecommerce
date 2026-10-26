@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   BadgePercent,
+  Megaphone,
   BookOpen,
   ClipboardList,
   FolderTree,
@@ -36,6 +37,7 @@ const NAV_ITEMS = [
   { href: "/admin/customers", label: "Customers", icon: Users },
   { href: "/admin/inventory", label: "Inventory", icon: Warehouse },
   { href: "/admin/coupons", label: "Coupons", icon: BadgePercent },
+  { href: "/admin/offer", label: "Show offer popup", icon: Megaphone },
   { href: "/admin/banners", label: "Banners", icon: ImageIcon },
   { href: "/admin/reviews", label: "Reviews", icon: MessageSquare },
   { href: "/admin/about", label: "About Budy Bear", icon: BookOpen },

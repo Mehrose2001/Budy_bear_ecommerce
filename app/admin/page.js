@@ -22,10 +22,32 @@ export default function AdminDashboardPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!admin?.token) return;
-    adminFetch("/api/admin/content?resource=stats", {}, admin.token)
-      .then(setStats)
-      .catch((err) => setError(err.message));
+    if (!admin?.token) return undefined;
+    let ignore = false;
+
+    const load = () => {
+      adminFetch(`/api/admin/content?resource=stats&t=${Date.now()}`, {}, admin.token)
+        .then((data) => {
+          if (!ignore) setStats(data);
+        })
+        .catch((err) => {
+          if (!ignore) setError(err.message);
+        });
+    };
+
+    load();
+    window.addEventListener("focus", load);
+    window.addEventListener("pageshow", load);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") load();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      ignore = true;
+      window.removeEventListener("focus", load);
+      window.removeEventListener("pageshow", load);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [admin?.token]);
 
   return (

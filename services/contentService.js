@@ -3,6 +3,7 @@ import { mapBanner, mapCoupon, mapProduct, mapSettings } from "@/lib/mappers";
 import { createServerClient, createServiceClient, createUserClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { getDefaultLegalPage, mergeLegalPage } from "@/data/legalPages";
+import { normalizeOffer } from "@/lib/storeOffer";
 import { getSettings as getMemorySettings, updateSettings as updateMemorySettings } from "@/lib/catalogStore";
 
 function client(accessToken) {
@@ -32,12 +33,30 @@ export async function updateStoreSettings(input, accessToken) {
     support_phone: String(input.supportPhone || input.support_phone || "").trim(),
     seasonal_collection: String(input.seasonalCollection || "").toLowerCase() === "summer" ? "summer" : "winter",
   };
+  const offer = input.offer === undefined ? null : normalizeOffer(input.offer);
+  if (offer) payload.offer = offer;
   const { data, error } = await supabase
     .from("store_settings")
     .update(payload)
     .eq("id", 1)
     .select("*")
     .single();
+  if (error && offer && /offer/i.test(String(error.message || error.details || ""))) {
+    const current = await supabase.from("store_settings").select("legal_pages").eq("id", 1).maybeSingle();
+    const withoutOffer = { ...payload };
+    delete withoutOffer.offer;
+    const retry = await supabase
+      .from("store_settings")
+      .update({
+        ...withoutOffer,
+        legal_pages: { ...(current.data?.legal_pages || {}), _offer: offer },
+      })
+      .eq("id", 1)
+      .select("*")
+      .single();
+    throwIf(retry.error, "Unable to update settings.");
+    return mapSettings(retry.data);
+  }
   if (error && /seasonal_collection/i.test(String(error.message || error.details || ""))) {
     const { seasonal_collection: _season, ...legacy } = payload;
     const retry = await supabase
@@ -170,9 +189,9 @@ export async function addWishlistItem(userId, productId, accessToken) {
 }
 
 async function saveLegalPagesJson(supabase, slug, intro, body) {
-  const current = await getStoreSettings();
+  const current = await supabase.from("store_settings").select("legal_pages").eq("id", 1).maybeSingle();
   const legalPages = {
-    ...(current.legalPages || {}),
+    ...(current.data?.legal_pages || {}),
     [slug]: { intro, body },
   };
   const retry = await supabase

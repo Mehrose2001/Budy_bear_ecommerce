@@ -8,6 +8,7 @@ import {
   updateProduct as updateMemoryProduct,
 } from "@/lib/catalogStore";
 import { withBackend } from "@/lib/withBackend";
+import { invalidateCatalogSnapshot } from "@/lib/catalog";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import {
   createProduct,
@@ -90,6 +91,7 @@ export async function DELETE(request) {
       });
       if (!existing) return NextResponse.json({ error: "Product not found" }, { status: 404 });
       await deleteProduct(id, getAccessToken(request));
+      invalidateCatalogSnapshot();
       return NextResponse.json({ ok: true });
     }
     const existing = getMemoryProduct(id);

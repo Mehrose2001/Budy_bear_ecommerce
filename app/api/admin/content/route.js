@@ -36,6 +36,8 @@ import {
 } from "@/services/contentService";
 import { getDefaultLegalPage, mergeLegalPage } from "@/data/legalPages";
 
+export const dynamic = "force-dynamic";
+
 function statsFrom(orders, products) {
   const sales = orders
     .filter((order) => order.orderStatus !== "Cancelled")

@@ -288,12 +288,38 @@ export async function updateSettings(input) {
         ? "summer"
         : "winter",
   };
+  const offer =
+    input.offer === undefined
+      ? null
+      : {
+          enabled: Boolean(input.offer.enabled),
+          message: String(input.offer.message || "").trim().slice(0, 280),
+          percent: Math.min(90, Math.max(0, Math.round(Number(input.offer.percent) || 0))),
+        };
+  if (offer) payload.offer = offer;
   const { data, error } = await supabase
     .from("store_settings")
     .update(payload)
     .eq("id", 1)
     .select("*")
     .single();
+  if (error && offer && /offer/i.test(String(error.message || ""))) {
+    const current = await supabase.from("store_settings").select("legal_pages").eq("id", 1).maybeSingle();
+    const withoutOffer = { ...payload };
+    delete withoutOffer.offer;
+    const retry = await supabase
+      .from("store_settings")
+      .update({
+        ...withoutOffer,
+        legal_pages: { ...(current.data?.legal_pages || {}), _offer: offer },
+      })
+      .eq("id", 1)
+      .select("*")
+      .single();
+    if (retry.error) throw new HttpError(400, retry.error.message);
+    invalidateCatalogCache();
+    return mapSettings(retry.data);
+  }
   if (error && /seasonal_collection/i.test(String(error.message || ""))) {
     const { seasonal_collection: _season, ...legacy } = payload;
     const retry = await supabase
@@ -341,9 +367,9 @@ export async function upsertStorePage(input) {
     body: String(input.body ?? ""),
   };
   const supabase = await requireSupabase();
-  const current = await supabase.from("store_settings").select("*").eq("id", 1).maybeSingle();
+  const current = await supabase.from("store_settings").select("legal_pages").eq("id", 1).maybeSingle();
   const legalPages = {
-    ...(mapSettings(current.data).legalPages || {}),
+    ...(current.data?.legal_pages || {}),
     [slug]: { intro: row.intro, body: row.body },
   };
   const jsonSave = await supabase

@@ -8,6 +8,8 @@ import Badge from "@/components/ui/Badge";
 import Modal from "@/components/ui/Modal";
 import StarRating from "@/components/ui/StarRating";
 import { useCart } from "@/context/CartContext";
+import { useStoreOffer } from "@/context/StoreOfferContext";
+import { isOfferActive, offerHeadline, priceWithOffer } from "@/lib/storeOffer";
 import { useToast } from "@/context/ToastContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { COLOR_SWATCHES, FREE_DELIVERY_THRESHOLD } from "@/data/store";
@@ -24,6 +26,7 @@ import { formatLabel, formatPrice, getDiscountPercent, cn } from "@/lib/utils";
 
 export default function ProductInfo({ product, compact = false, onAdded, onColorChange }) {
   const { addItem } = useCart();
+  const offer = useStoreOffer();
   const { showToast } = useToast();
   const { hasItem, toggleItem } = useWishlist();
   const colors = getProductColors(product);
@@ -36,8 +39,9 @@ export default function ProductInfo({ product, compact = false, onAdded, onColor
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
   const wishlisted = hasItem(product.id);
 
-  const discount = getDiscountPercent(product.price, product.salePrice);
-  const displayPrice = product.salePrice ?? product.price;
+  const pricing = priceWithOffer(product, offer);
+  const discount = getDiscountPercent(pricing.list, pricing.payable);
+  const displayPrice = pricing.payable;
   const available = getVariantQty(product, color, size);
   const totalStock = getProductStock(product);
   const canAdd = available > 0;
@@ -87,12 +91,15 @@ export default function ProductInfo({ product, compact = false, onAdded, onColor
         <span className="text-3xl font-black text-neutral-900">
           {formatPrice(displayPrice)}
         </span>
-        {product.salePrice && (
+        {pricing.payable < pricing.list && (
           <span className="text-lg text-error line-through">
-            {formatPrice(product.price)}
+            {formatPrice(pricing.list)}
           </span>
         )}
       </div>
+      {isOfferActive(offer) ? (
+        <p className="mt-2 text-sm font-semibold text-brand-primary">{offerHeadline(offer)}</p>
+      ) : null}
 
       <p className="mt-2 text-sm text-neutral-500">
         {available > 0

@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import ProductListing from "@/components/product/ProductListing";
-import { searchCatalog } from "@/lib/catalog";
+import { listCategories, searchCatalog } from "@/lib/catalog";
 
 function SearchFallback() {
   return (
@@ -19,6 +19,7 @@ export default async function SearchPage({ searchParams }) {
     <Suspense fallback={<SearchFallback />}>
       <ProductListing
         products={results}
+        categories={await listCategories().catch(() => [])}
         title={query ? `Search results for "${query}"` : "Search Products"}
         description={
           query

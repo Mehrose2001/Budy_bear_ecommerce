@@ -22,6 +22,7 @@ function refreshStoreCategories() {
   revalidatePath("/", "layout");
   revalidatePath("/");
   revalidatePath("/products");
+  revalidatePath("/search");
 }
 
 export async function GET(request) {

@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import ProductListing from "@/components/product/ProductListing";
-import { getCategoryBySlug, getProductsByCategory } from "@/lib/catalog";
+import { getCategoryBySlug, getProductsByCategory, listCategories } from "@/lib/catalog";
 
 function CategoryFallback() {
   return (
@@ -54,6 +54,7 @@ export default async function CategoryPage({ params }) {
     <Suspense fallback={<CategoryFallback />}>
       <ProductListing
         products={categoryProducts}
+        categories={await listCategories().catch(() => [])}
         title={category.name}
         description={category.description}
         basePath={`/category/${slug}`}

@@ -7,6 +7,8 @@ import { Eye, Heart, ShoppingBag } from "lucide-react";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import { useCart } from "@/context/CartContext";
+import { useStoreOffer } from "@/context/StoreOfferContext";
+import { priceWithOffer } from "@/lib/storeOffer";
 import { useQuickView } from "@/context/QuickViewContext";
 import { useToast } from "@/context/ToastContext";
 import { useWishlist } from "@/context/WishlistContext";
@@ -19,13 +21,15 @@ export default function ProductCard({ product, className }) {
   const [showActions, setShowActions] = useState(false);
   const cardRef = useRef(null);
   const { addItem } = useCart();
+  const offer = useStoreOffer();
   const { openQuickView } = useQuickView();
   const { showToast } = useToast();
   const { hasItem, toggleItem } = useWishlist();
   const isWishlisted = hasItem(product.id);
 
-  const discount = getDiscountPercent(product.price, product.salePrice);
-  const displayPrice = product.salePrice ?? product.price;
+  const pricing = priceWithOffer(product, offer);
+  const discount = getDiscountPercent(pricing.list, pricing.payable);
+  const displayPrice = pricing.payable;
   const secondaryImage = product.images[1] || product.images[0];
   const inStock = getProductStock(product) > 0;
 
@@ -157,9 +161,9 @@ export default function ProductCard({ product, className }) {
           <span className="text-base font-bold text-neutral-900">
             {formatPrice(displayPrice)}
           </span>
-          {product.salePrice && (
+          {pricing.payable < pricing.list && (
             <span className="text-sm text-error line-through">
-              {formatPrice(product.price)}
+              {formatPrice(pricing.list)}
             </span>
           )}
         </div>

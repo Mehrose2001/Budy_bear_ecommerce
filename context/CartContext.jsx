@@ -11,6 +11,8 @@ import {
 import { FREE_DELIVERY_THRESHOLD, SHIPPING_FEE } from "@/data/store";
 import { readCart, writeCart } from "@/lib/storage";
 import { getEffectivePrice } from "@/lib/productFilters";
+import { useStoreOffer } from "@/context/StoreOfferContext";
+import { isOfferActive } from "@/lib/storeOffer";
 import { getProductColors } from "@/lib/productImages";
 import { firstInStockColor, firstInStockSize, getVariantQty } from "@/lib/variantStock";
 
@@ -20,7 +22,14 @@ function createLineId(product, size, color) {
   return `${product.id}-${size}-${color}`;
 }
 
+function payableUnitPrice(item, offer) {
+  const base = Number(item.basePrice ?? item.unitPrice ?? item.salePrice ?? item.price) || 0;
+  if (!isOfferActive(offer)) return base;
+  return Math.max(0, Math.round(base * (1 - Number(offer.percent) / 100)));
+}
+
 export function CartProvider({ children }) {
+  const offer = useStoreOffer();
   const [items, setItems] = useState([]);
   const [isReady, setIsReady] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -46,7 +55,7 @@ export function CartProvider({ children }) {
     const maxStock = getVariantQty(product, selectedColor, selectedSize);
     if (maxStock <= 0) return;
     const lineId = createLineId(product, selectedSize, selectedColor);
-    const unitPrice = getEffectivePrice(product);
+    const basePrice = getEffectivePrice(product);
 
     setItems((current) => {
       const existing = current.find((item) => item.id === lineId);
@@ -72,7 +81,8 @@ export function CartProvider({ children }) {
           image: product.images[0],
           price: product.price,
           salePrice: product.salePrice,
-          unitPrice,
+          basePrice,
+          unitPrice: basePrice,
           size: selectedSize,
           color: selectedColor,
           quantity: Math.min(quantity, maxStock),
@@ -104,12 +114,25 @@ export function CartProvider({ children }) {
 
   const clearCart = useCallback(() => setItems([]), []);
 
+  const pricedItems = useMemo(
+    () =>
+      items.map((item) => {
+        const base = Number(item.basePrice ?? item.unitPrice ?? item.salePrice ?? item.price) || 0;
+        return {
+          ...item,
+          basePrice: base,
+          unitPrice: payableUnitPrice(item, offer),
+        };
+      }),
+    [items, offer]
+  );
+
   const summary = useMemo(() => {
-    const subtotal = items.reduce(
+    const subtotal = pricedItems.reduce(
       (total, item) => total + item.price * item.quantity,
       0
     );
-    const discountedSubtotal = items.reduce(
+    const discountedSubtotal = pricedItems.reduce(
       (total, item) => total + item.unitPrice * item.quantity,
       0
     );
@@ -124,12 +147,12 @@ export function CartProvider({ children }) {
       discount,
       shipping,
       total: discountedSubtotal + shipping,
-      itemCount: items.reduce((count, item) => count + item.quantity, 0),
+      itemCount: pricedItems.reduce((count, item) => count + item.quantity, 0),
     };
-  }, [items]);
+  }, [pricedItems]);
 
   const value = {
-    items,
+    items: pricedItems,
     isReady,
     isDrawerOpen,
     openDrawer,

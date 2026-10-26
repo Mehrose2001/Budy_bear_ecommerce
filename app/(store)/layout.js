@@ -1,6 +1,7 @@
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import WhatsAppFloat from "@/components/layout/WhatsAppFloat";
+import { OfferHydrator } from "@/context/StoreOfferContext";
 import { getStorefrontSettings, listCategories } from "@/lib/catalog";
 import { buildFooterShop, buildMainNav } from "@/lib/storeNav";
 
@@ -16,6 +17,7 @@ export default async function StoreLayout({ children }) {
 
   return (
     <>
+      <OfferHydrator offer={settings?.offer} />
       <Header navItems={navItems} announcement={settings?.announcement || ""} />
       <main className="flex-1">{children}</main>
       <Footer
