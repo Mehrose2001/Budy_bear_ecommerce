@@ -24,7 +24,12 @@ import {
   upsertCategory,
   upsertCoupon,
 } from "../services/catalog.js";
-import { listCustomersFromOrders, listOrders, updateOrderStatus } from "../services/orders.js";
+import {
+  deleteOrder,
+  listCustomersFromOrders,
+  listOrders,
+  updateOrderStatus,
+} from "../services/orders.js";
 import { storeImage } from "../services/storage.js";
 
 const upload = multer({
@@ -163,6 +168,16 @@ adminRouter.get(
   requireAdmin,
   asyncHandler(async (_req, res) => {
     res.json({ orders: await listOrders() });
+  })
+);
+
+adminRouter.delete(
+  "/orders",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    if (!req.query.id) throw new HttpError(400, "Order id is required.");
+    await deleteOrder(req.query.id);
+    res.json({ ok: true });
   })
 );
 

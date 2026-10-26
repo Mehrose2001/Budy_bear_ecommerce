@@ -88,7 +88,10 @@ export default function AdminBannersPage() {
 
   return (
     <div className="h-full min-h-0 overflow-y-auto">
-      <AdminPageHeader title="Banners" description="Upload homepage and campaign images from your device." />
+      <AdminPageHeader
+        title="Banners"
+        description="Shows 4:5 on mobile and 16:9 on desktop. Keep the main subject near the center."
+      />
       <form
         onSubmit={save}
         className="mb-8 grid gap-4 rounded-2xl border border-border bg-white p-5 shadow-sm"

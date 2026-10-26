@@ -266,7 +266,7 @@ export async function updateSettings(input) {
     support_email: input.supportEmail ?? input.support_email,
     support_phone: input.supportPhone ?? input.support_phone,
     seasonal_collection:
-      String(input.seasonalCollection ?? input.seasonal_collection || "").toLowerCase() === "summer"
+      String((input.seasonalCollection ?? input.seasonal_collection) || "").toLowerCase() === "summer"
         ? "summer"
         : "winter",
   };

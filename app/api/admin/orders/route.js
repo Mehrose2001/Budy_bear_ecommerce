@@ -1,10 +1,19 @@
 import { NextResponse } from "next/server";
 import { isAdminRequest, getAccessToken } from "@/lib/adminAuth";
-import { listOrders as listMemoryOrders, updateOrderStatus as updateMemoryOrder } from "@/lib/orders";
+import {
+  deleteOrder as deleteMemoryOrder,
+  listOrders as listMemoryOrders,
+  updateOrderStatus as updateMemoryOrder,
+} from "@/lib/orders";
 import { ORDER_STATUSES } from "@/data/admin";
 import { withBackend } from "@/lib/withBackend";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { getAllOrders, updateOrderStatus, updatePaymentStatus } from "@/services/orderService";
+import {
+  deleteOrder,
+  getAllOrders,
+  updateOrderStatus,
+  updatePaymentStatus,
+} from "@/services/orderService";
 
 export async function GET(request) {
   return withBackend(request, "/admin/orders", async () => {
@@ -39,5 +48,23 @@ export async function PATCH(request) {
     const order = updateMemoryOrder(body.id, body.orderStatus);
     if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
     return NextResponse.json({ order });
+  });
+}
+
+export async function DELETE(request) {
+  return withBackend(request, "/admin/orders", async () => {
+    if (!(await isAdminRequest(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const id = new URL(request.url).searchParams.get("id");
+    if (!id) return NextResponse.json({ error: "Order id is required." }, { status: 400 });
+    if (isSupabaseConfigured()) {
+      await deleteOrder(id, getAccessToken(request));
+      return NextResponse.json({ ok: true });
+    }
+    if (!deleteMemoryOrder(id)) {
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    }
+    return NextResponse.json({ ok: true });
   });
 }

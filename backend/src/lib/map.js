@@ -1,3 +1,24 @@
+function normalizeMediaUrl(value) {
+  const url = String(value || "").trim();
+  if (!url) return "";
+  return url.replace(/^https?:\/\/[^/]+\/media\/media\//i, "/media/");
+}
+
+function normalizeMediaList(value) {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => (typeof item === "string" ? normalizeMediaUrl(item) : item));
+}
+
+function normalizeColorImages(value) {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => {
+    if (!item || typeof item !== "object") return item;
+    const url = item.url || item.image || "";
+    if (!url) return item;
+    return { ...item, url: normalizeMediaUrl(url) };
+  });
+}
+
 function slugify(text) {
   return String(text || "")
     .toLowerCase()
@@ -58,8 +79,8 @@ export function mapProduct(row) {
     subcategory: row.subcategory || "",
     price: Number(row.price),
     salePrice: row.compare_at_price == null && row.sale_price == null ? null : Number(row.compare_at_price ?? row.sale_price),
-    images: row.images || [],
-    colorImages: row.color_images || [],
+    images: normalizeMediaList(row.images),
+    colorImages: normalizeColorImages(row.color_images),
     colorSwatches: row.color_swatches || {},
     sizes: row.sizes || [],
     colors: colorsFromImages(row),
@@ -135,7 +156,7 @@ export function mapCategory(row) {
     name: row.name,
     slug: row.slug,
     description: row.description || "",
-    image: row.image_url || row.image,
+    image: normalizeMediaUrl(row.image_url || row.image),
     subcategories: row.subcategories || [],
   };
 }
@@ -157,7 +178,7 @@ export function mapBanner(row) {
   return {
     id: row.id,
     title: row.title,
-    image: row.image,
+    image: normalizeMediaUrl(row.image),
     href: row.href,
     active: Boolean(row.active),
   };

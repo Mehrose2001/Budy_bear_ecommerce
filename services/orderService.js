@@ -1,3 +1,4 @@
+import { invalidateCatalogSnapshot } from "@/lib/catalog";
 import { AppError, throwIf } from "@/lib/errors";
 import { mapOrder, toDbOrderStatus, toDbPaymentStatus } from "@/lib/mappers";
 import { createServerClient, createServiceClient, createUserClient } from "@/lib/supabase/server";
@@ -121,6 +122,76 @@ export async function updateOrderStatus(id, status, accessToken) {
     .single();
   throwIf(error, "Unable to update order.");
   return withItems({ ...data, items: data.items?.length ? data.items : order.items });
+}
+
+function cloneVariants(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return JSON.parse(JSON.stringify(value));
+}
+
+function sumVariants(variants) {
+  return Object.values(variants).reduce((total, sizes) => {
+    if (!sizes || typeof sizes !== "object") return total;
+    return total + Object.values(sizes).reduce((sum, qty) => sum + Number(qty || 0), 0);
+  }, 0);
+}
+
+async function restoreOrderStock(supabase, items) {
+  for (const item of items || []) {
+    const productId = item.productId || item.product_id;
+    const qty = Math.max(1, Number(item.quantity) || 1);
+    if (!productId) continue;
+
+    const { data: product, error } = await supabase
+      .from("products")
+      .select("id, variant_stock, stock_quantity, stock")
+      .eq("id", productId)
+      .maybeSingle();
+    if (error || !product) continue;
+
+    const variants = cloneVariants(product.variant_stock);
+    const color = String(item.color || "").trim();
+    const size = String(item.size || "").trim();
+    const hasVariants = Object.keys(variants).length > 0;
+
+    if (hasVariants && color) {
+      const colorKey = Object.keys(variants).find((key) => key.toLowerCase() === color.toLowerCase());
+      const sizes = colorKey ? { ...variants[colorKey] } : null;
+      const sizeKey = sizes
+        ? Object.keys(sizes).find((key) => key.toLowerCase() === size.toLowerCase())
+        : "";
+      if (!colorKey || !sizeKey) continue;
+      sizes[sizeKey] = Number(sizes[sizeKey] || 0) + qty;
+      variants[colorKey] = sizes;
+      const total = sumVariants(variants);
+      const { error: updateError } = await supabase
+        .from("products")
+        .update({ variant_stock: variants, stock_quantity: total, stock: total })
+        .eq("id", productId);
+      throwIf(updateError, "Unable to restore product stock.");
+      continue;
+    }
+
+    if (hasVariants) continue;
+
+    const next = Number(product.stock_quantity ?? product.stock ?? 0) + qty;
+    const { error: updateError } = await supabase
+      .from("products")
+      .update({ stock_quantity: next, stock: next })
+      .eq("id", productId);
+    throwIf(updateError, "Unable to restore product stock.");
+  }
+}
+
+export async function deleteOrder(id, accessToken) {
+  const supabase = createServiceClient() || client(accessToken);
+  const order = await getOrderById(id, accessToken);
+  if (!order) throw new AppError("Order not found", 404);
+  await restoreOrderStock(supabase, order.items);
+  const { error } = await supabase.from("orders").delete().eq("id", id);
+  throwIf(error, "Unable to delete order.");
+  invalidateCatalogSnapshot();
+  return true;
 }
 
 export async function updatePaymentStatus(id, status, accessToken) {

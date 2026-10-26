@@ -110,9 +110,7 @@ async function uploadToLocalMedia(bytes, folder, filename) {
   const dir = path.join(process.cwd(), "public", "media", folder);
   await mkdir(dir, { recursive: true });
   await writeFile(path.join(dir, filename), bytes);
-  const base = mediaBaseUrl();
-  const relative = `/media/${folder}/${filename}`;
-  return base ? `${base}${relative}` : relative;
+  return `/media/${folder}/${filename}`;
 }
 
 export async function uploadProductImage(productId, file, accessToken, folder = "products") {

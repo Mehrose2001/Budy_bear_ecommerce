@@ -33,7 +33,7 @@ export default function Hero({ banners = [] }) {
 
   return (
     <section className="group relative overflow-hidden bg-brand-cream">
-      <div className="relative aspect-[2/1] min-h-[200px] w-full sm:aspect-[4096/2047]">
+      <div className="relative aspect-[4/5] w-full xl:aspect-video">
         {visible.length === 0 ? (
           <div className="absolute inset-0 bg-brand-cream" />
         ) : (

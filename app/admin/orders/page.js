@@ -9,6 +9,7 @@ import { adminFetch } from "@/lib/adminApi";
 import { formatPrice } from "@/lib/utils";
 import { ORDER_STATUSES } from "@/data/admin";
 import { useAdminAuth } from "@/context/AdminAuthContext";
+import { useToast } from "@/context/ToastContext";
 import { brand } from "@/data/brand";
 import {
   buildOrderWhatsAppMessage,
@@ -18,8 +19,11 @@ import {
 
 export default function AdminOrdersPage() {
   const { admin } = useAdminAuth();
+  const { showToast } = useToast();
   const [orders, setOrders] = useState([]);
   const [whatsAppPrompt, setWhatsAppPrompt] = useState(null);
+  const [deletingId, setDeletingId] = useState("");
+  const [error, setError] = useState("");
 
   const load = useCallback(async () => {
     if (!admin?.token) return;
@@ -72,6 +76,25 @@ export default function AdminOrdersPage() {
     await load();
   };
 
+  const removeOrder = async (order) => {
+    if (!window.confirm(`Delete order ${order.id}? This cannot be undone.`)) return;
+    setError("");
+    setDeletingId(order.id);
+    try {
+      await adminFetch(
+        `/api/admin/orders?id=${encodeURIComponent(order.id)}`,
+        { method: "DELETE" },
+        admin.token
+      );
+      showToast(`Order ${order.id} deleted.`);
+      await load();
+    } catch (deleteError) {
+      setError(deleteError.message || "Unable to delete this order.");
+    } finally {
+      setDeletingId("");
+    }
+  };
+
   return (
     <div className="flex min-h-0 min-w-0 flex-col">
       <AdminPageHeader
@@ -112,6 +135,12 @@ export default function AdminOrdersPage() {
         </div>
       )}
 
+      {error ? (
+        <p className="mb-4 shrink-0 rounded-2xl border border-error/30 bg-white px-4 py-3 text-sm text-error">
+          {error}
+        </p>
+      ) : null}
+
       <AdminTable>
         <table className="min-w-full text-left text-sm">
           <thead className="sticky top-0 z-10 border-b border-border bg-brand-cream">
@@ -124,6 +153,7 @@ export default function AdminOrdersPage() {
               <th className="px-4 py-3 font-medium">Status</th>
               <th className="px-4 py-3 font-medium">WhatsApp</th>
               <th className="px-4 py-3 font-medium">Shipment</th>
+              <th className="px-4 py-3 font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -182,6 +212,16 @@ export default function AdminOrdersPage() {
                       size="sm"
                       label="Download slip"
                     />
+                  </td>
+                  <td className="px-4 py-3">
+                    <button
+                      type="button"
+                      className="text-sm font-semibold text-error disabled:opacity-50"
+                      disabled={deletingId === order.id}
+                      onClick={() => removeOrder(order)}
+                    >
+                      {deletingId === order.id ? "Deleting..." : "Delete"}
+                    </button>
                   </td>
                 </tr>
               );

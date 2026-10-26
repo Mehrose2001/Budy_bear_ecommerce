@@ -115,6 +115,72 @@ export async function updateOrderStatus(id, orderStatus) {
   return mapOrder(data);
 }
 
+function cloneVariants(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const next = {};
+  Object.entries(value).forEach(([color, sizes]) => {
+    if (!sizes || typeof sizes !== "object" || Array.isArray(sizes)) return;
+    next[color] = { ...sizes };
+  });
+  return next;
+}
+
+function totalVariantStock(variants) {
+  return Object.values(variants).reduce(
+    (total, sizes) => total + Object.values(sizes).reduce((sum, qty) => sum + Number(qty || 0), 0),
+    0
+  );
+}
+
+async function restoreOrderStock(supabase, items) {
+  for (const item of items || []) {
+    const productId = item.productId || item.product_id;
+    const qty = Math.max(0, Math.floor(Number(item.quantity) || 0));
+    if (!productId || qty < 1) continue;
+
+    const { data: product, error } = await supabase
+      .from("products")
+      .select("id, variant_stock, stock_quantity, stock")
+      .eq("id", productId)
+      .maybeSingle();
+    if (error || !product) continue;
+
+    const variants = cloneVariants(product.variant_stock);
+    const color = String(item.color || "").trim();
+    const size = String(item.size || "").trim();
+    const hasVariants = Object.keys(variants).length > 0;
+    let patch;
+
+    if (hasVariants && color) {
+      const colorKey = Object.keys(variants).find((key) => key.toLowerCase() === color.toLowerCase());
+      const sizeKey = colorKey
+        ? Object.keys(variants[colorKey]).find((key) => key.toLowerCase() === size.toLowerCase())
+        : "";
+      if (!colorKey || !sizeKey) continue;
+      variants[colorKey][sizeKey] = Number(variants[colorKey][sizeKey] || 0) + qty;
+      const total = totalVariantStock(variants);
+      patch = { variant_stock: variants, stock_quantity: total, stock: total };
+    } else if (!hasVariants) {
+      const next = Number(product.stock_quantity ?? product.stock ?? 0) + qty;
+      patch = { stock_quantity: next, stock: next };
+    }
+
+    if (!patch) continue;
+    const { error: updateError } = await supabase.from("products").update(patch).eq("id", productId);
+    if (updateError) throw new HttpError(400, "Unable to restore product stock.");
+  }
+}
+
+export async function deleteOrder(id) {
+  const order = await getOrderById(id);
+  if (!order) throw new HttpError(404, "Order not found");
+  const supabase = await requireSupabase();
+  await restoreOrderStock(supabase, order.items);
+  const { error } = await supabase.from("orders").delete().eq("id", id);
+  if (error) throw new HttpError(400, error.message);
+  invalidateCatalogCache();
+}
+
 export function listCustomersFromOrders(orders) {
   const map = new Map();
   orders.forEach((order) => {
