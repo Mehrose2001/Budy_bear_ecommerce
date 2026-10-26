@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -27,7 +26,8 @@ function ImageField({ label, hint, image, frameClass, uploading, onFile }) {
       <div className="flex flex-wrap items-center gap-4">
         <div className={`relative overflow-hidden rounded-xl bg-brand-cream ring-1 ring-border ${frameClass}`}>
           {image ? (
-            <Image src={image} alt="" fill className="object-cover" sizes="180px" />
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={image} alt="" className="h-full w-full object-cover" />
           ) : (
             <span className="flex h-full items-center justify-center px-2 text-center text-[10px] text-neutral-400">
               No image
@@ -197,7 +197,8 @@ export default function AdminBannersPage() {
                 <p className="mb-1 text-xs font-medium text-neutral-500">Web</p>
                 <div className="relative h-28 overflow-hidden rounded-xl bg-brand-cream">
                   {banner.image ? (
-                    <Image src={banner.image} alt="" fill className="object-cover" sizes="280px" />
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={banner.image} alt="" className="h-full w-full object-cover" />
                   ) : null}
                 </div>
               </div>
@@ -205,12 +206,11 @@ export default function AdminBannersPage() {
                 <p className="mb-1 text-xs font-medium text-neutral-500">Mobile</p>
                 <div className="relative h-28 overflow-hidden rounded-xl bg-brand-cream">
                   {banner.mobileImage || banner.image ? (
-                    <Image
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
                       src={banner.mobileImage || banner.image}
                       alt=""
-                      fill
-                      className="object-cover"
-                      sizes="120px"
+                      className="h-full w-full object-cover"
                     />
                   ) : null}
                 </div>

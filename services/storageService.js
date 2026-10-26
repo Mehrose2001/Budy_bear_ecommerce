@@ -56,18 +56,25 @@ function isFtpConfigured() {
   );
 }
 
-function canWriteLocalMedia() {
-  return process.env.VERCEL !== "1";
+function shouldWriteLocalMedia() {
+  if (process.env.VERCEL === "1" || process.env.NODE_ENV === "production") return false;
+  const site = process.env.NEXT_PUBLIC_SITE_URL || "";
+  if (site && !/localhost|127\.0\.0\.1/i.test(site)) return false;
+  return true;
 }
 
 export function getProductImageUrl(objectPath) {
   if (!objectPath) return "";
   if (/^https?:\/\//i.test(objectPath) || objectPath.startsWith("/")) return objectPath;
-  const hostinger = mediaBaseUrl();
-  if (hostinger) return `${hostinger}/${objectPath.replace(/^\/+/, "")}`;
   const { url } = getSupabaseConfig();
-  if (!url) return objectPath;
-  return `${url}/storage/v1/object/public/${PRODUCT_IMAGE_BUCKET}/${objectPath.replace(/^\/+/, "")}`;
+  if (url && isSupabaseConfigured()) {
+    return `${url}/storage/v1/object/public/${PRODUCT_IMAGE_BUCKET}/${objectPath.replace(/^\/+/, "")}`;
+  }
+  const hostinger = String(
+    process.env.HOSTINGER_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_MEDIA_URL || ""
+  ).replace(/\/$/, "");
+  if (hostinger) return `${hostinger}/${objectPath.replace(/^\/+/, "")}`;
+  return objectPath;
 }
 
 async function ensurePublicBucket(supabase) {
@@ -126,40 +133,45 @@ export async function uploadProductImage(productId, file, accessToken, folder = 
     : "products";
 
   if (isFtpConfigured()) {
-    const url = await uploadToHostingerFtp(bytes, safeRoot, filename);
-    return { path: url, url };
+    try {
+      const url = await uploadToHostingerFtp(bytes, safeRoot, filename);
+      return { path: url, url };
+    } catch (error) {
+      if (!isSupabaseConfigured()) throw error;
+    }
   }
 
-  if (canWriteLocalMedia() && (mediaBaseUrl() || process.env.NODE_ENV !== "production")) {
+  if (isSupabaseConfigured()) {
+    const service = createServiceClient();
+    const supabase = service || createUserClient(accessToken);
+    if (!supabase) {
+      throw new AppError("Unable to create a Storage client.", 500);
+    }
+    if (service) {
+      await ensurePublicBucket(supabase);
+    }
+
+    const nested = productId ? `${safeRoot}/${productId}` : `${safeRoot}/draft`;
+    const objectPath = `${nested}/${filename}`;
+    const { error } = await supabase.storage.from(PRODUCT_IMAGE_BUCKET).upload(objectPath, bytes, {
+      cacheControl: "31536000",
+      upsert: false,
+      contentType: file.type || "image/jpeg",
+    });
+    throwIf(error, storageErrorMessage(error), 400);
+    const { data } = supabase.storage.from(PRODUCT_IMAGE_BUCKET).getPublicUrl(objectPath);
+    return {
+      path: objectPath,
+      url: data.publicUrl,
+    };
+  }
+
+  if (shouldWriteLocalMedia()) {
     const url = await uploadToLocalMedia(bytes, safeRoot, filename);
     return { path: url, url };
   }
 
-  if (!isSupabaseConfigured()) {
-    throw new AppError("Set Hostinger FTP or local media storage for image uploads.", 503);
-  }
-
-  const service = createServiceClient();
-  const supabase = service || createUserClient(accessToken);
-  if (!supabase) {
-    throw new AppError("Unable to create a Storage client.", 500);
-  }
-  if (service) {
-    await ensurePublicBucket(supabase);
-  }
-
-  const nested = productId ? `${safeRoot}/${productId}` : `${safeRoot}/draft`;
-  const objectPath = `${nested}/${filename}`;
-  const { error } = await supabase.storage.from(PRODUCT_IMAGE_BUCKET).upload(objectPath, bytes, {
-    cacheControl: "31536000",
-    upsert: false,
-    contentType: file.type || "image/jpeg",
-  });
-  throwIf(error, storageErrorMessage(error), 400);
-  return {
-    path: objectPath,
-    url: getProductImageUrl(objectPath),
-  };
+  throw new AppError("Set Hostinger FTP or Supabase storage for image uploads.", 503);
 }
 
 export async function deleteProductImage(objectPath, accessToken) {
