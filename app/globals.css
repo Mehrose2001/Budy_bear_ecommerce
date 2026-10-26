@@ -138,19 +138,6 @@ body {
   animation: offer-popup-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-@keyframes announcement-marquee {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
-}
-
-.animate-announcement-marquee {
-  animation: announcement-marquee 28s linear infinite;
-}
-
 @keyframes category-marquee {
   from {
     transform: translateX(0);
@@ -234,7 +221,6 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .offer-popup,
-  .animate-announcement-marquee,
   .animate-category-marquee,
   .testimonial-card,
   .testimonial-card.is-visible,
