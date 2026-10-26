@@ -50,6 +50,9 @@ function mediaRemotePatterns() {
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    cpus: 4,
+  },
   images: {
     formats: ["image/avif", "image/webp"],
     qualities: [75, 90, 95, 100],
