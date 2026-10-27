@@ -23,6 +23,7 @@ authRouter.post(
       return;
     }
     const result = await login(typedEmail, req.body?.password, req.ip);
+    if (audience !== "admin") delete result.refreshToken;
     res.json(result);
   })
 );

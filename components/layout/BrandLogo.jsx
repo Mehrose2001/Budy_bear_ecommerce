@@ -25,7 +25,7 @@ export default function BrandLogo({
         alt={`${brand.name} ${brand.tagline} logo`}
         width={size}
         height={size}
-        className="rounded-full bg-white object-cover ring-1 ring-white/20 transition-all duration-300"
+        className="rounded-full bg-white object-cover ring-1 ring-white/20"
         priority={priority}
       />
       {showWordmark && (

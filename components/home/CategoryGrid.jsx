@@ -86,6 +86,12 @@ function marqueeCopies(items, copies) {
   ).flat();
 }
 
+function copiesForDesktop(count) {
+  if (count < 1) return 1;
+  const setWidth = count * 228;
+  return Math.max(2, Math.ceil(2700 / setWidth));
+}
+
 export function CategoryCircles({ categories = [] }) {
   const items = toCards(categories);
   const {
@@ -148,7 +154,9 @@ export default function CategoryGrid({ categories = [] }) {
     onCardClick,
     onPointerEnter,
     onPointerLeave,
-  } = useInfiniteMarquee({ speed: 0.55 });
+  } = useInfiniteMarquee({ speed: 0.55, pauseOnHover: false });
+
+  const sequence = marqueeCopies(items, copiesForDesktop(items.length));
 
   return (
     <section className="hidden w-full overflow-hidden bg-brand-cream py-6 sm:py-8 md:block">
@@ -173,25 +181,30 @@ export default function CategoryGrid({ categories = [] }) {
         onPointerEnter={onPointerEnter}
         onPointerLeave={onPointerLeave}
       >
-        <div
-          ref={trackRef}
-          className="flex w-max gap-3 px-5 will-change-transform sm:gap-5 sm:px-6"
-        >
-          {items.map((category) => (
-            <CategoryCard
-              key={category.label}
-              category={category}
-              onCardClick={onCardClick}
-            />
-          ))}
-          {items.map((category) => (
-            <CategoryCard
-              key={`loop-${category.label}`}
-              category={category}
-              isDuplicate
-              onCardClick={onCardClick}
-            />
-          ))}
+        <div ref={trackRef} className="flex w-max will-change-transform">
+          <div data-marquee-copy className="flex shrink-0 gap-3 pr-3 sm:gap-5 sm:pr-5">
+            {sequence.map((category) => (
+              <CategoryCard
+                key={category.loopKey}
+                category={category}
+                onCardClick={onCardClick}
+              />
+            ))}
+          </div>
+          <div
+            data-marquee-copy
+            className="flex shrink-0 gap-3 pr-3 sm:gap-5 sm:pr-5"
+            aria-hidden="true"
+          >
+            {sequence.map((category) => (
+              <CategoryCard
+                key={`loop-${category.loopKey}`}
+                category={category}
+                isDuplicate
+                onCardClick={onCardClick}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </section>

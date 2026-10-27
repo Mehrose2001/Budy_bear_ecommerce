@@ -56,8 +56,10 @@ export async function POST(request) {
             { status: 401 }
           );
         }
+        return NextResponse.json(result);
       }
-      return NextResponse.json(result);
+      const { refreshToken: _refreshToken, ...customerSession } = result;
+      return NextResponse.json(customerSession);
     }
 
     if (audience !== "admin") {

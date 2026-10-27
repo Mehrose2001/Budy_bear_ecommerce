@@ -98,6 +98,7 @@ function toForm(product) {
   return {
     ...emptyProduct,
     ...product,
+    subcategory: product.subcategory || "",
     salePrice: product.salePrice ?? "",
     sizes: sizes.join(", "),
     imageItems,
@@ -116,11 +117,6 @@ export default function ProductForm({ product, categories, onCancel, onSave }) {
   useEffect(() => {
     setForm(toForm(product));
   }, [product]);
-
-  const subcategories = useMemo(() => {
-    const category = categories.find((item) => item.slug === form.category);
-    return category?.subcategories || [];
-  }, [categories, form.category]);
 
   const colorOptions = useMemo(() => {
     return uniqueColors([
@@ -273,6 +269,7 @@ export default function ProductForm({ product, categories, onCancel, onSave }) {
         ...rest,
         id: product?.id,
         slug,
+        subcategory: String(form.subcategory || "").trim(),
         price: Number(form.price),
         salePrice: form.salePrice === "" ? null : Number(form.salePrice),
         stock: sumVariantStock(variantStock),
@@ -352,24 +349,15 @@ export default function ProductForm({ product, categories, onCancel, onSave }) {
           ))}
         </select>
       </div>
-      <div>
-        <label className="mb-2 block text-sm font-medium text-neutral-700" htmlFor="subcategory">
-          Subcategory
-        </label>
-        <select
-          id="subcategory"
-          value={form.subcategory}
-          onChange={(event) => updateField("subcategory", event.target.value)}
-          className="h-11 w-full rounded-xl border border-neutral-200 bg-white px-4 text-sm"
-        >
-          <option value="">Select</option>
-          {subcategories.map((item) => (
-            <option key={item} value={item}>
-              {item}
-            </option>
-          ))}
-        </select>
-      </div>
+      <Input
+        label="Subcategory"
+        id="subcategory"
+        name="subcategory"
+        value={form.subcategory}
+        onChange={(event) => updateField("subcategory", event.target.value)}
+        placeholder="Enter a subcategory"
+        autoComplete="off"
+      />
       <Input
         label="Price (PKR)"
         type="number"

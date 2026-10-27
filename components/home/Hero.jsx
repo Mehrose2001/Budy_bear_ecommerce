@@ -78,10 +78,10 @@ export default function Hero({ banners = [] }) {
                   }));
                 }}
                 className={cn(
-                  "w-full bg-brand-cream object-contain object-center transition-opacity duration-[2.2s] ease-in-out motion-reduce:transition-none",
+                  "bg-brand-cream object-center transition-opacity duration-[2.2s] ease-in-out motion-reduce:transition-none",
                   active
-                    ? "relative h-auto max-h-[min(82vh,920px)] opacity-100"
-                    : "pointer-events-none absolute inset-0 h-full opacity-0"
+                    ? "relative block h-auto w-full opacity-100"
+                    : "pointer-events-none absolute inset-0 h-full w-full object-contain opacity-0"
                 )}
               />
             );

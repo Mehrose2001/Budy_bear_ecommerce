@@ -38,8 +38,10 @@ export default function AnnouncementBar({ announcement = "" }) {
     return () => media.removeEventListener("change", sync);
   }, []);
 
-  const { viewportRef, trackRef, onPointerEnter, onPointerLeave } = useInfiniteMarquee({
+  const { viewportRef, trackRef } = useInfiniteMarquee({
     speed,
+    pauseOnHover: false,
+    draggable: false,
   });
 
   const half = repeatMessages(messages, 3);
@@ -49,29 +51,35 @@ export default function AnnouncementBar({ announcement = "" }) {
     hidden: true,
   }));
 
+  const renderItems = (items) =>
+    items.map((item) => (
+      <p
+        key={item.key}
+        aria-hidden={item.hidden ? true : undefined}
+        className="flex shrink-0 items-center px-6 text-xs font-medium tracking-wide sm:text-sm"
+      >
+        <span
+          className="mr-6 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-brand-accent"
+          aria-hidden="true"
+        />
+        {item.message}
+      </p>
+    ));
+
   return (
     <div className="overflow-hidden bg-brand-primary text-brand-cream">
       <div
         ref={viewportRef}
-        className="relative h-9 cursor-grab select-none overflow-hidden active:cursor-grabbing"
+        className="relative h-9 select-none overflow-hidden"
         style={{ touchAction: "pan-y" }}
-        onPointerEnter={onPointerEnter}
-        onPointerLeave={onPointerLeave}
       >
         <div ref={trackRef} className="flex h-full w-max items-center will-change-transform">
-          {[...half, ...loop].map((item) => (
-            <p
-              key={item.key}
-              aria-hidden={item.hidden ? true : undefined}
-              className="flex shrink-0 items-center px-6 text-xs font-medium tracking-wide sm:text-sm"
-            >
-              <span
-                className="mr-6 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-brand-accent"
-                aria-hidden="true"
-              />
-              {item.message}
-            </p>
-          ))}
+          <div data-marquee-copy className="flex h-full items-center">
+            {renderItems(half)}
+          </div>
+          <div data-marquee-copy className="flex h-full items-center" aria-hidden="true">
+            {renderItems(loop)}
+          </div>
         </div>
       </div>
     </div>

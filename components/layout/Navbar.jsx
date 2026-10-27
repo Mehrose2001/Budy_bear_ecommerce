@@ -13,7 +13,7 @@ export default function Navbar({ items = mainNavItems, compact = false }) {
     <nav aria-label="Main navigation">
       <ul
         className={cn(
-          "flex flex-wrap items-center gap-1 transition-[padding] duration-300",
+          "flex flex-wrap items-center gap-1",
           compact ? "py-1.5" : "py-3"
         )}
       >

@@ -26,13 +26,27 @@ export default function Header({ navItems = mainNavItems, announcement = "" }) {
   const { isAuthenticated } = useCustomerAuth();
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
+    let frame = 0;
+    const sync = () => {
+      frame = 0;
+      const y = window.scrollY;
+      setIsScrolled((current) => {
+        if (y > 64) return true;
+        if (y < 2) return false;
+        return current;
+      });
+    };
+    const onScroll = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(sync);
     };
 
-    handleScroll();
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    sync();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", onScroll);
+    };
   }, []);
 
   useEffect(() => {
@@ -52,12 +66,12 @@ export default function Header({ navItems = mainNavItems, announcement = "" }) {
   };
 
   return (
-    <header className="sticky top-0 z-50">
+    <header className="sticky top-0 z-50 [overflow-anchor:none]">
       <AnnouncementBar announcement={announcement} />
 
       <div
         className={cn(
-          "border-b border-border transition-[background-color,box-shadow,backdrop-filter] duration-300",
+          "border-b border-border transition-[background-color,box-shadow] duration-300",
           isScrolled
             ? "bg-white/60 shadow-md backdrop-blur-xl"
             : "bg-white/95 backdrop-blur-sm"
@@ -66,7 +80,7 @@ export default function Header({ navItems = mainNavItems, announcement = "" }) {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div
             className={cn(
-              "relative flex items-center justify-between transition-[height] duration-300 xl:hidden",
+              "relative flex items-center justify-between xl:hidden",
               isScrolled ? "h-12" : "h-16"
             )}
           >
@@ -129,7 +143,7 @@ export default function Header({ navItems = mainNavItems, announcement = "" }) {
 
           <div
             className={cn(
-              "hidden items-center justify-between gap-4 transition-[height] duration-300 xl:flex",
+              "hidden items-center justify-between gap-4 xl:flex",
               isScrolled ? "h-[68px]" : "h-[88px]"
             )}
           >

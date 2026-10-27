@@ -195,6 +195,7 @@ export async function login(email, password, ip) {
   const profile = await loadProfile(data.user.id);
   return {
     accessToken: data.session.access_token,
+    refreshToken: data.session.refresh_token,
     user: profile,
   };
 }
@@ -321,6 +322,7 @@ export async function updateAdminAccount(user, input = {}) {
 
   const supabase = getServiceClient();
   let accessTokenOut = user.token;
+  let refreshTokenOut = "";
   if (changingLogin) {
     if (!currentPassword) {
       throw new HttpError(400, "Enter your current password to update email or password.");
@@ -350,6 +352,7 @@ export async function updateAdminAccount(user, input = {}) {
     });
     if (!reloginError && relogin?.session?.access_token) {
       accessTokenOut = relogin.session.access_token;
+      refreshTokenOut = relogin.session.refresh_token || "";
     }
   }
 
@@ -365,6 +368,7 @@ export async function updateAdminAccount(user, input = {}) {
   const profile = await loadProfile(user.id);
   return {
     accessToken: accessTokenOut,
+    refreshToken: refreshTokenOut,
     user: {
       ...profile,
       email: emailChanged ? nextEmail : profile.email,

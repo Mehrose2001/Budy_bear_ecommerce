@@ -2,7 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 
-export default function useInfiniteMarquee({ speed = 0.55 } = {}) {
+export default function useInfiniteMarquee({
+  speed = 0.55,
+  pauseOnHover = true,
+  draggable = true,
+} = {}) {
   const viewportRef = useRef(null);
   const trackRef = useRef(null);
   const offsetRef = useRef(0);
@@ -14,7 +18,12 @@ export default function useInfiniteMarquee({ speed = 0.55 } = {}) {
   const lastXRef = useRef(0);
   const lastYRef = useRef(0);
   const resumeTimerRef = useRef(null);
+  const speedRef = useRef(speed);
+  const pauseOnHoverRef = useRef(pauseOnHover);
   const [paused, setPaused] = useState(false);
+
+  speedRef.current = speed;
+  pauseOnHoverRef.current = pauseOnHover;
 
   useEffect(() => {
     pausedRef.current = paused;
@@ -23,7 +32,8 @@ export default function useInfiniteMarquee({ speed = 0.55 } = {}) {
   const applyOffset = () => {
     const track = trackRef.current;
     if (!track) return;
-    const half = track.scrollWidth / 2;
+    const copy = track.querySelector("[data-marquee-copy]");
+    const half = copy ? copy.offsetWidth : track.scrollWidth / 2;
     if (half > 0) {
       while (-offsetRef.current >= half) offsetRef.current += half;
       while (offsetRef.current > 0) offsetRef.current -= half;
@@ -38,22 +48,53 @@ export default function useInfiniteMarquee({ speed = 0.55 } = {}) {
       setPaused(true);
     }
 
-    let frame;
-    const tick = () => {
+    let frame = 0;
+    let last = performance.now();
+    let half = 0;
+
+    const measure = () => {
+      const track = trackRef.current;
+      if (!track) return 0;
+      const copy = track.querySelector("[data-marquee-copy]");
+      const width = copy ? copy.offsetWidth : track.scrollWidth / 2;
+      return width > 0 ? width : 0;
+    };
+
+    const paint = () => {
+      const track = trackRef.current;
+      if (!track || !(half > 0)) return;
+      while (-offsetRef.current >= half) offsetRef.current += half;
+      while (offsetRef.current > 0) offsetRef.current -= half;
+      track.style.transform = `translate3d(${offsetRef.current}px,0,0)`;
+    };
+
+    const tick = (now) => {
+      const dt = Math.min(34, now - last);
+      last = now;
       if (!pausedRef.current && !draggingRef.current && !hoveringRef.current) {
-        offsetRef.current -= speed;
-        applyOffset();
+        offsetRef.current -= speedRef.current * (dt / (1000 / 60));
+        paint();
       }
       frame = requestAnimationFrame(tick);
     };
 
+    half = measure();
+    const observer = new ResizeObserver(() => {
+      half = measure();
+      paint();
+    });
+    if (trackRef.current) observer.observe(trackRef.current);
+
     frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [speed]);
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, []);
 
   useEffect(() => {
     const viewport = viewportRef.current;
-    if (!viewport) return;
+    if (!viewport || !draggable) return;
 
     const clearResume = () => {
       if (resumeTimerRef.current) {
@@ -140,7 +181,7 @@ export default function useInfiniteMarquee({ speed = 0.55 } = {}) {
       viewport.removeEventListener("pointerup", resumeSoon);
       viewport.removeEventListener("pointercancel", resumeSoon);
     };
-  }, []);
+  }, [draggable]);
 
   const onCardClick = (event) => {
     if (movedRef.current) {
@@ -150,6 +191,7 @@ export default function useInfiniteMarquee({ speed = 0.55 } = {}) {
   };
 
   const onPointerEnter = (event) => {
+    if (!pauseOnHoverRef.current) return;
     if (event.pointerType === "mouse") hoveringRef.current = true;
   };
 

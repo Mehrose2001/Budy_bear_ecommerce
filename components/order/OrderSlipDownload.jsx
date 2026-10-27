@@ -2,7 +2,7 @@
 
 import { Download } from "lucide-react";
 import Button from "@/components/ui/Button";
-import { downloadOrderSlip } from "@/lib/orderNotifications";
+import { downloadOrderSlip } from "@/lib/orderSlipPdf";
 
 export default function OrderSlipDownload({ order, variant = "primary", size = "md", label = "Download slip" }) {
   if (!order) return null;

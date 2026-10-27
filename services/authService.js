@@ -176,6 +176,37 @@ export async function loginWithPassword(email, password, attemptKey = "unknown")
   const profile = await ensureProfile(data.user);
   return {
     accessToken: data.session.access_token,
+    refreshToken: data.session.refresh_token,
+    user: profile,
+  };
+}
+
+export async function refreshWithToken(refreshToken) {
+  if (!isSupabaseConfigured()) {
+    throw new AppError("Please sign in again.", 401);
+  }
+  const token = String(refreshToken || "").trim();
+  if (!token) throw new AppError("Please sign in again.", 401);
+
+  const supabase = createServerClient();
+  const { data, error } = await supabase.auth.refreshSession({ refresh_token: token });
+  if (error || !data?.session?.access_token || !data.session.refresh_token) {
+    throw new AppError("Please sign in again.", 401);
+  }
+
+  const authUser = data.user || data.session.user;
+  if (!authUser?.id) throw new AppError("Please sign in again.", 401);
+  const profile = await loadProfile(data.session.access_token, authUser.id);
+  if (String(profile?.role || "").toLowerCase() !== "admin") {
+    throw new AppError("Please sign in again.", 401);
+  }
+  if (String(profile?.email || "").trim().toLowerCase() !== adminLoginEmail()) {
+    throw new AppError("Please sign in again.", 401);
+  }
+
+  return {
+    accessToken: data.session.access_token,
+    refreshToken: data.session.refresh_token,
     user: profile,
   };
 }
@@ -307,6 +338,7 @@ export async function updateAdminAccount(accessToken, input = {}) {
   }
 
   let accessTokenOut = accessToken;
+  let refreshTokenOut = "";
   if (changingLogin) {
     const service = createServiceClient();
     if (emailChanged) {
@@ -340,6 +372,7 @@ export async function updateAdminAccount(accessToken, input = {}) {
     });
     if (nextAuth?.session?.access_token) {
       accessTokenOut = nextAuth.session.access_token;
+      refreshTokenOut = nextAuth.session.refresh_token || "";
     }
   }
 
@@ -360,6 +393,7 @@ export async function updateAdminAccount(accessToken, input = {}) {
   const user = await loadProfile(accessTokenOut, authUser.id);
   return {
     accessToken: accessTokenOut,
+    refreshToken: refreshTokenOut,
     user: {
       ...user,
       email: emailChanged ? nextEmail : user.email,

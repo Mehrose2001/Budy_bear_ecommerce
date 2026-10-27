@@ -8,39 +8,47 @@ import {
   emitAuthChanged,
   expireAdminSession,
   isAdminRole,
+  accessTokenNeedsRenewal,
   isAdminSessionFresh,
   readAdminSession,
+  refreshAdminSession,
   toAdminSession,
   touchAdminSession,
   writeAdminSession,
 } from "@/lib/adminSession";
+import { ADMIN_SESSION_KEY } from "@/data/admin";
 import { adminFetch } from "@/lib/adminApi";
 
 const AdminAuthContext = createContext(null);
 
 async function verifyAdminSession(session) {
   if (!session?.token || !isAdminSessionFresh(session)) return null;
+  let current = session;
+  if (current.refreshToken && accessTokenNeedsRenewal(current.token, Date.now(), 60_000)) {
+    current = await refreshAdminSession();
+    if (!current?.token || !isAdminSessionFresh(current)) return null;
+  }
   try {
     const response = await fetch("/api/auth/me", {
-      headers: { Authorization: `Bearer ${session.token}` },
+      headers: { Authorization: `Bearer ${current.token}` },
       cache: "no-store",
     });
     if (response.status === 401 || response.status === 403) return null;
     if (!response.ok) {
-      return isAdminSessionFresh(session) ? session : null;
+      return isAdminSessionFresh(current) ? current : null;
     }
     const data = await response.json().catch(() => ({}));
     if (!isAdminRole(data.user?.role)) return null;
     return {
-      ...session,
-      id: data.user.id || session.id,
-      email: String(data.user.email || session.email || "").trim().toLowerCase(),
-      name: data.user.name || session.name,
-      phone: data.user.phone || session.phone,
+      ...current,
+      id: data.user.id || current.id,
+      email: String(data.user.email || current.email || "").trim().toLowerCase(),
+      name: data.user.name || current.name,
+      phone: data.user.phone || current.phone,
       role: "admin",
     };
   } catch {
-    return isAdminSessionFresh(session) ? session : null;
+    return isAdminSessionFresh(current) ? current : null;
   }
 }
 
@@ -53,17 +61,6 @@ export function AdminAuthProvider({ children }) {
     let cancelled = false;
 
     const boot = async () => {
-      const onAdmin = window.location.pathname.startsWith("/admin");
-      const nav = performance.getEntriesByType("navigation")[0];
-      if (onAdmin && nav?.type === "reload") {
-        expireAdminSession();
-        if (!cancelled) {
-          setAdmin(null);
-          setIsReady(true);
-        }
-        return;
-      }
-
       const verified = await verifyAdminSession(readAdminSession());
       if (cancelled) return;
       if (verified) {
@@ -86,13 +83,27 @@ export function AdminAuthProvider({ children }) {
     const sync = () => {
       setAdmin(readAdminSession());
     };
+    const onStorage = (event) => {
+      if (event.key !== ADMIN_SESSION_KEY) return;
+      sync();
+    };
     window.addEventListener(AUTH_CHANGED_EVENT, sync);
-    return () => window.removeEventListener(AUTH_CHANGED_EVENT, sync);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener(AUTH_CHANGED_EVENT, sync);
+      window.removeEventListener("storage", onStorage);
+    };
   }, []);
 
   useEffect(() => {
     const poll = () => {
       const session = readAdminSession();
+      if (session?.refreshToken && accessTokenNeedsRenewal(session.token)) {
+        refreshAdminSession().then((next) => {
+          setAdmin(next && isAdminSessionFresh(next) ? next : null);
+        });
+        return;
+      }
       setAdmin((current) => {
         if (!session && !current) return current;
         if (!session) return null;
@@ -133,7 +144,7 @@ export function AdminAuthProvider({ children }) {
         if (!response.ok) {
           return { ok: false, error: data.error || "Invalid email or password." };
         }
-        const session = toAdminSession(data.user, data.accessToken);
+        const session = toAdminSession(data.user, data.accessToken, data.refreshToken);
         if (!session) {
           return { ok: false, error: "This account is not an admin." };
         }
@@ -190,7 +201,11 @@ export function AdminAuthProvider({ children }) {
           },
           admin.token
         );
-        const session = toAdminSession(data.user, data.accessToken || admin.token);
+        const session = toAdminSession(
+          data.user,
+          data.accessToken || admin.token,
+          data.refreshToken || admin.refreshToken
+        );
         if (session) {
           writeAdminSession({ ...session, title: admin.title });
           setAdmin({ ...session, title: admin.title });
