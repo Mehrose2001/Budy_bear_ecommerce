@@ -295,6 +295,10 @@ export async function updateSettings(input) {
           enabled: Boolean(input.offer.enabled),
           message: String(input.offer.message || "").trim().slice(0, 280),
           percent: Math.min(90, Math.max(0, Math.round(Number(input.offer.percent) || 0))),
+          image: String(input.offer.image || "").trim(),
+          newArrivals: Boolean(input.offer.newArrivals),
+          saleItems: Boolean(input.offer.saleItems),
+          featuredItems: Boolean(input.offer.featuredItems),
         };
   if (offer) payload.offer = offer;
   const { data, error } = await supabase

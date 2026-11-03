@@ -6,7 +6,9 @@ import { sendOrderPlacedEmail } from "@/lib/orderEmail";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { getRequestUser, getBearerToken } from "@/lib/supabase/server";
 import { computeCheckoutTotals } from "@/lib/checkoutTotals";
-import { validateCoupon } from "@/services/contentService";
+import { getStorefrontSettings } from "@/lib/catalog";
+import { normalizeOffer } from "@/lib/storeOffer";
+import { getStoreSettings, validateCoupon } from "@/services/contentService";
 import { listCoupons } from "@/lib/catalogStore";
 import { createOrder } from "@/services/orderService";
 
@@ -71,8 +73,19 @@ export async function POST(request) {
       }
     }
 
+    let offer = normalizeOffer(null);
+    try {
+      const settings = isSupabaseConfigured()
+        ? await getStoreSettings()
+        : await getStorefrontSettings();
+      offer = normalizeOffer(settings?.offer);
+    } catch {
+      offer = normalizeOffer(null);
+    }
+
     const priced = computeCheckoutTotals({
       items: body.items,
+      offer,
       couponPercent,
       couponDiscount: body.couponDiscount || 0,
       deliveryMethod: body.deliveryMethod,

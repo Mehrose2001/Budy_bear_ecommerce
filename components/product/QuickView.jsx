@@ -27,6 +27,11 @@ export default function QuickView({ product, onClose }) {
           product={product}
           compact
           onColorChange={setSelectedColor}
+          onViewFull={() => {
+            const slug = product.slug;
+            onClose();
+            router.push(`/product/${slug}`);
+          }}
           onAdded={(buyNow) => {
             onClose();
             if (buyNow) {

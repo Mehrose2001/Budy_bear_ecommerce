@@ -128,7 +128,7 @@ export async function uploadProductImage(productId, file, accessToken, folder = 
   }
 
   const filename = `${Date.now()}-${crypto.randomUUID()}${extensionOf(file)}`;
-  const safeRoot = ["products", "banners", "categories"].includes(folder)
+  const safeRoot = ["products", "banners", "categories", "offer"].includes(folder)
     ? folder
     : "products";
 

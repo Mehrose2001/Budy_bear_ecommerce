@@ -8,6 +8,8 @@ import { useCart } from "@/context/CartContext";
 import { useToast } from "@/context/ToastContext";
 import { DELIVERY_METHODS, PAKISTAN_PROVINCES, PAYMENT_METHODS, isExpressAvailable } from "@/data/checkout";
 import { computeCheckoutTotals } from "@/lib/checkoutTotals";
+import { useStoreOffer } from "@/context/StoreOfferContext";
+import { payableUnitPrice } from "@/lib/storeOffer";
 import { emitOrdersChanged } from "@/lib/adminSession";
 import { cn } from "@/lib/utils";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
@@ -55,6 +57,7 @@ function validate(form) {
 export function useCheckoutForm(totals) {
   const router = useRouter();
   const { items, clearCart } = useCart();
+  const offer = useStoreOffer();
   const { showToast } = useToast();
   const { user, authHeaders } = useCustomerAuth();
   const { rememberGuestOrder } = useOrders();
@@ -96,15 +99,31 @@ export function useCheckoutForm(totals) {
     (method) => method.id === form.paymentMethod
   );
 
+  const checkoutItems = useMemo(
+    () =>
+      items.map((item) => {
+        const base = Number(item.basePrice ?? item.unitPrice ?? item.salePrice ?? item.price) || 0;
+        const unitPrice = payableUnitPrice({ ...item, basePrice: base }, offer);
+        return {
+          ...item,
+          basePrice: base,
+          unitPrice,
+          offerApplied: unitPrice < base,
+        };
+      }),
+    [items, offer]
+  );
+
   const liveTotals = useMemo(
     () =>
       computeCheckoutTotals({
-        items,
+        items: checkoutItems,
+        offer,
         couponPercent: coupon?.discountPercent,
         couponDiscount,
         deliveryMethod: form.deliveryMethod,
       }),
-    [coupon?.discountPercent, couponDiscount, form.deliveryMethod, items]
+    [checkoutItems, coupon?.discountPercent, couponDiscount, form.deliveryMethod, offer]
   );
 
   const applyCoupon = async () => {
@@ -150,7 +169,7 @@ export function useCheckoutForm(totals) {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify({
-          items,
+          items: checkoutItems,
           subtotal: liveTotals.subtotal,
           discount: liveTotals.discount,
           shipping: liveTotals.shipping,
@@ -198,6 +217,7 @@ export function useCheckoutForm(totals) {
 
   return {
     form,
+    checkoutItems,
     liveTotals,
     errors,
     isSubmitting,

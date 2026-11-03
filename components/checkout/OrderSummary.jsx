@@ -1,46 +1,71 @@
 import Image from "next/image";
 import { formatPrice } from "@/lib/utils";
 import { FREE_DELIVERY_THRESHOLD } from "@/data/store";
+import { LIMITED_TIME_OFFER_LABEL } from "@/lib/storeOffer";
 
 export default function OrderSummary({
   items = [],
   subtotal,
   discount,
   productDiscount,
+  saleDiscount,
+  offerDiscount,
   couponDiscount,
   couponCode,
   shipping,
   total,
   deliveryMethod,
 }) {
-  const saleOff = Number(productDiscount ?? 0);
+  const saleOff = Number(saleDiscount ?? 0);
+  const offerOff = Number(offerDiscount ?? 0);
+  const productOff = Number(productDiscount ?? saleOff + offerOff);
   const promoOff = Number(couponDiscount ?? 0);
-  const combined = Number(discount ?? saleOff + promoOff);
-  const remaining = Math.max(0, FREE_DELIVERY_THRESHOLD - (subtotal - combined));
+  const combined = Number(discount ?? productOff + promoOff);
+  const payableSubtotal = Math.max(0, subtotal - offerOff - saleOff);
+  const remaining = Math.max(0, FREE_DELIVERY_THRESHOLD - payableSubtotal);
 
   return (
     <aside className="rounded-3xl border border-neutral-200 bg-white p-6">
       <h2 className="text-lg font-black text-neutral-900">Order summary</h2>
 
       <ul className="mt-5 space-y-4">
-        {items.map((item) => (
-          <li key={item.id} className="flex gap-3">
-            <span className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-neutral-100">
-              <Image src={item.image} alt={item.name} fill className="object-cover" sizes="64px" />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-semibold text-neutral-900">
-                {item.name}
+        {items.map((item) => {
+          const lineTotal = item.unitPrice * item.quantity;
+          const lineOriginal = (item.basePrice ?? item.unitPrice) * item.quantity;
+          const showOfferLine = item.offerApplied && lineOriginal > lineTotal;
+          return (
+            <li key={item.id} className="flex gap-3">
+              <span className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-neutral-100">
+                <Image src={item.image} alt={item.name} fill className="object-cover" sizes="64px" />
               </span>
-              <span className="text-xs text-neutral-500">
-                {item.color} · {item.size} · Qty {item.quantity}
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-semibold text-neutral-900">
+                  {item.name}
+                </span>
+                <span className="text-xs text-neutral-500">
+                  {item.color} · {item.size} · Qty {item.quantity}
+                </span>
+                {showOfferLine ? (
+                  <span className="mt-1 block text-xs font-semibold text-brand-primary">
+                    {LIMITED_TIME_OFFER_LABEL}
+                  </span>
+                ) : null}
               </span>
-            </span>
-            <span className="text-sm font-bold">
-              {formatPrice(item.unitPrice * item.quantity)}
-            </span>
-          </li>
-        ))}
+              <span className="text-right text-sm">
+                {showOfferLine ? (
+                  <>
+                    <span className="block text-xs text-neutral-500 line-through">
+                      {formatPrice(lineOriginal)}
+                    </span>
+                    <span className="block font-bold">{formatPrice(lineTotal)}</span>
+                  </>
+                ) : (
+                  <span className="font-bold">{formatPrice(lineTotal)}</span>
+                )}
+              </span>
+            </li>
+          );
+        })}
       </ul>
 
       <dl className="mt-5 space-y-3 border-t border-neutral-200 pt-4 text-sm">
@@ -54,12 +79,23 @@ export default function OrderSummary({
             <dd className="text-brand-primary">-{formatPrice(saleOff)}</dd>
           </div>
         ) : null}
+        {offerOff > 0 ? (
+          <div className="flex justify-between">
+            <dt className="text-neutral-500">{LIMITED_TIME_OFFER_LABEL}</dt>
+            <dd className="text-brand-primary">-{formatPrice(offerOff)}</dd>
+          </div>
+        ) : productOff > 0 && saleOff === 0 && offerOff === 0 ? (
+          <div className="flex justify-between">
+            <dt className="text-neutral-500">Product discount</dt>
+            <dd className="text-brand-primary">-{formatPrice(productOff)}</dd>
+          </div>
+        ) : null}
         {promoOff > 0 ? (
           <div className="flex justify-between">
             <dt className="text-neutral-500">Promo {couponCode || ""}</dt>
             <dd className="text-brand-primary">-{formatPrice(promoOff)}</dd>
           </div>
-        ) : combined > 0 && saleOff === 0 ? (
+        ) : combined > 0 && productOff === 0 && promoOff === 0 ? (
           <div className="flex justify-between">
             <dt className="text-neutral-500">Discount</dt>
             <dd className="text-brand-primary">-{formatPrice(combined)}</dd>

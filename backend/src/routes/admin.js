@@ -262,9 +262,12 @@ adminRouter.post(
   requireAdmin,
   upload.single("file"),
   asyncHandler(async (req, res) => {
-    const folder = req.body?.folder === "banners" || req.body?.folder === "categories"
-      ? req.body.folder
-      : "products";
+    const folder =
+      req.body?.folder === "banners" ||
+      req.body?.folder === "categories" ||
+      req.body?.folder === "offer"
+        ? req.body.folder
+        : "products";
     const url = await storeImage(req.file, folder);
     res.json({ url });
   })

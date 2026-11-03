@@ -198,7 +198,7 @@ export default function ProductListing({
     });
   }
   if (filters.onSale) {
-    activeChips.push({ key: "onSale", label: "On sale" });
+    activeChips.push({ key: "onSale", label: "Sale" });
   }
   if (filters.inStock) {
     activeChips.push({ key: "inStock", label: "In stock" });
@@ -207,7 +207,7 @@ export default function ProductListing({
     activeChips.push({ key: "newArrivals", label: "New arrivals" });
   }
   if (filters.bestSellers) {
-    activeChips.push({ key: "bestSellers", label: "Best sellers" });
+    activeChips.push({ key: "bestSellers", label: "Sale" });
   }
 
   const filterProps = {

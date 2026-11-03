@@ -8,8 +8,7 @@ import Badge from "@/components/ui/Badge";
 import Modal from "@/components/ui/Modal";
 import StarRating from "@/components/ui/StarRating";
 import { useCart } from "@/context/CartContext";
-import { useStoreOffer } from "@/context/StoreOfferContext";
-import { isOfferActive, offerHeadline, priceWithOffer } from "@/lib/storeOffer";
+import { getEffectivePrice } from "@/lib/productFilters";
 import { useToast } from "@/context/ToastContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { COLOR_SWATCHES, FREE_DELIVERY_THRESHOLD } from "@/data/store";
@@ -24,9 +23,14 @@ import {
 } from "@/lib/variantStock";
 import { formatLabel, formatPrice, getDiscountPercent, cn } from "@/lib/utils";
 
-export default function ProductInfo({ product, compact = false, onAdded, onColorChange }) {
+export default function ProductInfo({
+  product,
+  compact = false,
+  onAdded,
+  onColorChange,
+  onViewFull,
+}) {
   const { addItem } = useCart();
-  const offer = useStoreOffer();
   const { showToast } = useToast();
   const { hasItem, toggleItem } = useWishlist();
   const colors = getProductColors(product);
@@ -39,9 +43,9 @@ export default function ProductInfo({ product, compact = false, onAdded, onColor
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
   const wishlisted = hasItem(product.id);
 
-  const pricing = priceWithOffer(product, offer);
-  const discount = getDiscountPercent(pricing.list, pricing.payable);
-  const displayPrice = pricing.payable;
+  const displayPrice = getEffectivePrice(product);
+  const listPrice = Number(product.price) || displayPrice;
+  const discount = getDiscountPercent(listPrice, displayPrice);
   const available = getVariantQty(product, color, size);
   const totalStock = getProductStock(product);
   const canAdd = available > 0;
@@ -70,7 +74,7 @@ export default function ProductInfo({ product, compact = false, onAdded, onColor
       <div className="flex flex-wrap gap-2">
         {product.newArrival && <Badge variant="new">New</Badge>}
         {discount > 0 && <Badge variant="sale">{discount}% OFF</Badge>}
-        {product.bestSeller && <Badge variant="featured">Best Seller</Badge>}
+        {product.bestSeller && <Badge variant="sale">Sale</Badge>}
       </div>
 
       <h1 className={cn("mt-3 font-black tracking-tight text-neutral-900", compact ? "text-2xl" : "text-3xl")}>
@@ -91,15 +95,12 @@ export default function ProductInfo({ product, compact = false, onAdded, onColor
         <span className="text-3xl font-black text-neutral-900">
           {formatPrice(displayPrice)}
         </span>
-        {pricing.payable < pricing.list && (
+        {displayPrice < listPrice && (
           <span className="text-lg text-error line-through">
-            {formatPrice(pricing.list)}
+            {formatPrice(listPrice)}
           </span>
         )}
       </div>
-      {isOfferActive(offer) ? (
-        <p className="mt-2 text-sm font-semibold text-brand-primary">{offerHeadline(offer)}</p>
-      ) : null}
 
       <p className="mt-2 text-sm text-neutral-500">
         {available > 0
@@ -254,14 +255,23 @@ export default function ProductInfo({ product, compact = false, onAdded, onColor
         </button>
       </div>
 
-      {compact && (
-        <Link
-          href={`/product/${product.slug}`}
-          className="mt-4 inline-flex text-sm font-semibold text-brand-primary hover:underline"
-        >
-          View full product
-        </Link>
-      )}
+      {compact &&
+        (onViewFull ? (
+          <button
+            type="button"
+            onClick={onViewFull}
+            className="mt-4 inline-flex text-sm font-semibold text-brand-primary hover:underline"
+          >
+            View full product
+          </button>
+        ) : (
+          <Link
+            href={`/product/${product.slug}`}
+            className="mt-4 inline-flex text-sm font-semibold text-brand-primary hover:underline"
+          >
+            View full product
+          </Link>
+        ))}
 
       {!compact && (
         <div className="mt-8 grid gap-4 sm:grid-cols-2">

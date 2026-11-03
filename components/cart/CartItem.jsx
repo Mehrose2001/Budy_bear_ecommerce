@@ -16,6 +16,8 @@ export default function CartItem({ item }) {
     }
   };
 
+  const lineTotal = item.unitPrice * item.quantity;
+
   return (
     <article className="flex gap-4 border-b border-neutral-200 py-5 last:border-b-0">
       <Link
@@ -70,9 +72,7 @@ export default function CartItem({ item }) {
               <Plus className="h-3.5 w-3.5" />
             </button>
           </div>
-          <p className="text-sm font-bold text-neutral-900">
-            {formatPrice(item.unitPrice * item.quantity)}
-          </p>
+          <p className="text-sm font-bold text-neutral-900">{formatPrice(lineTotal)}</p>
         </div>
       </div>
     </article>

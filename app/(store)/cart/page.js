@@ -7,7 +7,8 @@ import Breadcrumbs from "@/components/ui/Breadcrumbs";
 import { useCart } from "@/context/CartContext";
 
 export default function CartPage() {
-  const { items, subtotal, discount, shipping, total, itemCount } = useCart();
+  const { items, subtotal, discount, saleDiscount, offerDiscount, shipping, total, itemCount } =
+    useCart();
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -41,6 +42,8 @@ export default function CartPage() {
           <CartSummary
             subtotal={subtotal}
             discount={discount}
+            saleDiscount={saleDiscount}
+            offerDiscount={offerDiscount}
             shipping={shipping}
             total={total}
             itemCount={itemCount}

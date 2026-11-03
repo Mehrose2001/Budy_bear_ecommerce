@@ -207,10 +207,15 @@ export function mapBanner(row) {
 function normalizeOffer(value) {
   const source = value && typeof value === "object" ? value : {};
   const percent = Math.min(90, Math.max(0, Math.round(Number(source.percent) || 0)));
+  const nested = source.sections && typeof source.sections === "object" ? source.sections : source;
   return {
     enabled: Boolean(source.enabled),
     message: String(source.message || "").trim().slice(0, 280),
     percent,
+    image: String(source.image || "").trim(),
+    newArrivals: Boolean(nested.newArrivals),
+    saleItems: Boolean(nested.saleItems),
+    featuredItems: Boolean(nested.featuredItems),
   };
 }
 

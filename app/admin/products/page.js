@@ -122,7 +122,7 @@ export default function AdminProductsPage() {
                     : product.stock}
                 </td>
                 <td className="px-4 py-3 text-xs">
-                  {[product.featured && "Featured", product.newArrival && "New", product.bestSeller && "Best"].filter(Boolean).join(" · ") || "—"}
+                  {[product.featured && "Featured", product.newArrival && "New Arrival", product.bestSeller && "Sale"].filter(Boolean).join(" · ") || "—"}
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex gap-2">

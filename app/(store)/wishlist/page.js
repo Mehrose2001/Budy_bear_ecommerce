@@ -8,12 +8,10 @@ import { useWishlist } from "@/context/WishlistContext";
 import { useCart } from "@/context/CartContext";
 import { useToast } from "@/context/ToastContext";
 import { formatPrice } from "@/lib/utils";
-import { useStoreOffer } from "@/context/StoreOfferContext";
-import { priceWithOffer } from "@/lib/storeOffer";
+import { getEffectivePrice } from "@/lib/productFilters";
 
 export default function WishlistPage() {
   const { items, removeItem, count } = useWishlist();
-  const offer = useStoreOffer();
   const { addItem } = useCart();
   const { showToast } = useToast();
 
@@ -78,7 +76,7 @@ export default function WishlistPage() {
                 </Link>
                 <p className="mt-1 text-sm text-neutral-500">{product.brand}</p>
                 <p className="mt-2 font-bold">
-                  {formatPrice(priceWithOffer(product, offer).payable)}
+                  {formatPrice(getEffectivePrice(product))}
                 </p>
               </div>
               <div className="flex flex-wrap gap-3">

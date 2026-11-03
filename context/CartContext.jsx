@@ -11,8 +11,6 @@ import {
 import { FREE_DELIVERY_THRESHOLD, SHIPPING_FEE } from "@/data/store";
 import { readCart, writeCart } from "@/lib/storage";
 import { getEffectivePrice } from "@/lib/productFilters";
-import { useStoreOffer } from "@/context/StoreOfferContext";
-import { isOfferActive } from "@/lib/storeOffer";
 import { getProductColors } from "@/lib/productImages";
 import { firstInStockColor, firstInStockSize, getVariantQty } from "@/lib/variantStock";
 
@@ -22,14 +20,7 @@ function createLineId(product, size, color) {
   return `${product.id}-${size}-${color}`;
 }
 
-function payableUnitPrice(item, offer) {
-  const base = Number(item.basePrice ?? item.unitPrice ?? item.salePrice ?? item.price) || 0;
-  if (!isOfferActive(offer)) return base;
-  return Math.max(0, Math.round(base * (1 - Number(offer.percent) / 100)));
-}
-
 export function CartProvider({ children }) {
-  const offer = useStoreOffer();
   const [items, setItems] = useState([]);
   const [isReady, setIsReady] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -81,6 +72,9 @@ export function CartProvider({ children }) {
           image: product.images[0],
           price: product.price,
           salePrice: product.salePrice,
+          featured: Boolean(product.featured),
+          newArrival: Boolean(product.newArrival),
+          bestSeller: Boolean(product.bestSeller),
           basePrice,
           unitPrice: basePrice,
           size: selectedSize,
@@ -118,35 +112,52 @@ export function CartProvider({ children }) {
     () =>
       items.map((item) => {
         const base = Number(item.basePrice ?? item.unitPrice ?? item.salePrice ?? item.price) || 0;
+        const quantity = Number(item.quantity) || 1;
         return {
           ...item,
           basePrice: base,
-          unitPrice: payableUnitPrice(item, offer),
+          unitPrice: base,
+          offerApplied: false,
+          lineOriginal: base * quantity,
+          linePayable: base * quantity,
+          lineOfferDiscount: 0,
         };
       }),
-    [items, offer]
+    [items]
   );
 
   const summary = useMemo(() => {
-    const subtotal = pricedItems.reduce(
-      (total, item) => total + item.price * item.quantity,
+    const listSubtotal = pricedItems.reduce(
+      (total, item) => total + Number(item.price || 0) * item.quantity,
       0
     );
-    const discountedSubtotal = pricedItems.reduce(
+    const subtotal = pricedItems.reduce(
+      (total, item) => total + item.basePrice * item.quantity,
+      0
+    );
+    const saleDiscount = pricedItems.reduce(
+      (total, item) =>
+        total + Math.max(0, Number(item.price || 0) - item.basePrice) * item.quantity,
+      0
+    );
+    const payableSubtotal = pricedItems.reduce(
       (total, item) => total + item.unitPrice * item.quantity,
       0
     );
-    const discount = subtotal - discountedSubtotal;
+    const discount = saleDiscount;
     const shipping =
-      discountedSubtotal === 0 || discountedSubtotal >= FREE_DELIVERY_THRESHOLD
+      payableSubtotal === 0 || payableSubtotal >= FREE_DELIVERY_THRESHOLD
         ? 0
         : SHIPPING_FEE;
 
     return {
+      listSubtotal,
       subtotal,
+      saleDiscount,
+      offerDiscount: 0,
       discount,
       shipping,
-      total: discountedSubtotal + shipping,
+      total: payableSubtotal + shipping,
       itemCount: pricedItems.reduce((count, item) => count + item.quantity, 0),
     };
   }, [pricedItems]);

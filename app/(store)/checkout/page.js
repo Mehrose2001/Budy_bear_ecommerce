@@ -50,10 +50,12 @@ export default function CheckoutPage() {
           />
           <div className="h-fit xl:sticky xl:top-36">
             <OrderSummary
-              items={items}
+              items={checkout.checkoutItems}
               subtotal={checkout.liveTotals.subtotal}
               discount={checkout.liveTotals.discount}
               productDiscount={checkout.liveTotals.productDiscount}
+              saleDiscount={checkout.liveTotals.saleDiscount}
+              offerDiscount={checkout.liveTotals.offerDiscount}
               couponDiscount={checkout.liveTotals.couponDiscount}
               couponCode={checkout.coupon?.code}
               shipping={checkout.liveTotals.shipping}

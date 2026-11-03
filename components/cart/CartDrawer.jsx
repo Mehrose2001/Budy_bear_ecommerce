@@ -17,6 +17,8 @@ export default function CartDrawer() {
     closeDrawer,
     subtotal,
     discount,
+    saleDiscount,
+    offerDiscount,
     shipping,
     total,
     itemCount,
@@ -86,6 +88,8 @@ export default function CartDrawer() {
             <CartSummary
               subtotal={subtotal}
               discount={discount}
+              saleDiscount={saleDiscount}
+              offerDiscount={offerDiscount}
               shipping={shipping}
               total={total}
               itemCount={itemCount}

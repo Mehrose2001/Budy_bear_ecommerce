@@ -6,8 +6,7 @@ import Link from "next/link";
 import { Search } from "lucide-react";
 import { searchProducts } from "@/data/products";
 import { formatPrice } from "@/lib/utils";
-import { useStoreOffer } from "@/context/StoreOfferContext";
-import { priceWithOffer } from "@/lib/storeOffer";
+import { getEffectivePrice } from "@/lib/productFilters";
 
 export default function SearchBar({
   id = "product-search",
@@ -18,7 +17,6 @@ export default function SearchBar({
   placeholder = "Search for clothes, dresses, jackets...",
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const offer = useStoreOffer();
   const containerRef = useRef(null);
 
   const suggestions = useMemo(() => {
@@ -98,7 +96,7 @@ export default function SearchBar({
                   {product.name}
                 </span>
                 <span className="text-xs text-neutral-500">
-                  {formatPrice(priceWithOffer(product, offer).payable)}
+                  {formatPrice(getEffectivePrice(product))}
                 </span>
               </span>
             </Link>

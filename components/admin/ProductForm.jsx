@@ -555,8 +555,8 @@ export default function ProductForm({ product, categories, onCancel, onSave }) {
       <div className="flex flex-wrap gap-4 md:col-span-2">
         {[
           ["featured", "Featured"],
-          ["newArrival", "New arrival"],
-          ["bestSeller", "Best seller"],
+          ["newArrival", "New Arrival"],
+          ["bestSeller", "Sale"],
         ].map(([key, label]) => (
           <label key={key} className="inline-flex items-center gap-2 text-sm text-neutral-700">
             <input
