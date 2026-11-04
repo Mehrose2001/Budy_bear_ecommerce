@@ -1,4 +1,5 @@
 import { listCategories, listProducts } from "@/lib/catalog";
+import { LEGAL_PAGES } from "@/data/legalPages";
 
 function siteUrl() {
   return String(process.env.NEXT_PUBLIC_SITE_URL || "https://budybear.com").replace(/\/$/, "");
@@ -16,12 +17,8 @@ export default async function sitemap() {
     "/products",
     "/contact",
     "/faqs",
-    "/about",
-    "/shipping",
-    "/returns",
     "/size-guide",
-    "/privacy",
-    "/terms",
+    ...Object.values(LEGAL_PAGES).map((page) => page.href),
   ].map((path) => ({
     url: `${base}${path || "/"}`,
     changeFrequency: "weekly",

@@ -2,10 +2,8 @@ import InfoPage from "@/components/layout/InfoPage";
 import LegalContent from "@/components/layout/LegalContent";
 import { getLegalPage } from "@/lib/catalog";
 
-export const metadata = { title: "Privacy Policy" };
-
-export default async function PrivacyPage() {
-  const page = await getLegalPage("privacy");
+export default async function ManagedLegalPage({ slug }) {
+  const page = await getLegalPage(slug);
 
   return (
     <InfoPage title={page.title} intro={page.intro}>

@@ -10,9 +10,11 @@ import {
   Link as LinkIcon,
   List,
   ListOrdered,
+  RemoveFormatting,
   Underline,
 } from "lucide-react";
 import { sanitizeHtml } from "@/lib/legalHtml";
+import { pastedHtmlToEditorHtml, plainTextToHtml } from "@/lib/pasteHtml";
 import { cn } from "@/lib/utils";
 
 const FONT_SIZES = ["12", "14", "16", "18", "20", "24", "28", "32"];
@@ -96,6 +98,43 @@ export default function RichTextEditor({ id, value, onChange }) {
     run("createLink", url);
   };
 
+  const insertHtml = (html) => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    editor.focus();
+    const selection = window.getSelection();
+    if (!selection) return;
+    if (!selection.rangeCount || !editor.contains(selection.getRangeAt(0).commonAncestorContainer)) {
+      const range = document.createRange();
+      range.selectNodeContents(editor);
+      range.collapse(false);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+    const range = selection.getRangeAt(0);
+    range.deleteContents();
+    const template = document.createElement("template");
+    template.innerHTML = html;
+    const fragment = template.content;
+    const last = fragment.lastChild;
+    range.insertNode(fragment);
+    if (last) {
+      range.setStartAfter(last);
+      range.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+    emit();
+  };
+
+  const onPaste = (event) => {
+    event.preventDefault();
+    const html = event.clipboardData?.getData("text/html") || "";
+    const text = event.clipboardData?.getData("text/plain") || "";
+    const next = sanitizeHtml(html.trim() ? pastedHtmlToEditorHtml(html, text) : plainTextToHtml(text));
+    insertHtml(next || "<p></p>");
+  };
+
   return (
     <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
       <div className="flex flex-wrap items-center gap-1 border-b border-neutral-200 bg-brand-cream/60 p-2">
@@ -170,6 +209,9 @@ export default function RichTextEditor({ id, value, onChange }) {
         <ToolbarButton label="Insert link" onClick={addLink}>
           <LinkIcon className="h-4 w-4" />
         </ToolbarButton>
+        <ToolbarButton label="Clear formatting" onClick={() => run("removeFormat")}>
+          <RemoveFormatting className="h-4 w-4" />
+        </ToolbarButton>
       </div>
       <div
         id={id}
@@ -178,9 +220,10 @@ export default function RichTextEditor({ id, value, onChange }) {
         suppressContentEditableWarning
         role="textbox"
         aria-multiline="true"
-        className="min-h-72 px-4 py-3 text-sm leading-7 text-neutral-800 outline-none [&_h1]:text-2xl [&_h1]:font-black [&_h2]:text-lg [&_h2]:font-black [&_h3]:text-base [&_h3]:font-bold"
+        className="min-h-72 px-4 py-3 text-sm font-normal leading-7 text-neutral-800 outline-none [&_b]:font-bold [&_em]:italic [&_h1]:text-2xl [&_h1]:font-black [&_h2]:text-lg [&_h2]:font-black [&_h3]:text-base [&_h3]:font-bold [&_li]:font-normal [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:font-normal [&_strong]:font-bold [&_ul]:list-disc [&_ul]:pl-5"
         onInput={emit}
         onBlur={emit}
+        onPaste={onPaste}
       />
     </div>
   );

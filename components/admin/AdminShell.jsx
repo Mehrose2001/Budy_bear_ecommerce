@@ -5,22 +5,28 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   BadgePercent,
-  Megaphone,
+  Ban,
   BookOpen,
   ClipboardList,
   FolderTree,
   Image as ImageIcon,
   LayoutDashboard,
+  LifeBuoy,
   LogOut,
+  Megaphone,
   Menu,
   MessageSquare,
   Package,
+  RefreshCw,
   ScrollText,
   Settings,
   Shield,
   ShoppingBag,
+  Truck,
+  Undo2,
   Users,
   UserRound,
+  Wallet,
   Warehouse,
   X,
 } from "lucide-react";
@@ -40,9 +46,16 @@ const NAV_ITEMS = [
   { href: "/admin/offer", label: "Show offer popup", icon: Megaphone },
   { href: "/admin/banners", label: "Banners", icon: ImageIcon },
   { href: "/admin/reviews", label: "Reviews", icon: MessageSquare },
+  { heading: "Footer pages" },
   { href: "/admin/about", label: "About Budy Bear", icon: BookOpen },
-  { href: "/admin/privacy", label: "Privacy Policy", icon: Shield },
   { href: "/admin/terms", label: "Terms & Conditions", icon: ScrollText },
+  { href: "/admin/privacy", label: "Privacy Policy", icon: Shield },
+  { href: "/admin/complaints", label: "Complaint Handling", icon: LifeBuoy },
+  { href: "/admin/shipping", label: "Shipping & Delivery", icon: Truck },
+  { href: "/admin/exchange", label: "Exchange Policy", icon: RefreshCw },
+  { href: "/admin/returns", label: "Return Policy", icon: Undo2 },
+  { href: "/admin/refund", label: "Refund Policy", icon: Wallet },
+  { href: "/admin/cancellation", label: "Order Cancellation", icon: Ban },
   { href: "/admin/settings", label: "Settings", icon: Settings },
   { href: "/admin/profile", label: "Profile", icon: UserRound },
 ];
@@ -107,6 +120,16 @@ export default function AdminShell({ children }) {
       </div>
       <nav className="flex-1 space-y-1 overflow-y-auto p-3" aria-label="Admin">
         {NAV_ITEMS.map((item) => {
+          if (item.heading) {
+            return (
+              <p
+                key={item.heading}
+                className="px-3 pb-1 pt-4 text-[11px] font-semibold uppercase tracking-wider text-white/40"
+              >
+                {item.heading}
+              </p>
+            );
+          }
           const Icon = item.icon;
           const active =
             item.href === "/admin"

@@ -70,14 +70,18 @@ export const footerLinks = {
     { label: "Track your order", href: "/track-order" },
     { label: "Contact Us", href: "/contact" },
     { label: "FAQs", href: "/faqs" },
-    { label: "Shipping & Delivery", href: "/shipping" },
-    { label: "Returns & Exchanges", href: "/returns" },
+    { label: "Shipping & Delivery Policy", href: "/shipping" },
+    { label: "Exchange Policy", href: "/exchange" },
+    { label: "Return Policy", href: "/returns" },
+    { label: "Refund Policy", href: "/refund" },
+    { label: "Order Cancellation Policy", href: "/cancellation" },
     { label: "Size Guide", href: "/size-guide" },
   ],
   company: [
     { label: "About Budy Bear", href: "/about" },
-    { label: "Privacy Policy", href: "/privacy" },
     { label: "Terms & Conditions", href: "/terms" },
+    { label: "Privacy Policy", href: "/privacy" },
+    { label: "Customer Complaint Handling Policy", href: "/complaints" },
   ],
   social: [
     {
