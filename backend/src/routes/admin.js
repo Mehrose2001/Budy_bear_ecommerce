@@ -18,6 +18,7 @@ import {
   updateProduct,
   updateReview,
   updateSettings,
+  saveStoreSeo,
   getStorePage,
   upsertStorePage,
   upsertBanner,
@@ -218,6 +219,7 @@ adminRouter.get(
     if (resource === "banners") return res.json({ banners: snapshot.banners });
     if (resource === "reviews") return res.json({ reviews: snapshot.reviews });
     if (resource === "settings") return res.json({ settings: snapshot.settings });
+    if (resource === "seo") return res.json({ seo: snapshot.settings?.seo || {} });
     if (resource === "pages") {
       const slug = req.query.slug;
       return res.json({ page: await getStorePage(slug) });
@@ -237,6 +239,7 @@ adminRouter.post(
     if (resource === "coupons") return res.json({ coupon: await upsertCoupon(data) });
     if (resource === "banners") return res.json({ banner: await upsertBanner(data) });
     if (resource === "settings") return res.json({ settings: await updateSettings(data) });
+    if (resource === "seo") return res.json({ settings: await saveStoreSeo(data) });
     if (resource === "pages") return res.json({ page: await upsertStorePage(data) });
     if (resource === "reviews") return res.json({ review: await updateReview(data.id, data) });
     throw new HttpError(400, "Unknown resource");

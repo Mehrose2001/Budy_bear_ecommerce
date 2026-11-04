@@ -1,3 +1,5 @@
+import { normalizeEntry, normalizeSeo, seoHasContent } from "../../../data/seo.js";
+
 function normalizeMediaUrl(value) {
   const url = String(value || "").trim();
   if (!url) return "";
@@ -28,6 +30,27 @@ function slugify(text) {
 
 function normalizeSeasonalCollection(value) {
   return String(value || "").toLowerCase() === "summer" ? "summer" : "winter";
+}
+
+function seasonalBannerEntry(value) {
+  const source = value && typeof value === "object" ? value : {};
+  return {
+    image: String(source.image || source.backgroundImage || "").trim(),
+    text: String(source.text || source.marketingText || "").trim().slice(0, 180),
+  };
+}
+
+export function normalizeSeasonalBanners(value) {
+  const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  return {
+    winter: seasonalBannerEntry(source.winter),
+    summer: seasonalBannerEntry(source.summer),
+  };
+}
+
+function seasonalBannerHasContent(value) {
+  const banners = normalizeSeasonalBanners(value);
+  return Object.values(banners).some((entry) => entry.image || entry.text);
 }
 
 function normalizeVariantStock(input) {
@@ -95,6 +118,7 @@ export function mapProduct(row) {
     isActive: row.is_active !== false,
     newArrival: Boolean(row.new_arrival),
     bestSeller: Boolean(row.best_seller),
+    seo: row.seo == null ? null : normalizeEntry(row.seo),
   };
 }
 
@@ -146,6 +170,7 @@ export function productToRow(input, existing = {}) {
     is_active: input.isActive ?? input.is_active ?? existing.is_active ?? true,
     new_arrival: Boolean(input.newArrival ?? input.new_arrival ?? existing.new_arrival),
     best_seller: Boolean(input.bestSeller ?? input.best_seller ?? existing.best_seller),
+    seo: normalizeEntry(input.seo ?? existing.seo),
   };
 }
 
@@ -158,6 +183,12 @@ export function mapCategory(row) {
     description: row.description || "",
     image: normalizeMediaUrl(row.image_url || row.image),
     subcategories: row.subcategories || [],
+    seo: row.seo == null ? null : normalizeEntry(row.seo),
+    subcategorySeo:
+      row.subcategory_seo == null && row.subcategorySeo == null
+        ? null
+        : normalizeSeo({ entities: { subcategories: row.subcategory_seo || row.subcategorySeo } })
+            .entities.subcategories,
   };
 }
 
@@ -227,9 +258,18 @@ function readSettingsOffer(row) {
     columnOffer &&
     typeof columnOffer === "object" &&
     ("enabled" in columnOffer || "percent" in columnOffer || "message" in columnOffer);
+  const columnBanner = row?.seasonal_banner || row?.seasonalBanner;
   return {
-    legalPages: Object.fromEntries(Object.entries(legal).filter(([key]) => key !== "_offer")),
+    legalPages: Object.fromEntries(
+      Object.entries(legal).filter(
+        ([key]) => key !== "_offer" && key !== "_seasonalBanner" && key !== "_seo"
+      )
+    ),
+    seo: seoHasContent(row?.seo) ? normalizeSeo(row.seo) : normalizeSeo(legal._seo),
     offer: normalizeOffer(hasColumnOffer ? columnOffer : legal._offer),
+    seasonalBanner: normalizeSeasonalBanners(
+      seasonalBannerHasContent(columnBanner) ? columnBanner : legal._seasonalBanner
+    ),
   };
 }
 
@@ -247,8 +287,10 @@ export function mapSettings(row) {
       supportEmail: "support@budybear.com",
       supportPhone: "+92 333 0370236",
       seasonalCollection: "winter",
+      seasonalBanner: normalizeSeasonalBanners(null),
       legalPages: {},
       offer: normalizeOffer(null),
+      seo: normalizeSeo(null),
     };
   }
   const stored = readSettingsOffer(row);
@@ -260,8 +302,10 @@ export function mapSettings(row) {
     seasonalCollection: normalizeSeasonalCollection(
       row.seasonal_collection || row.seasonalCollection
     ),
+    seasonalBanner: stored.seasonalBanner,
     legalPages: stored.legalPages,
     offer: stored.offer,
+    seo: stored.seo,
   };
 }
 

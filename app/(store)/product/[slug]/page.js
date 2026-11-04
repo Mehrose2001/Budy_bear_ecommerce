@@ -4,10 +4,11 @@ import ProductDetailsClient from "@/components/product/ProductDetailsClient";
 import ProductReviews from "@/components/product/ProductReviews";
 import ProductGrid from "@/components/product/ProductGrid";
 import RecentlyViewed from "@/components/product/RecentlyViewed";
-import { getProductPage, listProducts } from "@/lib/catalog";
+import { getProductPage, getStorefrontSettings, listProducts } from "@/lib/catalog";
 import { getProductColors } from "@/lib/productImages";
 import { formatLabel } from "@/lib/utils";
-import { brand } from "@/data/brand";
+import { buildMetadata, chooseEntry, productJsonLd } from "@/data/seo";
+import JsonLd from "@/components/seo/JsonLd";
 
 export const revalidate = 30;
 
@@ -27,14 +28,15 @@ export async function generateMetadata({ params }) {
     return { title: "Product not found" };
   }
 
-  return {
-    title: product.name,
-    description: product.description,
-    openGraph: {
-      title: `${product.name} | ${brand.name}`,
-      description: product.description,
-    },
-  };
+  const settings = await getStorefrontSettings().catch(() => null);
+  return buildMetadata({
+    seo: settings?.seo,
+    entry: chooseEntry(product.seo, settings?.seo?.entities?.products?.[product.slug]),
+    path: `/product/${product.slug}`,
+    fallbackTitle: product.name,
+    fallbackDescription: product.description,
+    fallbackImage: product.images?.[0],
+  });
 }
 
 export default async function ProductPage({ params }) {
@@ -48,8 +50,11 @@ export default async function ProductPage({ params }) {
 
   const related = page.related || [];
 
+  const settings = await getStorefrontSettings().catch(() => null);
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <JsonLd data={productJsonLd(product, settings?.seo)} />
       <Breadcrumbs
         items={[
           { label: "Home", href: "/" },

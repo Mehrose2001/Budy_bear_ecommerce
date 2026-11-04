@@ -1,15 +1,15 @@
-function siteUrl() {
-  return String(process.env.NEXT_PUBLIC_SITE_URL || "https://budybear.com").replace(/\/$/, "");
-}
+import { siteBase } from "@/data/seo";
+import { getStorefrontSettings } from "@/lib/catalog";
 
-export default function robots() {
-  const base = siteUrl();
+export default async function robots() {
+  const settings = await getStorefrontSettings().catch(() => null);
+  const base = siteBase(settings?.seo);
   return {
     rules: [
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/admin", "/api", "/checkout", "/account"],
+        disallow: ["/admin", "/api", "/checkout", "/account", "/cart", "/wishlist", "/order"],
       },
     ],
     sitemap: `${base}/sitemap.xml`,

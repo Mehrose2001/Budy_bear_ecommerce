@@ -12,7 +12,22 @@ import {
   listStoreBanners,
   listStoreTestimonials,
 } from "@/lib/catalog";
-import { getSeasonalCollection } from "@/lib/seasonalCollection";
+import { getSeasonalCollection, seasonalBannerFor } from "@/lib/seasonalCollection";
+import { brand } from "@/data/brand";
+import { buildMetadata } from "@/data/seo";
+
+export async function generateMetadata() {
+  const settings = await getStorefrontSettings().catch(() => null);
+  return buildMetadata({
+    seo: settings?.seo,
+    entry: settings?.seo?.home,
+    path: "/",
+    home: true,
+    fallbackTitle: `${brand.name} | Premium Kids Wear`,
+    fallbackDescription: `${brand.slogan} Shop premium kids clothing and accessories. Free delivery on orders above Rs. 3,000 across Pakistan.`,
+    fallbackImage: brand.logo,
+  });
+}
 
 export default async function HomePage() {
   const [newArrivals, bestSellers, categories, banners, testimonialReviews, settings] = await Promise.all([
@@ -24,6 +39,7 @@ export default async function HomePage() {
     getStorefrontSettings().catch(() => ({ seasonalCollection: "winter" })),
   ]);
   const collection = getSeasonalCollection(settings?.seasonalCollection);
+  const seasonalBanner = seasonalBannerFor(settings?.seasonalBanner, collection.id);
 
   const testimonials = (testimonialReviews || []).map((review) => ({
     name: review.author,
@@ -43,7 +59,11 @@ export default async function HomePage() {
         products={bestSellers.slice(0, 8)}
         viewAllHref="/products?bestSeller=true"
       />
-      <CollectionBanner season={collection.id} />
+      <CollectionBanner
+        season={collection.id}
+        backgroundImage={seasonalBanner.image}
+        marketingText={seasonalBanner.text}
+      />
       <ProductSection
         title={collection.label}
         description={collection.description}

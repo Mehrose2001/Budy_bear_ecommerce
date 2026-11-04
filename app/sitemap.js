@@ -1,12 +1,12 @@
-import { listCategories, listProducts } from "@/lib/catalog";
+import { listCategories, listProducts, getStorefrontSettings } from "@/lib/catalog";
 import { LEGAL_PAGES } from "@/data/legalPages";
-
-function siteUrl() {
-  return String(process.env.NEXT_PUBLIC_SITE_URL || "https://budybear.com").replace(/\/$/, "");
-}
+import { parseRobots, siteBase } from "@/data/seo";
+import { slugify } from "@/lib/utils";
 
 export default async function sitemap() {
-  const base = siteUrl();
+  const settings = await getStorefrontSettings().catch(() => null);
+  if (!parseRobots(settings?.seo?.robots).index) return [];
+  const base = siteBase(settings?.seo);
   const [products, categories] = await Promise.all([
     listProducts().catch(() => []),
     listCategories().catch(() => []),
@@ -41,5 +41,16 @@ export default async function sitemap() {
       priority: 0.6,
     }));
 
-  return [...staticRoutes, ...categoryRoutes, ...productRoutes];
+  const subcategoryRoutes = (categories || []).flatMap((category) =>
+    (category?.subcategories || [])
+      .map((name) => slugify(String(name)))
+      .filter(Boolean)
+      .map((subSlug) => ({
+        url: `${base}/category/${category.slug}?subcategory=${subSlug}`,
+        changeFrequency: "weekly",
+        priority: 0.5,
+      }))
+  );
+
+  return [...staticRoutes, ...categoryRoutes, ...subcategoryRoutes, ...productRoutes];
 }

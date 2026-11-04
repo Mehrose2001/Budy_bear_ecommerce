@@ -14,6 +14,8 @@ import {
   seedVariantStock,
   sumVariantStock,
 } from "@/lib/variantStock";
+import { emptyEntry } from "@/data/seo";
+import { SeoEntryFields } from "@/components/admin/SeoFields";
 
 const emptyProduct = {
   name: "",
@@ -30,6 +32,7 @@ const emptyProduct = {
   featured: false,
   newArrival: true,
   bestSeller: false,
+  seo: emptyEntry(),
 };
 
 function parseList(value) {
@@ -103,6 +106,7 @@ function toForm(product) {
     sizes: sizes.join(", "),
     imageItems,
     variantStock: buildVariantStock(colors, sizes, seedVariantStock(product)),
+    seo: { ...emptyEntry(), ...(product.seo || {}) },
   };
 }
 
@@ -567,6 +571,16 @@ export default function ProductForm({ product, categories, onCancel, onSave }) {
             {label}
           </label>
         ))}
+      </div>
+      <div className="md:col-span-2 rounded-2xl border border-border bg-neutral-50 p-4">
+        <h3 className="text-base font-black text-brand-primary">Search listing</h3>
+        <p className="mb-4 mt-1 text-xs text-neutral-500">
+          Optional. Empty fields keep the product name, description, and first image.
+        </p>
+        <SeoEntryFields
+          entry={form.seo || emptyEntry()}
+          onChange={(seo) => updateField("seo", seo)}
+        />
       </div>
       {error && <p className="md:col-span-2 text-sm text-error">{error}</p>}
       <div className="flex justify-end gap-3 md:col-span-2">

@@ -3,9 +3,11 @@ import Button from "@/components/ui/Button";
 import { getSeasonalCollection } from "@/lib/seasonalCollection";
 import { cn } from "@/lib/utils";
 
-export default function CollectionBanner({ season = "winter" }) {
+export default function CollectionBanner({ season = "winter", backgroundImage = "", marketingText = "" }) {
   const collection = getSeasonalCollection(season);
   const isSummer = collection.id === "summer";
+  const image = String(backgroundImage || "").trim();
+  const promo = String(marketingText || "").trim();
 
   return (
     <section className="bg-brand-cream">
@@ -25,12 +27,20 @@ export default function CollectionBanner({ season = "winter" }) {
                 isSummer ? "bg-[#24555C]" : "bg-brand-primary-dark"
               )}
             >
-              <Image
-                src={collection.image}
-                alt={collection.label}
-                fill
-                className="object-cover"
-              />
+              {image ? (
+                <img
+                  src={image}
+                  alt={collection.label}
+                  className="absolute inset-0 h-full w-full object-cover object-center"
+                />
+              ) : (
+                <Image
+                  src={collection.image}
+                  alt={collection.label}
+                  fill
+                  className="object-cover"
+                />
+              )}
             </div>
             <div
               className={cn(
@@ -44,6 +54,11 @@ export default function CollectionBanner({ season = "winter" }) {
               <h2 className="mt-4 text-3xl font-black tracking-tight text-white sm:text-4xl">
                 {collection.label}
               </h2>
+              {promo ? (
+                <p className="mt-3 max-w-lg text-lg font-bold leading-snug text-brand-accent sm:text-xl">
+                  {promo}
+                </p>
+              ) : null}
               <p className="mt-4 max-w-lg text-base leading-7 text-brand-cream/80">
                 {collection.bannerCopy}
               </p>

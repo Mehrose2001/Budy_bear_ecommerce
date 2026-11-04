@@ -3,7 +3,9 @@ import { mapBanner, mapCoupon, mapProduct, mapSettings } from "@/lib/mappers";
 import { createServerClient, createServiceClient, createUserClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { getDefaultLegalPage, mergeLegalPage } from "@/data/legalPages";
+import { isMissingColumn, normalizeSeo, withEntitySeo } from "@/data/seo";
 import { normalizeOffer } from "@/lib/storeOffer";
+import { normalizeSeasonalBanners } from "@/lib/seasonalCollection";
 import { getSettings as getMemorySettings, updateSettings as updateMemorySettings } from "@/lib/catalogStore";
 
 function client(accessToken) {
@@ -15,6 +17,87 @@ function client(accessToken) {
 
 function writeClient(accessToken) {
   return createServiceClient() || client(accessToken);
+}
+
+let seasonalBannerColumnAvailable;
+
+function seasonalBannerInput(input) {
+  if (input.seasonalBanner === undefined && input.seasonal_banner === undefined) return null;
+  return normalizeSeasonalBanners(input.seasonalBanner ?? input.seasonal_banner);
+}
+
+async function persistSeasonalBanner(supabase, seasonalBanner) {
+  if (seasonalBannerColumnAvailable !== false) {
+    const columnTry = await supabase
+      .from("store_settings")
+      .update({ seasonal_banner: seasonalBanner })
+      .eq("id", 1);
+    if (!columnTry.error) {
+      seasonalBannerColumnAvailable = true;
+    } else if (/seasonal_banner/i.test(String(columnTry.error.message || columnTry.error.details || ""))) {
+      seasonalBannerColumnAvailable = false;
+    } else {
+      throwIf(columnTry.error, "Unable to update settings.");
+    }
+  }
+
+  const current = await supabase.from("store_settings").select("legal_pages").eq("id", 1).maybeSingle();
+  throwIf(current.error, "Unable to update settings.");
+  const saved = await supabase
+    .from("store_settings")
+    .update({
+      legal_pages: {
+        ...(current.data?.legal_pages || {}),
+        _seasonalBanner: seasonalBanner,
+      },
+    })
+    .eq("id", 1)
+    .select("*")
+    .single();
+  throwIf(saved.error, "Unable to update settings.");
+  return saved.data;
+}
+
+async function persistSeoDocument(supabase, seo) {
+  const columnTry = await supabase.from("store_settings").update({ seo }).eq("id", 1).select("*").single();
+  if (!columnTry.error) return columnTry.data;
+  if (!isMissingColumn(columnTry.error, "seo")) throwIf(columnTry.error, "Unable to save SEO settings.");
+  const current = await supabase.from("store_settings").select("legal_pages").eq("id", 1).maybeSingle();
+  throwIf(current.error, "Unable to save SEO settings.");
+  const saved = await supabase
+    .from("store_settings")
+    .update({
+      legal_pages: { ...(current.data?.legal_pages || {}), _seo: seo },
+    })
+    .eq("id", 1)
+    .select("*")
+    .single();
+  throwIf(saved.error, "Unable to save SEO settings.");
+  return saved.data;
+}
+
+export async function saveStoreSeo(input, accessToken) {
+  const supabase = writeClient(accessToken);
+  const current = await getStoreSettings();
+  const seo = normalizeSeo({ ...normalizeSeo(input), entities: current.seo?.entities });
+  return mapSettings(await persistSeoDocument(supabase, seo));
+}
+
+export async function removeEntitySeo(group, key, accessToken) {
+  if (!key) return null;
+  const supabase = writeClient(accessToken);
+  const current = await getStoreSettings();
+  if (!current?.seo?.entities?.[group]?.[key]) return current;
+  const seo = normalizeSeo(current.seo);
+  delete seo.entities[group][key];
+  return mapSettings(await persistSeoDocument(supabase, seo));
+}
+
+export async function saveEntitySeo(group, key, entry, accessToken) {
+  const supabase = writeClient(accessToken);
+  const current = await getStoreSettings();
+  const seo = withEntitySeo(current.seo, group, key, entry);
+  return mapSettings(await persistSeoDocument(supabase, seo));
 }
 
 export async function getStoreSettings() {
@@ -35,7 +118,8 @@ export async function updateStoreSettings(input, accessToken) {
   };
   const offer = input.offer === undefined ? null : normalizeOffer(input.offer);
   if (offer) payload.offer = offer;
-  const { data, error } = await supabase
+  const seasonalBanner = seasonalBannerInput(input);
+  let { data, error } = await supabase
     .from("store_settings")
     .update(payload)
     .eq("id", 1)
@@ -55,7 +139,8 @@ export async function updateStoreSettings(input, accessToken) {
       .select("*")
       .single();
     throwIf(retry.error, "Unable to update settings.");
-    return mapSettings(retry.data);
+    data = retry.data;
+    error = null;
   }
   if (error && /seasonal_collection/i.test(String(error.message || error.details || ""))) {
     const { seasonal_collection: _season, ...legacy } = payload;
@@ -66,12 +151,14 @@ export async function updateStoreSettings(input, accessToken) {
       .select("*")
       .single();
     throwIf(retry.error, "Unable to update settings.");
+    const saved = seasonalBanner ? await persistSeasonalBanner(supabase, seasonalBanner) : retry.data;
     return {
-      ...mapSettings(retry.data),
+      ...mapSettings(saved),
       seasonalCollection: payload.seasonal_collection,
     };
   }
   throwIf(error, "Unable to update settings.");
+  if (seasonalBanner) data = await persistSeasonalBanner(supabase, seasonalBanner);
   return mapSettings(data);
 }
 

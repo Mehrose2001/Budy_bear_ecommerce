@@ -16,6 +16,26 @@ import {
   getCategoryRecord,
   updateCategory,
 } from "@/services/categoryService";
+import { entryHasContent } from "@/data/seo";
+import { getStoreSettings } from "@/services/contentService";
+
+async function withStoredCategorySeo(categories) {
+  const settings = await getStoreSettings().catch(() => null);
+  const saved = settings?.seo?.entities || {};
+  return categories.map((category) => {
+    const next = { ...category, subcategorySeo: { ...(category.subcategorySeo || {}) } };
+    if (!entryHasContent(next.seo) && entryHasContent(saved.categories?.[category.slug])) {
+      next.seo = saved.categories[category.slug];
+    }
+    Object.entries(saved.subcategories || {}).forEach(([key, entry]) => {
+      const [slug, subSlug] = String(key).split("/");
+      if (slug === category.slug && subSlug && !entryHasContent(next.subcategorySeo[subSlug]) && entryHasContent(entry)) {
+        next.subcategorySeo[subSlug] = entry;
+      }
+    });
+    return next;
+  });
+}
 
 function refreshStoreCategories() {
   invalidateCatalogSnapshot();
@@ -31,10 +51,12 @@ export async function GET(request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     if (isSupabaseConfigured()) {
-      const categories = await getCategories({
-        includeInactive: true,
-        accessToken: getAccessToken(request),
-      });
+      const categories = await withStoredCategorySeo(
+        await getCategories({
+          includeInactive: true,
+          accessToken: getAccessToken(request),
+        })
+      );
       return NextResponse.json({ categories });
     }
     return NextResponse.json({ categories: listMemoryCategories() });

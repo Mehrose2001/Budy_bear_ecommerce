@@ -2,6 +2,8 @@ import { Suspense } from "react";
 import ProductListing from "@/components/product/ProductListing";
 import { listCategories, listProducts } from "@/lib/catalog";
 import { brand } from "@/data/brand";
+import { buildMetadata } from "@/data/seo";
+import { getStorefrontSettings } from "@/lib/catalog";
 
 function ProductsFallback() {
   return (
@@ -22,10 +24,16 @@ function ProductsFallback() {
   );
 }
 
-export const metadata = {
-  title: "Shop All Products",
-  description: `Browse ${brand.name} kids wear and accessories. Filter by category, price, size, and more.`,
-};
+export async function generateMetadata() {
+  const settings = await getStorefrontSettings().catch(() => null);
+  return buildMetadata({
+    seo: settings?.seo,
+    entry: settings?.seo?.pages?.products,
+    path: "/products",
+    fallbackTitle: "Shop All Products",
+    fallbackDescription: `Browse ${brand.name} kids wear and accessories. Filter by category, price, size, and more.`,
+  });
+}
 
 export default async function ProductsPage({ searchParams }) {
   const resolvedSearchParams = await searchParams;

@@ -8,10 +8,12 @@ import {
   mapProduct,
   mapReview,
   mapSettings,
+  normalizeSeasonalBanners,
   productToRow,
 } from "../lib/map.js";
 import { requireSupabase } from "../supabase.js";
 import { getDefaultLegalPage, mergeLegalPage } from "../../../data/legalPages.js";
+import { isMissingColumn, normalizeEntry, normalizeSeo, withEntitySeo } from "../../../data/seo.js";
 
 async function fetchAll(table, orderColumn = "id") {
   const supabase = await requireSupabase();
@@ -86,6 +88,62 @@ export async function listPublishedReviews(productId) {
   return (data || []).map(mapReview);
 }
 
+async function persistSeoDocument(seo) {
+  const supabase = await requireSupabase();
+  const columnTry = await supabase.from("store_settings").update({ seo }).eq("id", 1).select("*").single();
+  if (!columnTry.error) return mapSettings(columnTry.data);
+  if (!isMissingColumn(columnTry.error, "seo")) throw new HttpError(400, columnTry.error.message);
+  const current = await supabase.from("store_settings").select("legal_pages").eq("id", 1).maybeSingle();
+  if (current.error) throw new HttpError(400, current.error.message);
+  const saved = await supabase
+    .from("store_settings")
+    .update({ legal_pages: { ...(current.data?.legal_pages || {}), _seo: seo } })
+    .eq("id", 1)
+    .select("*")
+    .single();
+  if (saved.error) throw new HttpError(400, saved.error.message);
+  return mapSettings(saved.data);
+}
+
+async function readSettingsRow() {
+  const supabase = await requireSupabase();
+  const { data, error } = await supabase.from("store_settings").select("*").eq("id", 1).maybeSingle();
+  if (error) throw new HttpError(400, error.message);
+  return mapSettings(data);
+}
+
+export async function saveStoreSeo(input) {
+  const current = await readSettingsRow();
+  const seo = normalizeSeo({ ...normalizeSeo(input), entities: current?.seo?.entities });
+  invalidateCatalogCache();
+  return persistSeoDocument(seo);
+}
+
+async function saveEntitySeo(group, key, entry) {
+  const current = await readSettingsRow();
+  invalidateCatalogCache();
+  return persistSeoDocument(withEntitySeo(current?.seo, group, key, entry));
+}
+
+async function writeProductRow(supabase, id, row, mode) {
+  let payload = { ...row };
+  const run = () =>
+    mode === "insert"
+      ? supabase.from("products").insert({ id, ...payload }).select("*").single()
+      : supabase.from("products").update(payload).eq("id", Number(id)).select("*").single();
+  let result = await run();
+  if (result.error && /variant_stock/i.test(String(result.error.message || ""))) {
+    delete payload.variant_stock;
+    result = await run();
+  }
+  if (isMissingColumn(result.error, "seo")) {
+    delete payload.seo;
+    result = await run();
+    result.seoStoredSeparately = true;
+  }
+  return result;
+}
+
 export async function createProduct(input) {
   const supabase = await requireSupabase();
   const row = productToRow(input);
@@ -99,14 +157,11 @@ export async function createProduct(input) {
       .limit(1);
     id = Number(rows?.[0]?.id || 100) + 1;
   }
-  const { data, error } = await supabase
-    .from("products")
-    .insert({ id, ...row })
-    .select("*")
-    .single();
-  if (error) throw new HttpError(400, error.message);
+  const result = await writeProductRow(supabase, id, row, "insert");
+  if (result.error) throw new HttpError(400, result.error.message);
+  if (result.seoStoredSeparately && input.seo) await saveEntitySeo("products", result.data.slug, input.seo);
   invalidateCatalogCache();
-  return mapProduct(data);
+  return mapProduct(result.data);
 }
 
 export async function updateProduct(id, input) {
@@ -123,15 +178,11 @@ export async function updateProduct(id, input) {
     best_seller: existing.bestSeller,
     review_count: existing.reviewCount,
   });
-  const { data, error } = await supabase
-    .from("products")
-    .update(row)
-    .eq("id", Number(id))
-    .select("*")
-    .single();
-  if (error) throw new HttpError(400, error.message);
+  const result = await writeProductRow(supabase, id, row, "update");
+  if (result.error) throw new HttpError(400, result.error.message);
+  if (result.seoStoredSeparately && input.seo) await saveEntitySeo("products", result.data.slug, input.seo);
   invalidateCatalogCache();
-  return mapProduct(data);
+  return mapProduct(result.data);
 }
 
 export async function deleteProduct(id) {
@@ -151,14 +202,28 @@ export async function upsertCategory(input) {
     image: input.image,
     subcategories: input.subcategories || [],
   };
-  const { data, error } = await supabase
-    .from("categories")
-    .upsert(row)
-    .select("*")
-    .single();
-  if (error) throw new HttpError(400, error.message);
+  if (input.seo !== undefined) row.seo = normalizeEntry(input.seo);
+  if (input.subcategorySeo !== undefined || input.subcategory_seo !== undefined) {
+    row.subcategory_seo = input.subcategorySeo || input.subcategory_seo || {};
+  }
+  let result = await supabase.from("categories").upsert(row).select("*").single();
+  let storedSeparately = false;
+  if (isMissingColumn(result.error, "seo") || isMissingColumn(result.error, "subcategory_seo")) {
+    delete row.seo;
+    delete row.subcategory_seo;
+    result = await supabase.from("categories").upsert(row).select("*").single();
+    storedSeparately = true;
+  }
+  if (result.error) throw new HttpError(400, result.error.message);
+  if (storedSeparately) {
+    if (input.seo !== undefined) await saveEntitySeo("categories", input.slug, input.seo);
+    const map = input.subcategorySeo || input.subcategory_seo || {};
+    for (const [key, entry] of Object.entries(map)) {
+      await saveEntitySeo("subcategories", `${input.slug}/${key}`, entry);
+    }
+  }
   invalidateCatalogCache();
-  return mapCategory(data);
+  return mapCategory(result.data);
 }
 
 export async function deleteCategory(slug) {
@@ -276,6 +341,40 @@ export async function deleteReview(id) {
   invalidateCatalogCache();
 }
 
+let seasonalBannerColumnAvailable;
+
+async function persistSeasonalBanner(supabase, seasonalBanner) {
+  if (seasonalBannerColumnAvailable !== false) {
+    const columnTry = await supabase
+      .from("store_settings")
+      .update({ seasonal_banner: seasonalBanner })
+      .eq("id", 1);
+    if (!columnTry.error) {
+      seasonalBannerColumnAvailable = true;
+    } else if (/seasonal_banner/i.test(String(columnTry.error.message || columnTry.error.details || ""))) {
+      seasonalBannerColumnAvailable = false;
+    } else {
+      throw new HttpError(400, columnTry.error.message);
+    }
+  }
+
+  const current = await supabase.from("store_settings").select("legal_pages").eq("id", 1).maybeSingle();
+  if (current.error) throw new HttpError(400, current.error.message);
+  const saved = await supabase
+    .from("store_settings")
+    .update({
+      legal_pages: {
+        ...(current.data?.legal_pages || {}),
+        _seasonalBanner: seasonalBanner,
+      },
+    })
+    .eq("id", 1)
+    .select("*")
+    .single();
+  if (saved.error) throw new HttpError(400, saved.error.message);
+  return saved.data;
+}
+
 export async function updateSettings(input) {
   const supabase = await requireSupabase();
   const payload = {
@@ -301,7 +400,11 @@ export async function updateSettings(input) {
           featuredItems: Boolean(input.offer.featuredItems),
         };
   if (offer) payload.offer = offer;
-  const { data, error } = await supabase
+  const seasonalBanner =
+    input.seasonalBanner === undefined && input.seasonal_banner === undefined
+      ? null
+      : normalizeSeasonalBanners(input.seasonalBanner ?? input.seasonal_banner);
+  let { data, error } = await supabase
     .from("store_settings")
     .update(payload)
     .eq("id", 1)
@@ -321,8 +424,8 @@ export async function updateSettings(input) {
       .select("*")
       .single();
     if (retry.error) throw new HttpError(400, retry.error.message);
-    invalidateCatalogCache();
-    return mapSettings(retry.data);
+    data = retry.data;
+    error = null;
   }
   if (error && /seasonal_collection/i.test(String(error.message || ""))) {
     const { seasonal_collection: _season, ...legacy } = payload;
@@ -333,13 +436,15 @@ export async function updateSettings(input) {
       .select("*")
       .single();
     if (retry.error) throw new HttpError(400, retry.error.message);
+    const saved = seasonalBanner ? await persistSeasonalBanner(supabase, seasonalBanner) : retry.data;
     invalidateCatalogCache();
     return {
-      ...mapSettings(retry.data),
+      ...mapSettings(saved),
       seasonalCollection: payload.seasonal_collection,
     };
   }
   if (error) throw new HttpError(400, error.message);
+  if (seasonalBanner) data = await persistSeasonalBanner(supabase, seasonalBanner);
   invalidateCatalogCache();
   return mapSettings(data);
 }

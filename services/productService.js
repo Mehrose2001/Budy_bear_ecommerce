@@ -1,5 +1,7 @@
 import { AppError, throwIf } from "@/lib/errors";
 import { mapProduct, productToRow } from "@/lib/mappers";
+import { isMissingColumn } from "@/data/seo";
+import { removeEntitySeo, saveEntitySeo } from "@/services/contentService";
 import { createServerClient, createUserClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
@@ -64,6 +66,25 @@ export async function getProductBySlug(slug, options = {}) {
   return product;
 }
 
+async function writeProductRow(supabase, id, row, mode) {
+  let payload = { ...row };
+  const run = () =>
+    mode === "insert"
+      ? supabase.from("products").insert({ id, ...payload }).select("*").single()
+      : supabase.from("products").update(payload).eq("id", Number(id)).select("*").single();
+  let result = await run();
+  if (isMissingVariantStockColumn(result.error)) {
+    delete payload.variant_stock;
+    result = await run();
+  }
+  if (isMissingColumn(result.error, "seo")) {
+    delete payload.seo;
+    result = await run();
+    result.seoStoredSeparately = true;
+  }
+  return result;
+}
+
 export async function createProduct(input, accessToken) {
   const supabase = client(accessToken);
   const row = productToRow(input);
@@ -77,19 +98,14 @@ export async function createProduct(input, accessToken) {
       .limit(1);
     id = Number(rows?.[0]?.id || 100) + 1;
   }
-  const { data, error } = await supabase
-    .from("products")
-    .insert({ id, ...row })
-    .select("*")
-    .single();
-  if (isMissingVariantStockColumn(error)) {
-    const { variant_stock: _variantStock, ...legacy } = row;
-    const retry = await supabase.from("products").insert({ id, ...legacy }).select("*").single();
-    throwIf(retry.error, "Unable to create product.");
-    return mapProduct(retry.data);
+  const result = await writeProductRow(supabase, id, row, "insert");
+  throwIf(result.error, "Unable to create product.");
+  if (result.seoStoredSeparately && input.seo) {
+    await saveEntitySeo("products", result.data.slug, input.seo, accessToken);
+  } else if (input.seo !== undefined) {
+    await removeEntitySeo("products", result.data.slug, accessToken);
   }
-  throwIf(error, "Unable to create product.");
-  return mapProduct(data);
+  return mapProduct(result.data);
 }
 
 export async function updateProduct(id, input, accessToken) {
@@ -111,25 +127,14 @@ export async function updateProduct(id, input, accessToken) {
     is_featured: existing.featured,
     is_active: existing.isActive,
   });
-  const { data, error } = await supabase
-    .from("products")
-    .update(row)
-    .eq("id", Number(id))
-    .select("*")
-    .single();
-  if (isMissingVariantStockColumn(error)) {
-    const { variant_stock: _variantStock, ...legacy } = row;
-    const retry = await supabase
-      .from("products")
-      .update(legacy)
-      .eq("id", Number(id))
-      .select("*")
-      .single();
-    throwIf(retry.error, "Unable to update product.");
-    return mapProduct(retry.data);
+  const result = await writeProductRow(supabase, id, row, "update");
+  throwIf(result.error, "Unable to update product.");
+  if (result.seoStoredSeparately && input.seo) {
+    await saveEntitySeo("products", result.data.slug, input.seo, accessToken);
+  } else if (input.seo !== undefined) {
+    await removeEntitySeo("products", result.data.slug, accessToken);
   }
-  throwIf(error, "Unable to update product.");
-  return mapProduct(data);
+  return mapProduct(result.data);
 }
 
 export async function deleteProduct(id, accessToken) {

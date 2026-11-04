@@ -19,6 +19,7 @@ import {
   Package,
   RefreshCw,
   ScrollText,
+  Search,
   Settings,
   Shield,
   ShoppingBag,
@@ -56,6 +57,7 @@ const NAV_ITEMS = [
   { href: "/admin/returns", label: "Return Policy", icon: Undo2 },
   { href: "/admin/refund", label: "Refund Policy", icon: Wallet },
   { href: "/admin/cancellation", label: "Order Cancellation", icon: Ban },
+  { href: "/admin/seo", label: "SEO", icon: Search },
   { href: "/admin/settings", label: "Settings", icon: Settings },
   { href: "/admin/profile", label: "Profile", icon: UserRound },
 ];

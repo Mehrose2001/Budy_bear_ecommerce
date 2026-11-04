@@ -8,6 +8,8 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { adminFetch, adminUploadFile } from "@/lib/adminApi";
 import { slugify } from "@/lib/utils";
+import { emptyEntry } from "@/data/seo";
+import { SeoEntryFields } from "@/components/admin/SeoFields";
 import { useAdminAuth } from "@/context/AdminAuthContext";
 import { useToast } from "@/context/ToastContext";
 
@@ -18,6 +20,8 @@ const emptyForm = {
   description: "",
   subcategories: "",
   image: "",
+  seo: emptyEntry(),
+  subcategorySeo: {},
 };
 
 export default function AdminCategoriesPage() {
@@ -57,6 +61,8 @@ export default function AdminCategoriesPage() {
       description: category.description || "",
       subcategories: (category.subcategories || []).join(", "),
       image: category.image || "",
+      seo: { ...emptyEntry(), ...(category.seo || {}) },
+      subcategorySeo: category.subcategorySeo || {},
     });
     setError("");
     setMode("edit");
@@ -189,6 +195,37 @@ export default function AdminCategoriesPage() {
             value={form.subcategories}
             onChange={(event) => setForm({ ...form, subcategories: event.target.value })}
           />
+          <div className="md:col-span-2 rounded-2xl border border-border bg-neutral-50 p-4">
+            <h4 className="text-base font-black text-brand-primary">Category search listing</h4>
+            <p className="mb-4 mt-1 text-xs text-neutral-500">
+              Optional. Empty fields keep the category name and description.
+            </p>
+            <SeoEntryFields
+              entry={form.seo || emptyEntry()}
+              onChange={(seo) => setForm({ ...form, seo })}
+            />
+          </div>
+          {form.subcategories
+            .split(",")
+            .map((item) => item.trim())
+            .filter(Boolean)
+            .map((name) => {
+              const key = slugify(name);
+              return (
+                <div key={key} className="md:col-span-2 rounded-2xl border border-border p-4">
+                  <h4 className="mb-4 text-base font-black text-brand-primary">{name} search listing</h4>
+                  <SeoEntryFields
+                    entry={{ ...emptyEntry(), ...(form.subcategorySeo?.[key] || {}) }}
+                    onChange={(entry) =>
+                      setForm({
+                        ...form,
+                        subcategorySeo: { ...form.subcategorySeo, [key]: entry },
+                      })
+                    }
+                  />
+                </div>
+              );
+            })}
 
           <div className="md:col-span-2">
             <p className="mb-2 text-sm font-medium text-neutral-800">Slider thumbnail</p>

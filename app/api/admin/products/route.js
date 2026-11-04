@@ -17,6 +17,18 @@ import {
   getProducts,
   updateProduct,
 } from "@/services/productService";
+import { entryHasContent } from "@/data/seo";
+import { getStoreSettings } from "@/services/contentService";
+
+async function withStoredProductSeo(products) {
+  const settings = await getStoreSettings().catch(() => null);
+  const saved = settings?.seo?.entities?.products || {};
+  return products.map((product) =>
+    entryHasContent(product.seo) || !entryHasContent(saved[product.slug])
+      ? product
+      : { ...product, seo: saved[product.slug] }
+  );
+}
 
 export async function GET(request) {
   return withBackend(request, "/admin/products", async () => {
@@ -24,10 +36,12 @@ export async function GET(request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     if (isSupabaseConfigured()) {
-      const products = await getProducts({
-        includeInactive: true,
-        accessToken: getAccessToken(request),
-      });
+      const products = await withStoredProductSeo(
+        await getProducts({
+          includeInactive: true,
+          accessToken: getAccessToken(request),
+        })
+      );
       return NextResponse.json({ products });
     }
     return NextResponse.json({ products: listMemoryProducts() });

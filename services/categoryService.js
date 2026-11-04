@@ -1,5 +1,7 @@
 import { AppError, throwIf } from "@/lib/errors";
 import { mapCategory } from "@/lib/mappers";
+import { isMissingColumn, normalizeEntry } from "@/data/seo";
+import { removeEntitySeo, saveEntitySeo } from "@/services/contentService";
 import { createServerClient, createServiceClient, createUserClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
@@ -49,12 +51,56 @@ export async function getCategoryBySlug(slug, options = {}) {
   return category;
 }
 
+function categorySeoFields(input) {
+  const fields = {};
+  if (input.seo !== undefined) fields.seo = normalizeEntry(input.seo);
+  if (input.subcategorySeo !== undefined || input.subcategory_seo !== undefined) {
+    fields.subcategory_seo = input.subcategorySeo || input.subcategory_seo || {};
+  }
+  return fields;
+}
+
+async function writeCategory(supabase, values, mode, id) {
+  let payload = { ...values };
+  const run = () =>
+    mode === "insert"
+      ? supabase.from("categories").insert(payload).select("*").single()
+      : supabase.from("categories").update(payload).eq("id", id).select("*").maybeSingle();
+  let result = await run();
+  let storedSeparately = false;
+  if (isMissingColumn(result.error, "seo") || isMissingColumn(result.error, "subcategory_seo")) {
+    delete payload.seo;
+    delete payload.subcategory_seo;
+    result = await run();
+    storedSeparately = true;
+  }
+  return { ...result, storedSeparately };
+}
+
+async function clearCategoryEntities(input, accessToken, slug) {
+  if (input.seo !== undefined) await removeEntitySeo("categories", slug, accessToken);
+  const map = input.subcategorySeo || input.subcategory_seo;
+  if (!map || typeof map !== "object") return;
+  for (const key of Object.keys(map)) {
+    await removeEntitySeo("subcategories", `${slug}/${key}`, accessToken);
+  }
+}
+
+async function storeCategoryEntities(input, accessToken, slug) {
+  if (input.seo !== undefined) await saveEntitySeo("categories", slug, input.seo, accessToken);
+  const map = input.subcategorySeo || input.subcategory_seo;
+  if (!map || typeof map !== "object") return;
+  for (const [key, entry] of Object.entries(map)) {
+    await saveEntitySeo("subcategories", `${slug}/${key}`, entry, accessToken);
+  }
+}
+
 export async function createCategory(input, accessToken) {
   const supabase = writeClient(accessToken);
   const slug = String(input.slug || "").trim();
-  const { data, error } = await supabase
-    .from("categories")
-    .insert({
+  const result = await writeCategory(
+    supabase,
+    {
       id: input.id || slug,
       name: input.name,
       slug,
@@ -63,11 +109,14 @@ export async function createCategory(input, accessToken) {
       image_url: input.image || input.image_url || null,
       subcategories: subcategoryList(input.subcategories),
       is_active: input.isActive !== false,
-    })
-    .select("*")
-    .single();
-  throwIf(error, "Unable to create category.");
-  return mapCategory(data);
+      ...categorySeoFields(input),
+    },
+    "insert"
+  );
+  throwIf(result.error, "Unable to create category.");
+  if (result.storedSeparately) await storeCategoryEntities(input, accessToken, slug);
+  else await clearCategoryEntities(input, accessToken, slug);
+  return mapCategory(result.data);
 }
 
 export async function getCategoryRecord(id, options = {}) {
@@ -91,9 +140,9 @@ export async function updateCategory(id, input, accessToken) {
   const existing = await findCategoryRow(supabase, id);
   throwIf(existing.error, "Unable to update category.");
   if (!existing.data) throw new AppError("Category not found", 404);
-  const { data, error } = await supabase
-    .from("categories")
-    .update({
+  const result = await writeCategory(
+    supabase,
+    {
       name: input.name,
       slug: input.slug,
       description: input.description,
@@ -101,12 +150,16 @@ export async function updateCategory(id, input, accessToken) {
       image_url: input.image || input.image_url,
       subcategories: subcategoryList(input.subcategories),
       is_active: input.isActive ?? input.is_active ?? existing.data.is_active,
-    })
-    .eq("id", existing.data.id)
-    .select("*")
-    .maybeSingle();
-  throwIf(error, "Unable to update category.");
-  return mapCategory(data);
+      ...categorySeoFields(input),
+    },
+    "update",
+    existing.data.id
+  );
+  throwIf(result.error, "Unable to update category.");
+  const savedSlug = input.slug || existing.data.slug;
+  if (result.storedSeparately) await storeCategoryEntities(input, accessToken, savedSlug);
+  else await clearCategoryEntities(input, accessToken, savedSlug);
+  return mapCategory(result.data);
 }
 
 export async function deleteCategory(id, accessToken) {

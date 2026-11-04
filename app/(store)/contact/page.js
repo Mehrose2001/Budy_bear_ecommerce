@@ -1,12 +1,21 @@
 import Link from "next/link";
 import { brand } from "@/data/brand";
+import { buildMetadata } from "@/data/seo";
+import { getStorefrontSettings } from "@/lib/catalog";
 import { getWhatsAppChatUrl } from "@/lib/orderNotifications";
 import Breadcrumbs from "@/components/ui/Breadcrumbs";
 import Button from "@/components/ui/Button";
 
-export const metadata = {
-  title: "Contact Us",
-};
+export async function generateMetadata() {
+  const settings = await getStorefrontSettings().catch(() => null);
+  return buildMetadata({
+    seo: settings?.seo,
+    entry: settings?.seo?.pages?.contact,
+    path: "/contact",
+    fallbackTitle: "Contact Us",
+    fallbackDescription: "Questions about an order, size, or delivery? Message Budy Bear on WhatsApp, call, or email.",
+  });
+}
 
 export default function ContactPage() {
   return (

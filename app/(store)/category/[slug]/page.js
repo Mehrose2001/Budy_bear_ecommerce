@@ -1,7 +1,9 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import ProductListing from "@/components/product/ProductListing";
-import { getCategoryBySlug, getProductsByCategory, listCategories } from "@/lib/catalog";
+import { getCategoryBySlug, getProductsByCategory, getStorefrontSettings, listCategories } from "@/lib/catalog";
+import { buildMetadata, chooseEntry } from "@/data/seo";
+import { formatLabel, slugify } from "@/lib/utils";
 
 function CategoryFallback() {
   return (
@@ -22,22 +24,43 @@ function CategoryFallback() {
   );
 }
 
-export async function generateMetadata({ params }) {
+export async function generateMetadata({ params, searchParams }) {
   const { slug } = await params;
+  const query = await searchParams;
   const category = await getCategoryBySlug(slug);
 
   if (!category) {
     return { title: "Category Not Found" };
   }
 
-  return {
-    title: `${category.name} Collection`,
-    description: category.description,
-    openGraph: {
-      title: `${category.name} | Budy Bear`,
-      description: category.description,
-    },
-  };
+  const settings = await getStorefrontSettings().catch(() => null);
+  const subSlug = slugify(String(query?.subcategory || ""));
+  const subName = (category.subcategories || []).find(
+    (name) => slugify(String(name)) === subSlug || String(name) === query?.subcategory
+  );
+  if (subSlug) {
+    const entry = chooseEntry(
+      category.subcategorySeo?.[subSlug] || category.subcategorySeo?.[slugify(String(subName || ""))],
+      settings?.seo?.entities?.subcategories?.[`${category.slug}/${subSlug}`]
+    );
+    return buildMetadata({
+      seo: settings?.seo,
+      entry,
+      path: `/category/${category.slug}?subcategory=${subSlug}`,
+      fallbackTitle: formatLabel(subName || subSlug),
+      fallbackDescription: category.description,
+      fallbackImage: category.image,
+    });
+  }
+
+  return buildMetadata({
+    seo: settings?.seo,
+    entry: chooseEntry(category.seo, settings?.seo?.entities?.categories?.[category.slug]),
+    path: `/category/${category.slug}`,
+    fallbackTitle: `${category.name} Collection`,
+    fallbackDescription: category.description,
+    fallbackImage: category.image,
+  });
 }
 
 export default async function CategoryPage({ params }) {

@@ -30,6 +30,7 @@ import {
   listBanners as listDbBanners,
   listCoupons as listDbCoupons,
   updateStoreSettings,
+  saveStoreSeo,
   upsertStorePage,
   upsertBanner as upsertDbBanner,
   upsertCoupon as upsertDbCoupon,
@@ -74,6 +75,10 @@ export async function GET(request) {
       if (resource === "banners") return NextResponse.json({ banners: await listDbBanners({ includeInactive: true, accessToken: token }) });
       if (resource === "reviews") return NextResponse.json({ reviews: await getAllReviews(token) });
       if (resource === "settings") return NextResponse.json({ settings: await getStoreSettings() });
+      if (resource === "seo") {
+        const settings = await getStoreSettings();
+        return NextResponse.json({ seo: settings?.seo || {} });
+      }
       if (resource === "pages") {
         const slug = searchParams.get("slug");
         return NextResponse.json({ page: await getStorePage(slug) });
@@ -107,6 +112,7 @@ export async function GET(request) {
     if (resource === "banners") return NextResponse.json({ banners: listBanners() });
     if (resource === "reviews") return NextResponse.json({ reviews: listReviews() });
     if (resource === "settings") return NextResponse.json({ settings: getSettings() });
+    if (resource === "seo") return NextResponse.json({ seo: getSettings()?.seo || {} });
     if (resource === "pages") {
       const slug = searchParams.get("slug");
       return NextResponse.json({
@@ -158,6 +164,12 @@ export async function POST(request) {
         revalidatePath("/");
         return NextResponse.json({ settings });
       }
+      if (body.resource === "seo") {
+        const settings = await saveStoreSeo(body.data, token);
+        invalidateCatalogSnapshot();
+        revalidatePath("/", "layout");
+        return NextResponse.json({ settings });
+      }
       if (body.resource === "pages") {
         const page = await upsertStorePage(body.data, token);
         invalidateCatalogSnapshot();
@@ -184,6 +196,15 @@ export async function POST(request) {
       invalidateCatalogSnapshot();
       revalidatePath("/", "layout");
       revalidatePath("/");
+      return NextResponse.json({ settings });
+    }
+    if (body.resource === "seo") {
+      const current = getSettings();
+      const settings = updateSettings({
+        seo: { ...(body.data || {}), entities: current?.seo?.entities },
+      });
+      invalidateCatalogSnapshot();
+      revalidatePath("/", "layout");
       return NextResponse.json({ settings });
     }
     if (body.resource === "pages") {
