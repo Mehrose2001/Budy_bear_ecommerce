@@ -1,43 +1,48 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import { adminFetch } from "@/lib/adminApi";
+import { adminFetch, adminUploadFile } from "@/lib/adminApi";
 import { useAdminAuth } from "@/context/AdminAuthContext";
-import { SEASONAL_COLLECTIONS, normalizeSeasonalCollection } from "@/lib/seasonalCollection";
+import {
+  SEASONAL_COLLECTIONS,
+  normalizeSeasonalBanners,
+  normalizeSeasonalCollection,
+} from "@/lib/seasonalCollection";
 import { cn } from "@/lib/utils";
+
+function formSettings(settings) {
+  return {
+    storeName: settings?.storeName || "",
+    announcement: settings?.announcement || "",
+    supportEmail: settings?.supportEmail || "",
+    supportPhone: settings?.supportPhone || "",
+    seasonalCollection: normalizeSeasonalCollection(settings?.seasonalCollection),
+    seasonalBanner: normalizeSeasonalBanners(settings?.seasonalBanner),
+  };
+}
 
 export default function AdminSettingsPage() {
   const { admin } = useAdminAuth();
-  const [settings, setSettings] = useState({
-    storeName: "",
-    announcement: "",
-    supportEmail: "",
-    supportPhone: "",
-    seasonalCollection: "winter",
-  });
+  const fileInputRef = useRef(null);
+  const [settings, setSettings] = useState(formSettings(null));
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (!admin?.token) return;
     adminFetch("/api/admin/content?resource=settings", {}, admin.token)
-      .then((data) =>
-        setSettings({
-          storeName: data.settings?.storeName || "",
-          announcement: data.settings?.announcement || "",
-          supportEmail: data.settings?.supportEmail || "",
-          supportPhone: data.settings?.supportPhone || "",
-          seasonalCollection: normalizeSeasonalCollection(data.settings?.seasonalCollection),
-        })
-      )
+      .then((data) => setSettings(formSettings(data.settings)))
       .catch(() => {});
   }, [admin?.token]);
 
   const persist = async (next) => {
     setSaving(true);
+    setError("");
     try {
       const data = await adminFetch(
         "/api/admin/content",
@@ -47,17 +52,11 @@ export default function AdminSettingsPage() {
         },
         admin.token
       );
-      if (data.settings) {
-        setSettings({
-          storeName: data.settings.storeName || "",
-          announcement: data.settings.announcement || "",
-          supportEmail: data.settings.supportEmail || "",
-          supportPhone: data.settings.supportPhone || "",
-          seasonalCollection: normalizeSeasonalCollection(data.settings.seasonalCollection),
-        });
-      }
+      if (data.settings) setSettings(formSettings(data.settings));
       setSaved(true);
       window.setTimeout(() => setSaved(false), 2000);
+    } catch (saveError) {
+      setError(saveError.message || "Unable to save settings.");
     } finally {
       setSaving(false);
     }
@@ -75,6 +74,38 @@ export default function AdminSettingsPage() {
   };
 
   const season = normalizeSeasonalCollection(settings.seasonalCollection);
+  const banners = normalizeSeasonalBanners(settings.seasonalBanner);
+  const banner = banners[season];
+  const seasonLabel = SEASONAL_COLLECTIONS[season].label;
+
+  const patchBanner = (patch, seasonId = season) => {
+    setSettings((current) => {
+      const all = normalizeSeasonalBanners(current.seasonalBanner);
+      return {
+        ...current,
+        seasonalBanner: {
+          ...all,
+          [seasonId]: { ...all[seasonId], ...patch },
+        },
+      };
+    });
+  };
+
+  const uploadImage = async (file) => {
+    if (!file) return;
+    const seasonId = season;
+    setError("");
+    setUploading(true);
+    try {
+      const data = await adminUploadFile(file, admin?.token, "seasonal", "banners");
+      patchBanner({ image: data.url }, seasonId);
+    } catch (uploadError) {
+      setError(uploadError.message || "Could not upload the background image.");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   return (
     <div className="h-full min-h-0 overflow-y-auto">
@@ -105,11 +136,11 @@ export default function AdminSettingsPage() {
           onChange={(event) => setSettings({ ...settings, supportPhone: event.target.value })}
         />
 
-        <fieldset>
+        <fieldset className="space-y-4">
           <legend className="mb-2 block text-sm font-medium text-neutral-700">
             Seasonal collection
           </legend>
-          <p className="mb-3 text-xs text-neutral-500">
+          <p className="text-xs text-neutral-500">
             Shown on the home page. Both collections display new arrival products.
           </p>
           <div className="grid grid-cols-2 gap-3">
@@ -118,7 +149,7 @@ export default function AdminSettingsPage() {
                 key={item.id}
                 type="button"
                 onClick={() => setSeason(item.id)}
-                disabled={saving}
+                disabled={saving || uploading}
                 className={cn(
                   "rounded-2xl border px-4 py-3 text-sm font-semibold transition-colors",
                   season === item.id
@@ -131,9 +162,67 @@ export default function AdminSettingsPage() {
               </button>
             ))}
           </div>
+
+          <div>
+            <p className="mb-1 text-sm font-medium text-neutral-700">Background image</p>
+            <p className="mb-3 text-xs text-neutral-500">
+              Seasonal photo for the {seasonLabel} banner. Leave empty to keep the current artwork.
+            </p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+              <div className="relative h-28 w-full overflow-hidden rounded-xl bg-brand-cream ring-1 ring-border sm:h-24 sm:w-40">
+                {banner.image ? (
+                  <img src={banner.image} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <img
+                    src={SEASONAL_COLLECTIONS[season].image}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                )}
+              </div>
+              <div className="flex flex-col gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
+                  className="hidden"
+                  onChange={(event) => uploadImage(event.target.files?.[0])}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={uploading || saving}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {uploading ? "Uploading..." : "Upload from device"}
+                </Button>
+                {banner.image ? (
+                  <button
+                    type="button"
+                    className="text-left text-xs font-semibold text-neutral-500 hover:text-error"
+                    onClick={() => patchBanner({ image: "" })}
+                  >
+                    Remove image
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          </div>
+
+          <Input
+            label="Marketing text"
+            value={banner.text}
+            maxLength={180}
+            placeholder="Summer Sale – Up to 50% OFF"
+            onChange={(event) => patchBanner({ text: event.target.value })}
+          />
+          <p className="-mt-2 text-xs text-neutral-500">
+            Shown on the {seasonLabel} banner. Save settings to publish it.
+          </p>
         </fieldset>
 
-        <Button type="submit" disabled={saving}>
+        {error ? <p className="text-sm text-error">{error}</p> : null}
+        <Button type="submit" disabled={saving || uploading}>
           {saving ? "Saving..." : "Save settings"}
         </Button>
         {saved && <p className="text-sm text-success">Settings saved.</p>}

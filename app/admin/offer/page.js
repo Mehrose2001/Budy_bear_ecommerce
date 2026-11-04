@@ -52,6 +52,7 @@ export default function AdminOfferPage() {
     setSaving(true);
     setError("");
     const nextOffer = normalizeOffer(offer);
+    const { seasonalBanner: _seasonalBanner, ...storeSettings } = settings;
     try {
       const data = await adminFetch(
         "/api/admin/content",
@@ -59,7 +60,7 @@ export default function AdminOfferPage() {
           method: "POST",
           body: JSON.stringify({
             resource: "settings",
-            data: { ...settings, offer: nextOffer },
+            data: { ...storeSettings, offer: nextOffer },
           }),
         },
         admin.token
