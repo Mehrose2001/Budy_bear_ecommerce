@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { formatPrice } from "@/lib/utils";
-import { FREE_DELIVERY_THRESHOLD } from "@/data/store";
+import { useDeliverySettings } from "@/context/DeliverySettingsContext";
 import { LIMITED_TIME_OFFER_LABEL } from "@/lib/storeOffer";
 
 export default function OrderSummary({
@@ -16,13 +16,14 @@ export default function OrderSummary({
   total,
   deliveryMethod,
 }) {
+  const { freeDeliveryThreshold } = useDeliverySettings();
   const saleOff = Number(saleDiscount ?? 0);
   const offerOff = Number(offerDiscount ?? 0);
   const productOff = Number(productDiscount ?? saleOff + offerOff);
   const promoOff = Number(couponDiscount ?? 0);
   const combined = Number(discount ?? productOff + promoOff);
   const payableSubtotal = Math.max(0, subtotal - offerOff - saleOff);
-  const remaining = Math.max(0, FREE_DELIVERY_THRESHOLD - payableSubtotal);
+  const remaining = Math.max(0, freeDeliveryThreshold - payableSubtotal);
 
   return (
     <aside className="rounded-3xl border border-neutral-200 bg-white p-6">

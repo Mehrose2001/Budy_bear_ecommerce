@@ -2,6 +2,7 @@
 
 import { ToastProvider } from "@/context/ToastContext";
 import { CartProvider } from "@/context/CartContext";
+import { DeliverySettingsProvider } from "@/context/DeliverySettingsContext";
 import { StoreOfferProvider } from "@/context/StoreOfferContext";
 import OfferPopup from "@/components/store/OfferPopup";
 import { WishlistProvider } from "@/context/WishlistContext";
@@ -21,6 +22,7 @@ export default function AppProviders({ children }) {
         <AdminAuthProvider>
           <CustomerAuthProvider>
             <StoreOfferProvider>
+            <DeliverySettingsProvider>
             <CartProvider>
               <WishlistProvider>
                 <OrdersProvider>
@@ -34,6 +36,7 @@ export default function AppProviders({ children }) {
                 </OrdersProvider>
               </WishlistProvider>
             </CartProvider>
+            </DeliverySettingsProvider>
             </StoreOfferProvider>
           </CustomerAuthProvider>
         </AdminAuthProvider>

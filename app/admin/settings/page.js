@@ -11,12 +11,16 @@ import {
   normalizeSeasonalBanners,
   normalizeSeasonalCollection,
 } from "@/lib/seasonalCollection";
+import { DEFAULT_DELIVERY_SETTINGS } from "@/lib/deliverySettings";
 import { cn } from "@/lib/utils";
 
 function formSettings(settings) {
   return {
     storeName: settings?.storeName || "",
     announcement: settings?.announcement || "",
+    deliveryFee: settings?.deliveryFee ?? DEFAULT_DELIVERY_SETTINGS.deliveryFee,
+    freeDeliveryThreshold:
+      settings?.freeDeliveryThreshold ?? DEFAULT_DELIVERY_SETTINGS.freeDeliveryThreshold,
     supportEmail: settings?.supportEmail || "",
     supportPhone: settings?.supportPhone || "",
     seasonalCollection: normalizeSeasonalCollection(settings?.seasonalCollection),
@@ -124,6 +128,34 @@ export default function AdminSettingsPage() {
           value={settings.announcement}
           onChange={(event) => setSettings({ ...settings, announcement: event.target.value })}
         />
+        <Input
+          label="Delivery amount (Rs.)"
+          type="number"
+          min="0"
+          step="1"
+          value={settings.deliveryFee}
+          onChange={(event) =>
+            setSettings({ ...settings, deliveryFee: event.target.value })
+          }
+          required
+        />
+        <p className="-mt-2 text-xs text-neutral-500">
+          Standard delivery charge applied when the order is below the free-delivery threshold.
+        </p>
+        <Input
+          label="Amount after delivery applied (Rs.)"
+          type="number"
+          min="0"
+          step="1"
+          value={settings.freeDeliveryThreshold}
+          onChange={(event) =>
+            setSettings({ ...settings, freeDeliveryThreshold: event.target.value })
+          }
+          required
+        />
+        <p className="-mt-2 text-xs text-neutral-500">
+          Minimum order value for free standard delivery across the cart, checkout, and orders.
+        </p>
         <Input
           label="Support email"
           type="email"

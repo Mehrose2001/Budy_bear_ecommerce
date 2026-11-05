@@ -5,6 +5,8 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { getDefaultLegalPage, mergeLegalPage } from "@/data/legalPages";
 import { isMissingColumn, normalizeSeo, withEntitySeo } from "@/data/seo";
 import { normalizeOffer } from "@/lib/storeOffer";
+import { normalizeDeliverySettings } from "@/lib/deliverySettings";
+import { parseStoreJsonField } from "@/lib/storeSettingsJson";
 import { normalizeSeasonalBanners } from "@/lib/seasonalCollection";
 import { getSettings as getMemorySettings, updateSettings as updateMemorySettings } from "@/lib/catalogStore";
 
@@ -24,6 +26,36 @@ let seasonalBannerColumnAvailable;
 function seasonalBannerInput(input) {
   if (input.seasonalBanner === undefined && input.seasonal_banner === undefined) return null;
   return normalizeSeasonalBanners(input.seasonalBanner ?? input.seasonal_banner);
+}
+
+async function persistDeliverySettings(supabase, delivery) {
+  const normalized = normalizeDeliverySettings(delivery);
+  const columnTry = await supabase
+    .from("store_settings")
+    .update({
+      delivery_fee: normalized.deliveryFee,
+      free_delivery_threshold: normalized.freeDeliveryThreshold,
+    })
+    .eq("id", 1);
+  if (columnTry.error && !/delivery_fee|free_delivery_threshold/i.test(String(columnTry.error.message || ""))) {
+    throwIf(columnTry.error, "Unable to update delivery settings.");
+  }
+
+  const current = await supabase.from("store_settings").select("legal_pages").eq("id", 1).maybeSingle();
+  throwIf(current.error, "Unable to update delivery settings.");
+  const saved = await supabase
+    .from("store_settings")
+    .update({
+      legal_pages: {
+        ...(current.data?.legal_pages || {}),
+        _delivery: normalized,
+      },
+    })
+    .eq("id", 1)
+    .select("*")
+    .single();
+  throwIf(saved.error, "Unable to update delivery settings.");
+  return saved.data;
 }
 
 async function persistSeasonalBanner(supabase, seasonalBanner) {
@@ -101,10 +133,38 @@ export async function saveEntitySeo(group, key, entry, accessToken) {
 }
 
 export async function getStoreSettings() {
-  const supabase = client();
+  const supabase = createServiceClient() || client();
   const { data, error } = await supabase.from("store_settings").select("*").eq("id", 1).maybeSingle();
   throwIf(error, "Unable to load settings.", 500);
   return mapSettings(data);
+}
+
+export async function getDeliverySettingsForStorefront() {
+  if (!isSupabaseConfigured()) {
+    const settings = getMemorySettings();
+    return normalizeDeliverySettings({
+      deliveryFee: settings?.deliveryFee,
+      freeDeliveryThreshold: settings?.freeDeliveryThreshold,
+    });
+  }
+
+  const supabase = createServiceClient() || client();
+  throwIf(!supabase, "Supabase is not configured.", 503);
+  const { data, error } = await supabase
+    .from("store_settings")
+    .select("legal_pages")
+    .eq("id", 1)
+    .maybeSingle();
+  throwIf(error, "Unable to load delivery settings.", 500);
+
+  const legal = parseStoreJsonField(data?.legal_pages) || {};
+  const embedded =
+    legal._delivery && typeof legal._delivery === "object" ? legal._delivery : {};
+
+  return normalizeDeliverySettings({
+    deliveryFee: embedded.deliveryFee,
+    freeDeliveryThreshold: embedded.freeDeliveryThreshold,
+  });
 }
 
 export async function updateStoreSettings(input, accessToken) {
@@ -159,7 +219,23 @@ export async function updateStoreSettings(input, accessToken) {
   }
   throwIf(error, "Unable to update settings.");
   if (seasonalBanner) data = await persistSeasonalBanner(supabase, seasonalBanner);
-  return mapSettings(data);
+  if (input.deliveryFee !== undefined || input.freeDeliveryThreshold !== undefined) {
+    data = await persistDeliverySettings(supabase, {
+      deliveryFee: input.deliveryFee,
+      freeDeliveryThreshold: input.freeDeliveryThreshold,
+    });
+  }
+  const mapped = mapSettings(data);
+  if (input.deliveryFee !== undefined || input.freeDeliveryThreshold !== undefined) {
+    return {
+      ...mapped,
+      ...normalizeDeliverySettings({
+        deliveryFee: input.deliveryFee ?? mapped.deliveryFee,
+        freeDeliveryThreshold: input.freeDeliveryThreshold ?? mapped.freeDeliveryThreshold,
+      }),
+    };
+  }
+  return mapped;
 }
 
 export async function listCoupons({ includeInactive = false, accessToken } = {}) {

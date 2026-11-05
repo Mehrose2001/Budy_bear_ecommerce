@@ -1,6 +1,6 @@
 import Button from "@/components/ui/Button";
 import { formatPrice } from "@/lib/utils";
-import { FREE_DELIVERY_THRESHOLD } from "@/data/store";
+import { useDeliverySettings } from "@/context/DeliverySettingsContext";
 import { LIMITED_TIME_OFFER_LABEL } from "@/lib/storeOffer";
 
 export default function CartSummary({
@@ -13,11 +13,12 @@ export default function CartSummary({
   itemCount,
   showCheckout = true,
 }) {
+  const { freeDeliveryThreshold } = useDeliverySettings();
   const saleOff = Number(saleDiscount ?? 0);
   const offerOff = Number(offerDiscount ?? 0);
   const combined = Number(discount ?? saleOff + offerOff);
   const payableSubtotal = Math.max(0, subtotal - offerOff);
-  const remaining = Math.max(0, FREE_DELIVERY_THRESHOLD - payableSubtotal);
+  const remaining = Math.max(0, freeDeliveryThreshold - payableSubtotal);
 
   return (
     <aside className="rounded-3xl border border-neutral-200 bg-white p-6">

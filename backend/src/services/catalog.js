@@ -343,6 +343,51 @@ export async function deleteReview(id) {
 
 let seasonalBannerColumnAvailable;
 
+function normalizeDeliverySettings(input) {
+  const rawFee = input?.deliveryFee ?? input?.deliveryAmount ?? input?.delivery_fee;
+  const rawThreshold =
+    input?.freeDeliveryThreshold ??
+    input?.freeDeliveryMin ??
+    input?.free_delivery_threshold;
+  return {
+    deliveryFee: Math.max(0, Math.round(Number(rawFee ?? 249))),
+    freeDeliveryThreshold: Math.max(0, Math.round(Number(rawThreshold ?? 3000))),
+  };
+}
+
+async function persistDeliverySettings(supabase, delivery) {
+  const normalized = normalizeDeliverySettings(delivery);
+  const columnTry = await supabase
+    .from("store_settings")
+    .update({
+      delivery_fee: normalized.deliveryFee,
+      free_delivery_threshold: normalized.freeDeliveryThreshold,
+    })
+    .eq("id", 1);
+  if (
+    columnTry.error &&
+    !/delivery_fee|free_delivery_threshold/i.test(String(columnTry.error.message || ""))
+  ) {
+    throw new HttpError(400, columnTry.error.message);
+  }
+
+  const current = await supabase.from("store_settings").select("legal_pages").eq("id", 1).maybeSingle();
+  if (current.error) throw new HttpError(400, current.error.message);
+  const saved = await supabase
+    .from("store_settings")
+    .update({
+      legal_pages: {
+        ...(current.data?.legal_pages || {}),
+        _delivery: normalized,
+      },
+    })
+    .eq("id", 1)
+    .select("*")
+    .single();
+  if (saved.error) throw new HttpError(400, saved.error.message);
+  return saved.data;
+}
+
 async function persistSeasonalBanner(supabase, seasonalBanner) {
   if (seasonalBannerColumnAvailable !== false) {
     const columnTry = await supabase
@@ -445,8 +490,24 @@ export async function updateSettings(input) {
   }
   if (error) throw new HttpError(400, error.message);
   if (seasonalBanner) data = await persistSeasonalBanner(supabase, seasonalBanner);
+  if (input.deliveryFee !== undefined || input.freeDeliveryThreshold !== undefined) {
+    data = await persistDeliverySettings(supabase, {
+      deliveryFee: input.deliveryFee,
+      freeDeliveryThreshold: input.freeDeliveryThreshold,
+    });
+  }
   invalidateCatalogCache();
-  return mapSettings(data);
+  const mapped = mapSettings(data);
+  if (input.deliveryFee !== undefined || input.freeDeliveryThreshold !== undefined) {
+    return {
+      ...mapped,
+      ...normalizeDeliverySettings({
+        deliveryFee: input.deliveryFee ?? mapped.deliveryFee,
+        freeDeliveryThreshold: input.freeDeliveryThreshold ?? mapped.freeDeliveryThreshold,
+      }),
+    };
+  }
+  return mapped;
 }
 
 export async function getStorePage(slug) {

@@ -262,7 +262,11 @@ function readSettingsOffer(row) {
   return {
     legalPages: Object.fromEntries(
       Object.entries(legal).filter(
-        ([key]) => key !== "_offer" && key !== "_seasonalBanner" && key !== "_seo"
+        ([key]) =>
+          key !== "_offer" &&
+          key !== "_seasonalBanner" &&
+          key !== "_seo" &&
+          key !== "_delivery"
       )
     ),
     seo: seoHasContent(row?.seo) ? normalizeSeo(row.seo) : normalizeSeo(legal._seo),
@@ -279,6 +283,19 @@ function storefrontSupportEmail(value) {
   return email;
 }
 
+function readDeliverySettings(row, legalPages = {}) {
+  const embedded = legalPages?._delivery;
+  const fee = row?.delivery_fee ?? row?.deliveryFee ?? embedded?.deliveryFee;
+  const threshold =
+    row?.free_delivery_threshold ??
+    row?.freeDeliveryThreshold ??
+    embedded?.freeDeliveryThreshold;
+  return {
+    deliveryFee: Math.max(0, Math.round(Number(fee ?? 249))),
+    freeDeliveryThreshold: Math.max(0, Math.round(Number(threshold ?? 3000))),
+  };
+}
+
 export function mapSettings(row) {
   if (!row) {
     return {
@@ -291,9 +308,12 @@ export function mapSettings(row) {
       legalPages: {},
       offer: normalizeOffer(null),
       seo: normalizeSeo(null),
+      deliveryFee: 249,
+      freeDeliveryThreshold: 3000,
     };
   }
   const stored = readSettingsOffer(row);
+  const rawLegal = row?.legal_pages || row?.legalPages || {};
   return {
     storeName: row.store_name || row.storeName || "Budy Bear",
     announcement: row.announcement || "",
@@ -306,6 +326,7 @@ export function mapSettings(row) {
     legalPages: stored.legalPages,
     offer: stored.offer,
     seo: stored.seo,
+    ...readDeliverySettings(row, rawLegal),
   };
 }
 

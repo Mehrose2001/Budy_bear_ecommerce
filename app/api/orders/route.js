@@ -8,7 +8,11 @@ import { getRequestUser, getBearerToken } from "@/lib/supabase/server";
 import { computeCheckoutTotals } from "@/lib/checkoutTotals";
 import { getStorefrontSettings } from "@/lib/catalog";
 import { normalizeOffer } from "@/lib/storeOffer";
-import { getStoreSettings, validateCoupon } from "@/services/contentService";
+import {
+  getDeliverySettingsForStorefront,
+  getStoreSettings,
+  validateCoupon,
+} from "@/services/contentService";
 import { listCoupons } from "@/lib/catalogStore";
 import { createOrder } from "@/services/orderService";
 
@@ -74,11 +78,18 @@ export async function POST(request) {
     }
 
     let offer = normalizeOffer(null);
+    let deliverySettings = null;
     try {
       const settings = isSupabaseConfigured()
         ? await getStoreSettings()
         : await getStorefrontSettings();
       offer = normalizeOffer(settings?.offer);
+      deliverySettings = isSupabaseConfigured()
+        ? await getDeliverySettingsForStorefront()
+        : {
+            deliveryFee: settings?.deliveryFee,
+            freeDeliveryThreshold: settings?.freeDeliveryThreshold,
+          };
     } catch {
       offer = normalizeOffer(null);
     }
@@ -89,6 +100,7 @@ export async function POST(request) {
       couponPercent,
       couponDiscount: body.couponDiscount || 0,
       deliveryMethod: body.deliveryMethod,
+      deliverySettings,
     });
     const payload = {
       ...body,

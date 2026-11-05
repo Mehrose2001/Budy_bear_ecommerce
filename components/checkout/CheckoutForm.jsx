@@ -8,6 +8,7 @@ import { useCart } from "@/context/CartContext";
 import { useToast } from "@/context/ToastContext";
 import { DELIVERY_METHODS, PAKISTAN_PROVINCES, PAYMENT_METHODS, isExpressAvailable } from "@/data/checkout";
 import { computeCheckoutTotals } from "@/lib/checkoutTotals";
+import { useDeliverySettings } from "@/context/DeliverySettingsContext";
 import { useStoreOffer } from "@/context/StoreOfferContext";
 import { payableUnitPrice } from "@/lib/storeOffer";
 import { emitOrdersChanged } from "@/lib/adminSession";
@@ -58,6 +59,7 @@ export function useCheckoutForm(totals) {
   const router = useRouter();
   const { items, clearCart } = useCart();
   const offer = useStoreOffer();
+  const deliverySettings = useDeliverySettings();
   const { showToast } = useToast();
   const { user, authHeaders } = useCustomerAuth();
   const { rememberGuestOrder } = useOrders();
@@ -122,8 +124,16 @@ export function useCheckoutForm(totals) {
         couponPercent: coupon?.discountPercent,
         couponDiscount,
         deliveryMethod: form.deliveryMethod,
+        deliverySettings,
       }),
-    [checkoutItems, coupon?.discountPercent, couponDiscount, form.deliveryMethod, offer]
+    [
+      checkoutItems,
+      coupon?.discountPercent,
+      couponDiscount,
+      deliverySettings,
+      form.deliveryMethod,
+      offer,
+    ]
   );
 
   const applyCoupon = async () => {

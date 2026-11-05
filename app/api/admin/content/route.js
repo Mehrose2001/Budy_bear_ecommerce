@@ -162,6 +162,8 @@ export async function POST(request) {
         invalidateCatalogSnapshot();
         revalidatePath("/", "layout");
         revalidatePath("/");
+        revalidatePath("/cart");
+        revalidatePath("/checkout");
         return NextResponse.json({ settings });
       }
       if (body.resource === "seo") {
@@ -196,6 +198,8 @@ export async function POST(request) {
       invalidateCatalogSnapshot();
       revalidatePath("/", "layout");
       revalidatePath("/");
+      revalidatePath("/cart");
+      revalidatePath("/checkout");
       return NextResponse.json({ settings });
     }
     if (body.resource === "seo") {

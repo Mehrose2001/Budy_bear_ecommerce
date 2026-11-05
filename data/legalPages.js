@@ -10,6 +10,9 @@ export const LEGAL_PAGE_SLUGS = [
   "cancellation"
 ];
 
+/** Managed in admin but served from dedicated routes (not `/[slug]`). */
+export const MANAGED_CONTENT_SLUGS = ["contact", "size-guide"];
+
 export const LEGAL_PAGES = {
   "about": {
     "slug": "about",
@@ -73,6 +76,20 @@ export const LEGAL_PAGES = {
     "href": "/cancellation",
     "intro": "How to cancel an order before it has been dispatched.",
     "body": "<p>Last updated: 4 November 2026</p><h2>1. When Cancellation Is Available</h2><p>Customers can request cancellation of an online order before it has been dispatched. Please contact Budy Bear as soon as possible. Once an order has been dispatched to the courier, cancellation cannot be guaranteed; the team will review any available options under our Return and Exchange Policies.</p><h2>2. How to Submit a Cancellation Request</h2><p>Send a WhatsApp message to +92 333 0370236. You may also email support@budybear.com. Include your order number, the name and phone number used for the order, and a short statement that you want to cancel. Our team may ask for additional relevant order or payment details to verify the request before confirming cancellation.</p><h2>3. Confirmation and Verification</h2><p>A cancellation request is not final until our team verifies the order and confirms that cancellation is possible. We will advise you whether the order has already been dispatched or whether a cancellation can still be completed. Do not disclose any one-time password (OTP), card PIN or banking password as part of verification.</p><h2>4. Refunds for Prepaid Cancellations</h2><p>If the order was prepaid and the cancellation is verified and approved before dispatch, Budy Bear will process the refund within 4-6 working days after approval. A bank or payment provider may require additional time for the refund to appear in the customer's account.</p><h2>5. Cash on Delivery Orders</h2><p>If a Cash on Delivery order is successfully cancelled before dispatch and no payment has been collected, there is no advance payment to refund. If the order has already been shipped, please speak with our support team about the available options.</p><h2>6. Support Details</h2><p>WhatsApp / phone: +92 333 0370236. Email: support@budybear.com. Working hours: Monday to Saturday, 10:00 AM to 7:00 PM (Pakistan time).</p>"
+  },
+  "contact": {
+    "slug": "contact",
+    "title": "Contact Us",
+    "href": "/contact",
+    "intro": "Questions about an order, size, delivery, or exchange? Reach Budy Bear customer care using the details below.",
+    "body": "<p>Last updated: 5 November 2026</p><h2>Customer support</h2><p>Our team is here to help with orders, sizing, delivery updates, exchanges, and general questions about Budy Bear kidswear.</p><ul><li><strong>WhatsApp / phone:</strong> +92 333 0370236</li><li><strong>Email:</strong> <a href=\"mailto:support@budybear.com\">support@budybear.com</a></li><li><strong>Support hours:</strong> Monday to Saturday, 10:00 AM to 7:00 PM (Pakistan time)</li></ul><h2>Registered office</h2><p>Budy Bear (Private) Limited<br>House # S1, Area 37/D, JamNagar, Landhi #01<br>Karachi, Pakistan</p><h2>Before you message us</h2><p>For faster help, please include your order number (if you have one), the phone number used at checkout, and a short description of your question. For product or delivery issues, clear photos help our team respond quickly.</p><h2>Other helpful pages</h2><ul><li><a href=\"/faqs\">FAQs</a></li><li><a href=\"/track-order\">Track your order</a></li><li><a href=\"/shipping\">Shipping &amp; Delivery Policy</a></li><li><a href=\"/exchange\">Exchange Policy</a></li><li><a href=\"/returns\">Return Policy</a></li><li><a href=\"/complaints\">Customer Complaint Handling Policy</a></li></ul>"
+  },
+  "size-guide": {
+    "slug": "size-guide",
+    "title": "Size Guide",
+    "href": "/size-guide",
+    "intro": "Sizes are listed in months for babies and years for older kids. If your child is between sizes, we recommend choosing the larger size.",
+    "body": "<h2>Baby (months)</h2><p>Common size options include 0-3M, 3-6M, 6-9M, 9-12M, 12-18M, and 18-24M depending on the style. Always check the size picker on the product page for the exact options available.</p><h2>Kids (years)</h2><p>Year sizes such as 2-3Y through older ranges are shown on each product. Fit can vary slightly by fabric and style, so use the measurements below when you are unsure.</p><h2>How to measure</h2><ul><li><strong>Chest:</strong> Measure around the fullest part of the chest, keeping the tape level.</li><li><strong>Waist:</strong> Measure around the natural waist.</li><li><strong>Height:</strong> Measure standing straight without shoes.</li></ul><h2>Need a recommendation?</h2><p>Still unsure? Message us from <a href=\"/contact\">Contact Us</a> with your child&apos;s age, height, and the product name — we will suggest a size.</p>"
   }
 };
 

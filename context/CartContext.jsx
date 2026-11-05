@@ -8,7 +8,8 @@ import {
   useMemo,
   useState,
 } from "react";
-import { FREE_DELIVERY_THRESHOLD, SHIPPING_FEE } from "@/data/store";
+import { useDeliverySettings } from "@/context/DeliverySettingsContext";
+import { resolveShippingCost } from "@/lib/deliverySettings";
 import { readCart, writeCart } from "@/lib/storage";
 import { getEffectivePrice } from "@/lib/productFilters";
 import { getProductColors } from "@/lib/productImages";
@@ -21,6 +22,7 @@ function createLineId(product, size, color) {
 }
 
 export function CartProvider({ children }) {
+  const deliverySettings = useDeliverySettings();
   const [items, setItems] = useState([]);
   const [isReady, setIsReady] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -145,10 +147,7 @@ export function CartProvider({ children }) {
       0
     );
     const discount = saleDiscount;
-    const shipping =
-      payableSubtotal === 0 || payableSubtotal >= FREE_DELIVERY_THRESHOLD
-        ? 0
-        : SHIPPING_FEE;
+    const shipping = resolveShippingCost(payableSubtotal, "standard", deliverySettings);
 
     return {
       listSubtotal,
@@ -160,7 +159,7 @@ export function CartProvider({ children }) {
       total: payableSubtotal + shipping,
       itemCount: pricedItems.reduce((count, item) => count + item.quantity, 0),
     };
-  }, [pricedItems]);
+  }, [pricedItems, deliverySettings]);
 
   const value = {
     items: pricedItems,

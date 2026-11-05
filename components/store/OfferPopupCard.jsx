@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Tag, X } from "lucide-react";
 import { brand } from "@/data/brand";
 import { normalizeOffer } from "@/lib/storeOffer";
@@ -14,9 +14,15 @@ export default function OfferPopupCard({
   preview = false,
   className,
 }) {
+  const router = useRouter();
   const offer = normalizeOffer(rawOffer);
   const message = offer.message || "Every product is included. The discount is already on the price.";
   const image = offer.image;
+
+  const goToSale = () => {
+    onShop?.();
+    router.push("/products?filter=sale");
+  };
 
   return (
     <div
@@ -86,13 +92,13 @@ export default function OfferPopupCard({
             Shop the offer
           </div>
         ) : (
-          <Link
-            href="/products"
-            onClick={onShop}
-            className="mt-4 flex h-12 items-center justify-center rounded-full bg-brand-primary text-sm font-semibold text-white shadow-md transition-colors hover:bg-brand-primary-dark"
+          <button
+            type="button"
+            onClick={goToSale}
+            className="mt-4 flex h-12 w-full items-center justify-center rounded-full bg-brand-primary text-sm font-semibold text-white shadow-md transition-colors hover:bg-brand-primary-dark"
           >
             Shop the offer
-          </Link>
+          </button>
         )}
         {onClose && !preview ? (
           <button

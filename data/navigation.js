@@ -75,13 +75,14 @@ export const footerLinks = {
     { label: "Return Policy", href: "/returns" },
     { label: "Refund Policy", href: "/refund" },
     { label: "Order Cancellation Policy", href: "/cancellation" },
-    { label: "Size Guide", href: "/size-guide" },
+    { label: "Customer Complaint Handling Policy", href: "/complaints" },
   ],
   company: [
     { label: "About Budy Bear", href: "/about" },
     { label: "Terms & Conditions", href: "/terms" },
     { label: "Privacy Policy", href: "/privacy" },
-    { label: "Customer Complaint Handling Policy", href: "/complaints" },
+    { label: "Size Guide", href: "/size-guide" },
+    { label: "Customer Care", href: "/contact" },
   ],
   social: [
     {

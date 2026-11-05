@@ -1,11 +1,12 @@
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import WhatsAppFloat from "@/components/layout/WhatsAppFloat";
+import { DeliveryHydrator } from "@/context/DeliverySettingsContext";
 import { OfferHydrator } from "@/context/StoreOfferContext";
 import { getStorefrontSettings, listCategories } from "@/lib/catalog";
 import { buildFooterShop, buildMainNav } from "@/lib/storeNav";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 export default async function StoreLayout({ children }) {
   const [categories, settings] = await Promise.all([
@@ -18,6 +19,12 @@ export default async function StoreLayout({ children }) {
   return (
     <>
       <OfferHydrator offer={settings?.offer} />
+      <DeliveryHydrator
+        delivery={{
+          deliveryFee: settings?.deliveryFee,
+          freeDeliveryThreshold: settings?.freeDeliveryThreshold,
+        }}
+      />
       <Header navItems={navItems} announcement={settings?.announcement || ""} />
       <main className="flex-1">{children}</main>
       <Footer

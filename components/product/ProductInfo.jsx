@@ -11,7 +11,8 @@ import { useCart } from "@/context/CartContext";
 import { getEffectivePrice } from "@/lib/productFilters";
 import { useToast } from "@/context/ToastContext";
 import { useWishlist } from "@/context/WishlistContext";
-import { COLOR_SWATCHES, FREE_DELIVERY_THRESHOLD } from "@/data/store";
+import { COLOR_SWATCHES } from "@/data/store";
+import { useDeliverySettings } from "@/context/DeliverySettingsContext";
 import { getProductColors } from "@/lib/productImages";
 import {
   firstInStockColor,
@@ -30,6 +31,7 @@ export default function ProductInfo({
   onColorChange,
   onViewFull,
 }) {
+  const { freeDeliveryThreshold } = useDeliverySettings();
   const { addItem } = useCart();
   const { showToast } = useToast();
   const { hasItem, toggleItem } = useWishlist();
@@ -280,7 +282,7 @@ export default function ProductInfo({
               <Truck className="h-4 w-4" /> Delivery
             </p>
             <p className="mt-2 text-sm text-neutral-600">
-              Free delivery on orders above {formatPrice(FREE_DELIVERY_THRESHOLD)}.
+              Free delivery on orders above {formatPrice(freeDeliveryThreshold)}.
               Standard delivery across Pakistan in 3–6 working days.
             </p>
           </div>
