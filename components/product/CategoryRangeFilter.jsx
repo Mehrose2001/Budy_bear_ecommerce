@@ -52,7 +52,7 @@ function CategoryBranch({
         <button
           type="button"
           onClick={() => setIsOpen((current) => !current)}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-neutral-500 hover:bg-brand-cream"
+          className="inline-flex h-8 w-8 shrink-0 items-center justify-center self-center rounded-lg text-neutral-500 hover:bg-brand-cream"
           aria-expanded={isOpen}
           aria-label={`${isOpen ? "Collapse" : "Expand"} ${category.name}`}
         >

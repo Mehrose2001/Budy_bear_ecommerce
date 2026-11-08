@@ -15,7 +15,7 @@ function FilterSection({ title, children, defaultOpen = true }) {
       <button
         type="button"
         onClick={() => setIsOpen((current) => !current)}
-        className="flex w-full items-center justify-between text-left"
+        className="flex w-full items-center justify-between gap-3 text-left"
         aria-expanded={isOpen}
       >
         <span className="text-sm font-bold uppercase tracking-wide text-neutral-900">
@@ -23,7 +23,7 @@ function FilterSection({ title, children, defaultOpen = true }) {
         </span>
         <ChevronDown
           className={cn(
-            "h-4 w-4 text-neutral-500 transition-transform",
+            "h-4 w-4 shrink-0 text-neutral-500 transition-transform",
             isOpen && "rotate-180"
           )}
         />

@@ -13,7 +13,7 @@ export default function InfoPage({ title, intro, children }) {
         {title}
       </h1>
       {intro ? <p className="mt-3 text-neutral-600">{intro}</p> : null}
-      <div className="mt-8 space-y-6 text-sm leading-7 text-neutral-700 [&_h2]:text-base [&_h2]:font-black [&_h2]:text-brand-primary [&_a]:font-semibold [&_a]:text-brand-primary [&_a]:underline [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5">
+      <div className="prose-store mt-8 space-y-6 text-neutral-700 [&_h2]:text-base [&_h2]:font-black [&_h2]:text-brand-primary [&_a]:font-semibold [&_a]:text-brand-primary [&_a]:underline [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5">
         {children}
       </div>
     </div>

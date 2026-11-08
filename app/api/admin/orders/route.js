@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { AppError } from "@/lib/errors";
 import { isAdminRequest, getAccessToken } from "@/lib/adminAuth";
 import {
   deleteOrder as deleteMemoryOrder,
@@ -6,6 +7,7 @@ import {
   updateOrderStatus as updateMemoryOrder,
 } from "@/lib/orders";
 import { ORDER_STATUSES } from "@/data/admin";
+import { invalidateCatalogSnapshot } from "@/lib/catalog";
 import { withBackend } from "@/lib/withBackend";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import {
@@ -59,12 +61,22 @@ export async function DELETE(request) {
     const id = new URL(request.url).searchParams.get("id");
     if (!id) return NextResponse.json({ error: "Order id is required." }, { status: 400 });
     if (isSupabaseConfigured()) {
-      await deleteOrder(id, getAccessToken(request));
-      return NextResponse.json({ ok: true });
+      try {
+        await deleteOrder(id, getAccessToken(request));
+        invalidateCatalogSnapshot();
+        return NextResponse.json({ ok: true, id });
+      } catch (error) {
+        const status = error instanceof AppError ? error.status : 400;
+        const message =
+          (error && typeof error === "object" && error.message) ||
+          "Unable to delete order.";
+        return NextResponse.json({ error: message }, { status });
+      }
     }
     if (!deleteMemoryOrder(id)) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
-    return NextResponse.json({ ok: true });
+    invalidateCatalogSnapshot();
+    return NextResponse.json({ ok: true, id });
   });
 }

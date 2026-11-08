@@ -172,12 +172,13 @@ async function restoreOrderStock(supabase, items) {
 }
 
 export async function deleteOrder(id) {
+  const supabase = await requireSupabase();
   const order = await getOrderById(id);
   if (!order) throw new HttpError(404, "Order not found");
-  const supabase = await requireSupabase();
   await restoreOrderStock(supabase, order.items);
-  const { error } = await supabase.from("orders").delete().eq("id", id);
-  if (error) throw new HttpError(400, error.message);
+  await supabase.from("order_items").delete().eq("order_id", id);
+  const { error: deleteError } = await supabase.from("orders").delete().eq("id", id);
+  if (deleteError) throw new HttpError(400, deleteError.message);
   invalidateCatalogCache();
 }
 

@@ -39,14 +39,23 @@ import { getDefaultLegalPage, mergeLegalPage } from "@/data/legalPages";
 
 export const dynamic = "force-dynamic";
 
+const COMPLETED_STATUSES = new Set(["Delivered", "Shipped"]);
+const PENDING_STATUSES = new Set(["Pending", "Processing", "Confirmed", "Dispatch"]);
+
 function statsFrom(orders, products) {
   const sales = orders
     .filter((order) => order.orderStatus !== "Cancelled")
     .reduce((sum, order) => sum + Number(order.total || 0), 0);
-  const customers = new Set(orders.map((order) => order.customer?.email).filter(Boolean));
+  const customers = new Set(
+    orders
+      .map((order) => order.customer?.email?.trim() || order.customer?.phone?.trim())
+      .filter(Boolean)
+  );
   return {
     totalSales: sales,
     totalOrders: orders.length,
+    pendingOrders: orders.filter((order) => PENDING_STATUSES.has(order.orderStatus)).length,
+    completedOrders: orders.filter((order) => COMPLETED_STATUSES.has(order.orderStatus)).length,
     customers: customers.size,
     products: products.length,
     recentOrders: orders.slice(0, 6),

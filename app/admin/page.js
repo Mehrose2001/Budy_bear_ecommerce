@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ClipboardList, Package, Users, Wallet } from "lucide-react";
+import { CheckCircle2, ClipboardList, Clock3, Package, Users, Wallet } from "lucide-react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import AdminTable from "@/components/admin/AdminTable";
 import { adminFetch } from "@/lib/adminApi";
@@ -12,6 +12,8 @@ import { useAdminAuth } from "@/context/AdminAuthContext";
 const CARDS = [
   { key: "totalSales", label: "Total sales", icon: Wallet },
   { key: "totalOrders", label: "Orders", icon: ClipboardList },
+  { key: "pendingOrders", label: "Pending orders", icon: Clock3 },
+  { key: "completedOrders", label: "Completed orders", icon: CheckCircle2 },
   { key: "customers", label: "Customers", icon: Users },
   { key: "products", label: "Products", icon: Package },
 ];
@@ -38,6 +40,7 @@ export default function AdminDashboardPage() {
     load();
     window.addEventListener("focus", load);
     window.addEventListener("pageshow", load);
+    window.addEventListener("admin-orders-changed", load);
     const onVisible = () => {
       if (document.visibilityState === "visible") load();
     };
@@ -46,6 +49,7 @@ export default function AdminDashboardPage() {
       ignore = true;
       window.removeEventListener("focus", load);
       window.removeEventListener("pageshow", load);
+      window.removeEventListener("admin-orders-changed", load);
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, [admin?.token]);
@@ -59,14 +63,15 @@ export default function AdminDashboardPage() {
 
       {error && <p className="mb-4 text-sm text-error">{error}</p>}
 
-      <div className="grid shrink-0 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid shrink-0 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {CARDS.map((card) => {
           const Icon = card.icon;
           const value = stats?.[card.key];
-          const display =
-            card.key === "totalSales"
+          const display = !stats
+            ? "…"
+            : card.key === "totalSales"
               ? formatPrice(value || 0)
-              : value ?? "—";
+              : value ?? 0;
 
           return (
             <div

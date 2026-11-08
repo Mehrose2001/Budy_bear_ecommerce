@@ -104,15 +104,15 @@ export default function ProductInfo({
         )}
       </div>
 
-      <p className="mt-2 text-sm text-neutral-500">
-        {available > 0
-          ? `${available} in stock${color ? ` for ${color}` : ""}${showSizePicker && size ? ` / ${size}` : ""}`
-          : totalStock > 0
+      {available <= 0 ? (
+        <p className="mt-2 text-sm text-neutral-500">
+          {totalStock > 0
             ? showSizePicker
               ? "This size is sold out"
               : "This option is sold out"
             : "Out of stock"}
-      </p>
+        </p>
+      ) : null}
 
       {colors.length > 0 && (
       <fieldset className="mt-6">
@@ -283,7 +283,7 @@ export default function ProductInfo({
             </p>
             <p className="mt-2 text-sm text-neutral-600">
               Free delivery on orders above {formatPrice(freeDeliveryThreshold)}.
-              Standard delivery across Pakistan in 3–6 working days.
+              Standard delivery across Pakistan in 3–4 working days.
             </p>
           </div>
           <div className="rounded-2xl bg-brand-cream p-4">

@@ -26,7 +26,7 @@ export default async function StoreLayout({ children }) {
         }}
       />
       <Header navItems={navItems} announcement={settings?.announcement || ""} />
-      <main className="flex-1">{children}</main>
+      <main className="flex-1 min-w-0">{children}</main>
       <Footer
         shopLinks={shopLinks}
         supportEmail={settings?.supportEmail}

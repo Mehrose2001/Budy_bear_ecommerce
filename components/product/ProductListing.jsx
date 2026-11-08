@@ -261,7 +261,7 @@ export default function ProductListing({
             <select
               value={sortBy}
               onChange={(event) => updateUrl(filters, event.target.value)}
-              className="h-11 rounded-full border border-neutral-200 bg-white px-4 text-sm outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
+              className="select-field h-11 rounded-full border border-neutral-200 bg-white pl-4 pr-10 text-sm outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
             >
               {SORT_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>

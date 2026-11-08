@@ -4,6 +4,7 @@ import {
   getSupabaseConfig,
   getSupabaseEnvDebug,
 } from "@/lib/supabase/config";
+import { getServiceRoleKey } from "@/lib/supabase/secrets.server";
 import { isSmtpConfigured } from "@/lib/orderEmail";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +20,7 @@ export async function GET() {
     supabaseUrlSet: Boolean(url),
     supabaseAnonSet: Boolean(anonKey),
     env: getSupabaseEnvDebug(),
+    hasServiceRoleKey: Boolean(getServiceRoleKey()),
     smtpConfigured: isSmtpConfigured(),
   });
 }

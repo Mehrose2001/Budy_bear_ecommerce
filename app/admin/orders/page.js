@@ -77,9 +77,17 @@ export default function AdminOrdersPage() {
   };
 
   const removeOrder = async (order) => {
-    if (!window.confirm(`Delete order ${order.id}? This cannot be undone.`)) return;
+    if (
+      !window.confirm(
+        `Permanently delete order ${order.id} for ${formatPrice(order.total)}? This cannot be undone.`
+      )
+    ) {
+      return;
+    }
     setError("");
     setDeletingId(order.id);
+    const previous = orders;
+    setOrders((current) => current.filter((row) => row.id !== order.id));
     try {
       await adminFetch(
         `/api/admin/orders?id=${encodeURIComponent(order.id)}`,
@@ -87,9 +95,16 @@ export default function AdminOrdersPage() {
         admin.token
       );
       showToast(`Order ${order.id} deleted.`);
+      window.dispatchEvent(new Event("admin-orders-changed"));
       await load();
     } catch (deleteError) {
-      setError(deleteError.message || "Unable to delete this order.");
+      setOrders(previous);
+      const message =
+        deleteError && typeof deleteError === "object" && deleteError.message
+          ? deleteError.message
+          : "Unable to delete this order.";
+      setError(message);
+      showToast(message, "error");
     } finally {
       setDeletingId("");
     }

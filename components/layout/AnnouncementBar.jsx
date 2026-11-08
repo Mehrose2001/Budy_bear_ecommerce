@@ -1,16 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { announcementMessages } from "@/data/navigation";
+import { useDeliverySettings } from "@/context/DeliverySettingsContext";
 import useInfiniteMarquee from "@/hooks/useInfiniteMarquee";
-
-function buildMessages(announcement) {
-  const custom = String(announcement || "").trim();
-  const extras = announcementMessages
-    .slice(1)
-    .filter((message) => message.toLowerCase() !== custom.toLowerCase());
-  return custom ? [custom, ...extras] : announcementMessages;
-}
+import { buildAnnouncementMessages } from "@/lib/announcementCopy";
 
 function repeatMessages(messages, copies) {
   const items = [];
@@ -27,7 +20,8 @@ function repeatMessages(messages, copies) {
 }
 
 export default function AnnouncementBar({ announcement = "" }) {
-  const messages = buildMessages(announcement);
+  const { freeDeliveryThreshold } = useDeliverySettings();
+  const messages = buildAnnouncementMessages(announcement, freeDeliveryThreshold);
   const [speed, setSpeed] = useState(0.55);
 
   useEffect(() => {

@@ -184,12 +184,28 @@ async function restoreOrderStock(supabase, items) {
 }
 
 export async function deleteOrder(id, accessToken) {
-  const supabase = createServiceClient() || client(accessToken);
-  const order = await getOrderById(id, accessToken);
-  if (!order) throw new AppError("Order not found", 404);
+  const supabase = createServiceClient();
+  throwIf(
+    !supabase,
+    "Order delete is unavailable. Set SUPABASE_SERVICE_ROLE_KEY on the server.",
+    503
+  );
+
+  const { data, error } = await supabase
+    .from("orders")
+    .select("*, order_items(*)")
+    .eq("id", id)
+    .maybeSingle();
+  throwIf(error, "Unable to load this order.", 500);
+  if (!data) throw new AppError("Order not found", 404);
+
+  const order = withItems(data);
   await restoreOrderStock(supabase, order.items);
-  const { error } = await supabase.from("orders").delete().eq("id", id);
-  throwIf(error, "Unable to delete order.");
+
+  await supabase.from("order_items").delete().eq("order_id", id);
+  const { error: deleteError } = await supabase.from("orders").delete().eq("id", id);
+  throwIf(deleteError, "Unable to delete order.", 400);
+
   invalidateCatalogSnapshot();
   return true;
 }

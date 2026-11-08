@@ -206,10 +206,18 @@ adminRouter.get(
       const sales = orders
         .filter((order) => order.orderStatus !== "Cancelled")
         .reduce((sum, order) => sum + order.total, 0);
-      const customers = new Set(orders.map((order) => order.customer?.email).filter(Boolean));
+      const customers = new Set(
+        orders
+          .map((order) => order.customer?.email?.trim() || order.customer?.phone?.trim())
+          .filter(Boolean)
+      );
+      const pendingStatuses = new Set(["Pending", "Processing", "Confirmed", "Dispatch"]);
+      const completedStatuses = new Set(["Delivered", "Shipped"]);
       return res.json({
         totalSales: sales,
         totalOrders: orders.length,
+        pendingOrders: orders.filter((order) => pendingStatuses.has(order.orderStatus)).length,
+        completedOrders: orders.filter((order) => completedStatuses.has(order.orderStatus)).length,
         customers: customers.size,
         products: snapshot.products.length,
         recentOrders: orders.slice(0, 6),
