@@ -184,12 +184,17 @@ async function restoreOrderStock(supabase, items) {
 }
 
 export async function deleteOrder(id, accessToken) {
-  const supabase = createServiceClient();
-  throwIf(
-    !supabase,
-    "Order delete is unavailable. Set SUPABASE_SERVICE_ROLE_KEY on the server.",
-    503
-  );
+  let supabase = createServiceClient();
+  if (!supabase) {
+    const token = String(accessToken || "").trim();
+    throwIf(
+      !token,
+      "Order delete is unavailable. Add SUPABASE_SERVICE_ROLE_KEY on the server, or sign in again as admin.",
+      503
+    );
+    supabase = createUserClient(token);
+    throwIf(!supabase, "Order delete is unavailable.", 503);
+  }
 
   const { data, error } = await supabase
     .from("orders")

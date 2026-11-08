@@ -21,6 +21,9 @@ export async function GET() {
     supabaseAnonSet: Boolean(anonKey),
     env: getSupabaseEnvDebug(),
     hasServiceRoleKey: Boolean(getServiceRoleKey()),
+    orderDeleteMode: Boolean(getServiceRoleKey())
+      ? "service_role"
+      : "admin_jwt_fallback",
     smtpConfigured: isSmtpConfigured(),
   });
 }
