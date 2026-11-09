@@ -23,7 +23,9 @@ import {
   sortProducts,
   PRODUCTS_PER_PAGE,
 } from "@/lib/productFilters";
-import { formatLabel, formatPrice } from "@/lib/utils";
+import { formatLabel, formatPrice, slugify } from "@/lib/utils";
+import CategoryHeroBanner from "@/components/category/CategoryHeroBanner";
+import { resolveListingBanner } from "@/lib/categoryBanner";
 
 function ActiveFilterChip({ label, onRemove }) {
   return (
@@ -48,6 +50,7 @@ export default function ProductListing({
   presetFilter = null,
   searchQuery = "",
   categories = [],
+  category = null,
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -69,6 +72,13 @@ export default function ProductListing({
   }, [searchParams, lockedCategory, presetFilter]);
 
   const sortBy = searchParams.get("sort") || DEFAULT_SORT;
+
+  const listingBanner = useMemo(() => {
+    if (!category) return null;
+    const fromQuery = slugify(String(searchParams.get("subcategory") || ""));
+    const fromFilter = filters.subcategories[0] ? slugify(filters.subcategories[0]) : "";
+    return resolveListingBanner(category, fromFilter || fromQuery);
+  }, [category, filters.subcategories, searchParams]);
 
   const filteredProducts = useMemo(
     () => sortProducts(applyFilters(products, filters), sortBy),
@@ -225,6 +235,7 @@ export default function ProductListing({
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      {listingBanner ? <CategoryHeroBanner banner={listingBanner} /> : null}
       <Breadcrumbs items={breadcrumbs} />
 
       <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">

@@ -13,20 +13,34 @@ export default function Modal({
   labelledBy,
 }) {
   const dialogRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+  const openedRef = useRef(false);
 
   useEffect(() => {
-    if (!isOpen) return undefined;
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      openedRef.current = false;
+      return undefined;
+    }
 
     const previouslyFocused = document.activeElement;
-    const focusable = dialogRef.current?.querySelector(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-    );
-    focusable?.focus();
+    const shouldFocusOnOpen = !openedRef.current;
+    openedRef.current = true;
+
+    if (shouldFocusOnOpen) {
+      const focusable = dialogRef.current?.querySelector(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      focusable?.focus();
+    }
     document.body.style.overflow = "hidden";
 
     const handleKeyDown = (event) => {
       if (event.key === "Escape") {
-        onClose();
+        onCloseRef.current?.();
         return;
       }
 
@@ -57,7 +71,7 @@ export default function Modal({
       document.removeEventListener("keydown", handleKeyDown);
       previouslyFocused?.focus?.();
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

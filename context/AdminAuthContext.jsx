@@ -21,6 +21,17 @@ import { adminFetch } from "@/lib/adminApi";
 
 const AdminAuthContext = createContext(null);
 
+function adminSessionKey(session) {
+  if (!session?.token) return "";
+  return [
+    session.token,
+    session.refreshToken,
+    session.sessionVersion,
+    session.expiresAt,
+    session.lastActiveAt,
+  ].join("|");
+}
+
 async function verifyAdminSession(session) {
   if (!session?.token || !isAdminSessionFresh(session)) return null;
   let current = session;
@@ -81,7 +92,11 @@ export function AdminAuthProvider({ children }) {
 
   useEffect(() => {
     const sync = () => {
-      setAdmin(readAdminSession());
+      const session = readAdminSession();
+      setAdmin((current) => {
+        if (adminSessionKey(current) === adminSessionKey(session)) return current;
+        return session;
+      });
     };
     const onStorage = (event) => {
       if (event.key !== ADMIN_SESSION_KEY) return;
@@ -100,17 +115,23 @@ export function AdminAuthProvider({ children }) {
       const session = readAdminSession();
       if (session?.refreshToken && accessTokenNeedsRenewal(session.token)) {
         refreshAdminSession().then((next) => {
-          setAdmin(next && isAdminSessionFresh(next) ? next : null);
+          if (!next || !isAdminSessionFresh(next)) {
+            setAdmin((current) => (current?.token ? current : null));
+            return;
+          }
+          setAdmin((current) =>
+            adminSessionKey(current) === adminSessionKey(next) ? current : next
+          );
         });
         return;
       }
       setAdmin((current) => {
         if (!session && !current) return current;
         if (!session) return null;
-        return session;
+        return adminSessionKey(current) === adminSessionKey(session) ? current : session;
       });
     };
-    const id = window.setInterval(poll, 8000);
+    const id = window.setInterval(poll, 20_000);
 
     const onActivity = () => {
       if (!pathname?.startsWith("/admin") || pathname === "/admin/login") return;

@@ -3,26 +3,24 @@
 import { useMemo, useState } from "react";
 import StarRating from "@/components/ui/StarRating";
 import ReviewForm from "@/components/product/ReviewForm";
+import { productRatingSummary } from "@/lib/ratings";
+import { isReviewPublicMapped } from "@/lib/reviewStatus";
 
 export default function ProductReviews({ product, reviews = [] }) {
   const [items, setItems] = useState(Array.isArray(reviews) ? reviews : []);
-  const [summary, setSummary] = useState({
-    rating: Number(product.rating) || 0,
-    count: Number(product.reviewCount) || 0,
-  });
+  const [summary, setSummary] = useState(() => productRatingSummary(product));
 
-  const visible = useMemo(
-    () => items.filter((review) => review.status !== "Hidden" && review.status !== "Pending"),
-    [items]
-  );
+  const visible = useMemo(() => items.filter((review) => isReviewPublicMapped(review)), [items]);
 
   const handleCreated = (review) => {
     if (!review) return;
     setItems((current) => [review, ...current.filter((item) => item.id !== review.id)]);
+    if (review.status === "Pending" || review.status === "Hidden") return;
     setSummary((current) => {
       const count = current.count + 1;
-      const rating = Math.round(((current.rating * current.count + Number(review.rating)) / count) * 100) / 100;
-      return { count, rating };
+      const rating =
+        Math.round(((current.rating * current.count + Number(review.rating)) / count) * 100) / 100;
+      return { ...current, count, rating, hasReviews: count > 0 };
     });
   };
 
@@ -30,10 +28,16 @@ export default function ProductReviews({ product, reviews = [] }) {
     <section id="reviews" className="scroll-mt-36">
       <h2 className="text-2xl font-black text-neutral-900">Reviews</h2>
       <div className="mt-2 flex flex-wrap items-center gap-3">
-        <StarRating rating={summary.rating} size="md" count={summary.count} />
-        <p className="text-sm text-neutral-500">
-          {summary.count} review{summary.count === 1 ? "" : "s"} · {summary.rating || 0} average
-        </p>
+        {summary.hasReviews ? (
+          <>
+            <StarRating rating={summary.rating} size="md" count={summary.count} />
+            <p className="text-sm text-neutral-500">
+              {summary.count} review{summary.count === 1 ? "" : "s"}
+            </p>
+          </>
+        ) : (
+          <p className="text-sm font-medium text-neutral-500">No reviews yet</p>
+        )}
       </div>
 
       <div className="mt-6 space-y-4">

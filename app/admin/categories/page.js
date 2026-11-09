@@ -10,6 +10,8 @@ import { adminFetch, adminUploadFile } from "@/lib/adminApi";
 import { slugify } from "@/lib/utils";
 import { emptyEntry } from "@/data/seo";
 import { SeoEntryFields } from "@/components/admin/SeoFields";
+import CategoryBannerFields from "@/components/admin/CategoryBannerFields";
+import { emptyCategoryBanner } from "@/lib/categoryBanner";
 import { useAdminAuth } from "@/context/AdminAuthContext";
 import { useToast } from "@/context/ToastContext";
 
@@ -22,6 +24,8 @@ const emptyForm = {
   image: "",
   seo: emptyEntry(),
   subcategorySeo: {},
+  banner: emptyCategoryBanner(),
+  subcategoryBanners: {},
 };
 
 export default function AdminCategoriesPage() {
@@ -63,6 +67,8 @@ export default function AdminCategoriesPage() {
       image: category.image || "",
       seo: { ...emptyEntry(), ...(category.seo || {}) },
       subcategorySeo: category.subcategorySeo || {},
+      banner: { ...emptyCategoryBanner(), ...(category.banner || {}) },
+      subcategoryBanners: category.subcategoryBanners || {},
     });
     setError("");
     setMode("edit");
@@ -195,6 +201,30 @@ export default function AdminCategoriesPage() {
             value={form.subcategories}
             onChange={(event) => setForm({ ...form, subcategories: event.target.value })}
           />
+          <CategoryBannerFields
+            form={form}
+            setForm={setForm}
+            adminToken={admin?.token}
+            slugHint={form.slug || form.id}
+          />
+          {form.subcategories
+            .split(",")
+            .map((item) => item.trim())
+            .filter(Boolean)
+            .map((name) => {
+              const key = slugify(name);
+              return (
+                <CategoryBannerFields
+                  key={`banner-${key}`}
+                  form={form}
+                  setForm={setForm}
+                  adminToken={admin?.token}
+                  slugHint={`${form.slug}-${key}`}
+                  subcategorySlug={key}
+                />
+              );
+            })}
+
           <div className="md:col-span-2 rounded-2xl border border-border bg-neutral-50 p-4">
             <h4 className="text-base font-black text-brand-primary">Category search listing</h4>
             <p className="mb-4 mt-1 text-xs text-neutral-500">

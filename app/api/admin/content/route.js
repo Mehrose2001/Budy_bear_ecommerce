@@ -21,7 +21,11 @@ import { revalidatePath } from "next/cache";
 import { invalidateCatalogSnapshot } from "@/lib/catalog";
 import { getProducts } from "@/services/productService";
 import { getAllOrders } from "@/services/orderService";
-import { deleteReview as deleteDbReview, getAllReviews, updateReview as updateDbReview } from "@/services/reviewService";
+import {
+  deleteReview as deleteDbReview,
+  getAllReviews,
+  updateReview as updateDbReview,
+} from "@/services/reviewService";
 import {
   deleteBanner as deleteDbBanner,
   deleteCoupon as deleteDbCoupon,
@@ -38,6 +42,25 @@ import {
 import { getDefaultLegalPage, mergeLegalPage } from "@/data/legalPages";
 
 export const dynamic = "force-dynamic";
+
+async function revalidateAfterReviewChange(productId) {
+  if (!productId) {
+    revalidatePath("/");
+    revalidatePath("/products");
+    return;
+  }
+  try {
+    const products = await getProducts({ includeInactive: true });
+    const product = products.find((item) => Number(item.id) === Number(productId));
+    if (product?.slug) {
+      revalidatePath(`/product/${product.slug}`);
+    }
+  } catch {
+    /* ignore */
+  }
+  revalidatePath("/");
+  revalidatePath("/products");
+}
 
 const COMPLETED_STATUSES = new Set(["Delivered", "Shipped"]);
 const PENDING_STATUSES = new Set(["Pending", "Processing", "Confirmed", "Dispatch"]);
@@ -190,7 +213,7 @@ export async function POST(request) {
       if (body.resource === "reviews") {
         const review = await updateDbReview(body.data.id, body.data, token);
         invalidateCatalogSnapshot();
-        revalidatePath("/");
+        await revalidateAfterReviewChange(review?.productId);
         return NextResponse.json({ review });
       }
       return NextResponse.json({ error: "Unknown resource" }, { status: 400 });
@@ -256,9 +279,9 @@ export async function DELETE(request) {
         revalidatePath("/");
       }
       if (resource === "reviews") {
-        await deleteDbReview(id, token);
+        const deleted = await deleteDbReview(id, token);
         invalidateCatalogSnapshot();
-        revalidatePath("/");
+        await revalidateAfterReviewChange(deleted?.product_id || deleted?.productId);
       }
       return NextResponse.json({ ok: true });
     }

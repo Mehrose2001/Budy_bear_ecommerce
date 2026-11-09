@@ -118,9 +118,10 @@ export default function ProductForm({ product, categories, onCancel, onSave }) {
   const [uploadingId, setUploadingId] = useState("");
   const [error, setError] = useState("");
 
+  const editingId = product?.id ?? "new";
   useEffect(() => {
     setForm(toForm(product));
-  }, [product]);
+  }, [editingId]);
 
   const colorOptions = useMemo(() => {
     return uniqueColors([

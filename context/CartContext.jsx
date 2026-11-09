@@ -13,7 +13,13 @@ import { resolveShippingCost } from "@/lib/deliverySettings";
 import { readCart, writeCart } from "@/lib/storage";
 import { getEffectivePrice } from "@/lib/productFilters";
 import { getProductColors } from "@/lib/productImages";
-import { firstInStockColor, firstInStockSize, getVariantQty } from "@/lib/variantStock";
+import {
+  firstInStockColor,
+  firstInStockSize,
+  getConfiguredSizes,
+  getVariantQty,
+  isSizeSoldOut,
+} from "@/lib/variantStock";
 
 const CartContext = createContext(null);
 
@@ -44,7 +50,10 @@ export function CartProvider({ children }) {
   const addItem = useCallback((product, { size, color, quantity = 1, openDrawer: shouldOpen = true } = {}) => {
     const colors = getProductColors(product);
     const selectedColor = color || firstInStockColor(product, colors);
-    const selectedSize = size || firstInStockSize(product, selectedColor, product.sizes);
+    const configuredSizes = getConfiguredSizes(product);
+    const selectedSize =
+      size || firstInStockSize(product, selectedColor, configuredSizes);
+    if (configuredSizes.length && isSizeSoldOut(product, selectedColor, selectedSize)) return;
     const maxStock = getVariantQty(product, selectedColor, selectedSize);
     if (maxStock <= 0) return;
     const lineId = createLineId(product, selectedSize, selectedColor);

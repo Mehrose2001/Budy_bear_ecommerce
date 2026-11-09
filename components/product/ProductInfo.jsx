@@ -6,7 +6,7 @@ import { Heart, Minus, Plus, Truck, RefreshCcw } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import Modal from "@/components/ui/Modal";
-import StarRating from "@/components/ui/StarRating";
+import ProductRating from "@/components/ui/ProductRating";
 import { useCart } from "@/context/CartContext";
 import { getEffectivePrice } from "@/lib/productFilters";
 import { useToast } from "@/context/ToastContext";
@@ -17,6 +17,7 @@ import { getProductColors } from "@/lib/productImages";
 import {
   firstInStockColor,
   firstInStockSize,
+  getConfiguredSizes,
   getProductStock,
   getVariantQty,
   isColorSoldOut,
@@ -36,10 +37,10 @@ export default function ProductInfo({
   const { showToast } = useToast();
   const { hasItem, toggleItem } = useWishlist();
   const colors = getProductColors(product);
-  const sizes = (product.sizes || []).filter(Boolean);
+  const configuredSizes = getConfiguredSizes(product);
   const [color, setColor] = useState(() => firstInStockColor(product, colors));
   const [size, setSize] = useState(() =>
-    firstInStockSize(product, firstInStockColor(product, colors), sizes)
+    firstInStockSize(product, firstInStockColor(product, colors), configuredSizes)
   );
   const [quantity, setQuantity] = useState(1);
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
@@ -55,21 +56,20 @@ export default function ProductInfo({
   const handleColorChange = (option) => {
     if (isColorSoldOut(product, option)) return;
     setColor(option);
-    setSize(firstInStockSize(product, option, sizes));
+    setSize(firstInStockSize(product, option, configuredSizes));
     setQuantity(1);
     onColorChange?.(option);
   };
 
   const handleAdd = (buyNow = false) => {
-    if (!canAdd) return;
+    if (!canAdd || isSizeSoldOut(product, color, size)) return;
     addItem(product, { size, color, quantity, openDrawer: !buyNow });
     showToast(`${product.name} added to cart`);
     onAdded?.(buyNow);
   };
 
   const quantityOptions = Math.max(1, Math.min(available || 1, 10));
-  const availableSizes = sizes.filter((option) => !isSizeSoldOut(product, color, option));
-  const showSizePicker = availableSizes.length > 0;
+  const showSizePicker = configuredSizes.length > 0;
 
   return (
     <div>
@@ -87,7 +87,7 @@ export default function ProductInfo({
       </p>
 
       <div className="mt-4 flex items-center gap-3">
-        <StarRating rating={product.rating} size="md" count={product.reviewCount} />
+        <ProductRating product={product} size="md" showAverageText />
         <a href="#reviews" className="text-sm font-medium text-brand-primary hover:underline">
           Read reviews
         </a>
@@ -165,25 +165,37 @@ export default function ProductInfo({
           </button>
         </div>
         <div className="flex flex-wrap gap-2">
-          {availableSizes.map((option) => (
-            <button
-              key={option}
-              type="button"
-              onClick={() => {
-                setSize(option);
-                setQuantity(1);
-              }}
-              className={cn(
-                "min-w-12 rounded-xl border px-3 py-2 text-sm font-semibold",
-                size === option
-                  ? "border-brand-primary bg-brand-primary text-white"
-                  : "border-neutral-200 hover:border-brand-primary"
-              )}
-              aria-pressed={size === option}
-            >
-              {option}
-            </button>
-          ))}
+          {configuredSizes.map((option) => {
+            const soldOut = isSizeSoldOut(product, color, option);
+            return (
+              <button
+                key={option}
+                type="button"
+                disabled={soldOut}
+                onClick={() => {
+                  if (soldOut) return;
+                  setSize(option);
+                  setQuantity(1);
+                }}
+                className={cn(
+                  "min-w-12 rounded-xl border px-3 py-2 text-sm font-semibold",
+                  soldOut &&
+                    "cursor-not-allowed border-neutral-200 bg-neutral-100 text-neutral-400 line-through opacity-60",
+                  !soldOut &&
+                    size === option &&
+                    "border-brand-primary bg-brand-primary text-white",
+                  !soldOut &&
+                    size !== option &&
+                    "border-neutral-200 hover:border-brand-primary"
+                )}
+                aria-pressed={!soldOut && size === option}
+                aria-disabled={soldOut}
+                title={soldOut ? "Out of stock" : undefined}
+              >
+                {option}
+              </button>
+            );
+          })}
         </div>
       </fieldset>
       ) : null}
@@ -313,7 +325,7 @@ export default function ProductInfo({
             </tr>
           </thead>
           <tbody>
-            {availableSizes.map((option, index) => (
+            {configuredSizes.map((option, index) => (
               <tr key={option} className="border-b border-neutral-100">
                 <td className="py-2 font-medium">{option}</td>
                 <td className="py-2">{option}</td>

@@ -1,7 +1,16 @@
 import { AppError, throwIf } from "@/lib/errors";
 import { mapCategory } from "@/lib/mappers";
 import { isMissingColumn, normalizeEntry } from "@/data/seo";
-import { removeEntitySeo, saveEntitySeo } from "@/services/contentService";
+import {
+  getCategoryBannerOverlays,
+  persistCategoryBannerOverlay,
+  removeEntitySeo,
+  saveEntitySeo,
+} from "@/services/contentService";
+import {
+  normalizeCategoryBanner,
+  normalizeSubcategoryBannerMap,
+} from "@/lib/categoryBanner";
 import { createServerClient, createServiceClient, createUserClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
@@ -29,13 +38,29 @@ function subcategoryList(value) {
   return [];
 }
 
+function applyBannerOverlay(category, overlays) {
+  if (!category?.slug || !overlays?.[category.slug]) return category;
+  const overlay = overlays[category.slug];
+  return {
+    ...category,
+    banner: overlay.banner || category.banner,
+    subcategoryBanners: overlay.subcategoryBanners || category.subcategoryBanners,
+  };
+}
+
 export async function getCategories({ includeInactive = false, accessToken } = {}) {
   const supabase = client(accessToken);
   let query = supabase.from("categories").select("*").order("name", { ascending: true });
   if (!includeInactive) query = query.eq("is_active", true);
   const { data, error } = await query;
   throwIf(error, "Unable to load categories.", 500);
-  return (data || []).map(mapCategory).filter(Boolean);
+  let overlays = {};
+  try {
+    overlays = await getCategoryBannerOverlays(accessToken);
+  } catch {
+    overlays = {};
+  }
+  return (data || []).map(mapCategory).filter(Boolean).map((category) => applyBannerOverlay(category, overlays));
 }
 
 export async function getCategoryBySlug(slug, options = {}) {
@@ -48,7 +73,14 @@ export async function getCategoryBySlug(slug, options = {}) {
   throwIf(error, "Unable to load category.", 500);
   const category = mapCategory(data);
   if (category && category.isActive === false && !options.includeInactive) return null;
-  return category;
+  if (!category) return null;
+  let overlays = {};
+  try {
+    overlays = await getCategoryBannerOverlays(options.accessToken);
+  } catch {
+    overlays = {};
+  }
+  return applyBannerOverlay(category, overlays);
 }
 
 function categorySeoFields(input) {
@@ -56,6 +88,15 @@ function categorySeoFields(input) {
   if (input.seo !== undefined) fields.seo = normalizeEntry(input.seo);
   if (input.subcategorySeo !== undefined || input.subcategory_seo !== undefined) {
     fields.subcategory_seo = input.subcategorySeo || input.subcategory_seo || {};
+  }
+  return fields;
+}
+
+function categoryBannerFields(input) {
+  const fields = {};
+  if (input.banner !== undefined) fields.banner = normalizeCategoryBanner(input.banner);
+  if (input.subcategoryBanners !== undefined) {
+    fields.subcategory_banners = normalizeSubcategoryBannerMap(input.subcategoryBanners);
   }
   return fields;
 }
@@ -68,13 +109,27 @@ async function writeCategory(supabase, values, mode, id) {
       : supabase.from("categories").update(payload).eq("id", id).select("*").maybeSingle();
   let result = await run();
   let storedSeparately = false;
+  let storedBannersSeparately = false;
+  const bannerPayload = {
+    banner: payload.banner,
+    subcategory_banners: payload.subcategory_banners,
+  };
   if (isMissingColumn(result.error, "seo") || isMissingColumn(result.error, "subcategory_seo")) {
     delete payload.seo;
     delete payload.subcategory_seo;
     result = await run();
     storedSeparately = true;
   }
-  return { ...result, storedSeparately };
+  if (
+    isMissingColumn(result.error, "banner") ||
+    isMissingColumn(result.error, "subcategory_banners")
+  ) {
+    delete payload.banner;
+    delete payload.subcategory_banners;
+    result = await run();
+    storedBannersSeparately = true;
+  }
+  return { ...result, storedSeparately, storedBannersSeparately, bannerPayload };
 }
 
 async function clearCategoryEntities(input, accessToken, slug) {
@@ -110,13 +165,22 @@ export async function createCategory(input, accessToken) {
       subcategories: subcategoryList(input.subcategories),
       is_active: input.isActive !== false,
       ...categorySeoFields(input),
+      ...categoryBannerFields(input),
     },
     "insert"
   );
   throwIf(result.error, "Unable to create category.");
   if (result.storedSeparately) await storeCategoryEntities(input, accessToken, slug);
   else await clearCategoryEntities(input, accessToken, slug);
-  return mapCategory(result.data);
+  if (result.storedBannersSeparately) {
+    await persistCategoryBannerOverlay(slug, input, accessToken);
+  }
+  return applyBannerOverlay(mapCategory(result.data), {
+    [slug]: {
+      banner: normalizeCategoryBanner(input.banner),
+      subcategoryBanners: normalizeSubcategoryBannerMap(input.subcategoryBanners),
+    },
+  });
 }
 
 export async function getCategoryRecord(id, options = {}) {
@@ -126,7 +190,14 @@ export async function getCategoryRecord(id, options = {}) {
   throwIf(existing.error, "Unable to load category.", 500);
   const category = mapCategory(existing.data);
   if (category && category.isActive === false && !options.includeInactive) return null;
-  return category;
+  if (!category) return null;
+  let overlays = {};
+  try {
+    overlays = await getCategoryBannerOverlays(options.accessToken);
+  } catch {
+    overlays = {};
+  }
+  return applyBannerOverlay(category, overlays);
 }
 
 async function findCategoryRow(supabase, id) {
@@ -151,6 +222,7 @@ export async function updateCategory(id, input, accessToken) {
       subcategories: subcategoryList(input.subcategories),
       is_active: input.isActive ?? input.is_active ?? existing.data.is_active,
       ...categorySeoFields(input),
+      ...categoryBannerFields(input),
     },
     "update",
     existing.data.id
@@ -159,7 +231,18 @@ export async function updateCategory(id, input, accessToken) {
   const savedSlug = input.slug || existing.data.slug;
   if (result.storedSeparately) await storeCategoryEntities(input, accessToken, savedSlug);
   else await clearCategoryEntities(input, accessToken, savedSlug);
-  return mapCategory(result.data);
+  if (result.storedBannersSeparately) {
+    await persistCategoryBannerOverlay(savedSlug, input, accessToken);
+  }
+  const mapped = mapCategory(result.data);
+  return applyBannerOverlay(mapped, {
+    [savedSlug]: {
+      banner: normalizeCategoryBanner(input.banner ?? mapped?.banner),
+      subcategoryBanners: normalizeSubcategoryBannerMap(
+        input.subcategoryBanners ?? mapped?.subcategoryBanners
+      ),
+    },
+  });
 }
 
 export async function deleteCategory(id, accessToken) {

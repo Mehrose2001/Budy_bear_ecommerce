@@ -1,17 +1,39 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Modal from "@/components/ui/Modal";
 import ProductGallery from "@/components/product/ProductGallery";
 import ProductInfo from "@/components/product/ProductInfo";
 import { getProductColors } from "@/lib/productImages";
+import { applyReviewStatsToProduct } from "@/lib/ratings";
 
 export default function QuickView({ product, onClose }) {
   const router = useRouter();
+  const [displayProduct, setDisplayProduct] = useState(product);
   const [selectedColor, setSelectedColor] = useState(getProductColors(product)[0]);
 
-  if (!product) return null;
+  useEffect(() => {
+    if (!product?.id) {
+      setDisplayProduct(null);
+      return;
+    }
+    setDisplayProduct(product);
+    setSelectedColor(getProductColors(product)[0]);
+    let ignore = false;
+    fetch(`/api/reviews?productId=${encodeURIComponent(product.id)}`, { cache: "no-store" })
+      .then((response) => response.json())
+      .then((data) => {
+        if (ignore) return;
+        setDisplayProduct(applyReviewStatsToProduct(product, data.reviews || []));
+      })
+      .catch(() => {});
+    return () => {
+      ignore = true;
+    };
+  }, [product]);
+
+  if (!displayProduct) return null;
 
   return (
     <Modal
@@ -22,13 +44,13 @@ export default function QuickView({ product, onClose }) {
       className="max-w-4xl"
     >
       <div className="grid gap-8 md:grid-cols-2">
-        <ProductGallery product={product} compact selectedColor={selectedColor} />
+        <ProductGallery product={displayProduct} compact selectedColor={selectedColor} />
         <ProductInfo
-          product={product}
+          product={displayProduct}
           compact
           onColorChange={setSelectedColor}
           onViewFull={() => {
-            const slug = product.slug;
+            const slug = displayProduct.slug;
             onClose();
             router.push(`/product/${slug}`);
           }}

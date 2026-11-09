@@ -77,6 +77,7 @@ export default async function CategoryPage({ params }) {
     <Suspense fallback={<CategoryFallback />}>
       <ProductListing
         products={categoryProducts}
+        category={category}
         categories={await listCategories().catch(() => [])}
         title={category.name}
         description={category.description}

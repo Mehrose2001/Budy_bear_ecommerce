@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { footerLinks } from "@/data/navigation";
 import { brand } from "@/data/brand";
 import { getWhatsAppChatUrl } from "@/lib/orderNotifications";
 import BrandLogo from "./BrandLogo";
+import FooterLinkSections from "./FooterLinkSections";
 
 function InstagramIcon({ className }) {
   return (
@@ -49,10 +49,12 @@ export default function Footer({ shopLinks, supportEmail, supportPhone }) {
   const email = String(supportEmail || "").trim() || brand.supportEmail;
   const phone = String(supportPhone || "").trim() || brand.whatsapp;
 
+  const shop = shopLinks || footerLinks.shop;
+
   return (
     <footer className="mt-auto border-t border-brand-primary/20 bg-brand-primary-dark text-neutral-300">
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 md:py-12 lg:px-8">
+        <div className="grid gap-6 md:grid-cols-2 md:gap-10 lg:grid-cols-5">
           <div className="lg:col-span-2">
             <BrandLogo size={56} showWordmark variant="light" />
             <p className="mt-4 max-w-sm text-sm leading-6 text-white/70">
@@ -94,62 +96,14 @@ export default function Footer({ shopLinks, supportEmail, supportPhone }) {
             </div>
           </div>
 
-          <div>
-            <h3 className="text-sm font-bold uppercase tracking-wider text-white">
-              Shop
-            </h3>
-            <ul className="mt-4 space-y-3">
-              {(shopLinks || footerLinks.shop).map((item) => (
-                <li key={item.label}>
-                  <Link
-                    href={item.href}
-                    className="text-sm text-white/70 transition-colors hover:text-white"
-                  >
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <h3 className="text-sm font-bold uppercase tracking-wider text-white">
-              Customer Care
-            </h3>
-            <ul className="mt-4 space-y-3">
-              {footerLinks.customerCare.map((item) => (
-                <li key={item.label}>
-                  <Link
-                    href={item.href}
-                    className="text-sm text-white/70 transition-colors hover:text-white"
-                  >
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <h3 className="text-sm font-bold uppercase tracking-wider text-white">
-              Company
-            </h3>
-            <ul className="mt-4 space-y-3">
-              {footerLinks.company.map((item) => (
-                <li key={item.label}>
-                  <Link
-                    href={item.href}
-                    className="text-sm text-white/70 transition-colors hover:text-white"
-                  >
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <FooterLinkSections
+            shopLinks={shop}
+            customerCareLinks={footerLinks.customerCare}
+            companyLinks={footerLinks.company}
+          />
         </div>
 
-        <div className="mt-12 flex flex-col gap-4 border-t border-white/10 pt-8 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-8 flex flex-col gap-4 border-t border-white/10 pt-6 md:mt-12 md:pt-8 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-white/50">
             © {new Date().getFullYear()} {brand.name}. All rights reserved.
           </p>

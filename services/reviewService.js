@@ -1,9 +1,11 @@
 import { AppError, throwIf } from "@/lib/errors";
 import { mapReview } from "@/lib/mappers";
+import { statsFromReviewRows } from "@/lib/ratings";
 import {
   REVIEW_STATUS,
   TESTIMONIAL_LIMIT,
-  isPublicReviewStatus,
+  isHomepageTestimonialRow,
+  isReviewPublicRow,
   wantsTestimonialStatus,
   withTestimonialMarker,
 } from "@/lib/reviewStatus";
@@ -28,71 +30,91 @@ function writeClient(accessToken) {
   return anonClient();
 }
 
-function publishedFilter(query) {
-  return query.or(
-    "is_approved.eq.true,is_testimonial.eq.true,status.eq.Published,status.eq.Testimonial"
-  );
-}
-
 function isMissingColumnError(error, column) {
   const message = String(error?.message || error?.details || "");
   return message.toLowerCase().includes(column.toLowerCase());
 }
 
+let reviewStatsCache = { at: 0, map: new Map() };
+const REVIEW_STATS_TTL_MS = 20_000;
+
+export async function loadPublicReviewStatsMap() {
+  if (!isSupabaseConfigured()) return new Map();
+  if (Date.now() - reviewStatsCache.at < REVIEW_STATS_TTL_MS) {
+    return reviewStatsCache.map;
+  }
+  const supabase = createServiceClient() || anonClient();
+  let { data, error } = await supabase
+    .from("reviews")
+    .select("product_id, rating, status, is_approved, is_testimonial, comment");
+  if (error && isMissingColumnError(error, "is_testimonial")) {
+    ({ data, error } = await supabase
+      .from("reviews")
+      .select("product_id, rating, status, is_approved, comment"));
+  }
+  if (error) {
+    if (reviewStatsCache.map.size > 0) return reviewStatsCache.map;
+    return new Map();
+  }
+  const map = statsFromReviewRows(data || []);
+  const { data: products, error: productsError } = await supabase
+    .from("products")
+    .select("id, rating, review_count");
+  if (!productsError) {
+    for (const row of products || []) {
+      const productId = Number(row.id);
+      const reviewCount = Math.max(0, Number(row.review_count ?? 0));
+      if (!productId || reviewCount <= 0) continue;
+      const rating = Number(row.rating) || 0;
+      const fromReviews = map.get(productId);
+      if (!fromReviews || fromReviews.reviewCount < reviewCount) {
+        map.set(productId, {
+          reviewCount,
+          rating: fromReviews?.rating || rating,
+        });
+      }
+    }
+  }
+  reviewStatsCache = { at: Date.now(), map };
+  return map;
+}
+
+export function invalidateReviewStatsCache() {
+  reviewStatsCache = { at: 0, map: new Map() };
+}
+
 export async function getProductReviews(productId, { includeUnapproved = false } = {}) {
   const supabase = anonClient();
-  let query = supabase
+  const id = Number(productId);
+  if (!id) return [];
+
+  const { data, error } = await supabase
     .from("reviews")
     .select("*")
-    .eq("product_id", Number(productId))
+    .eq("product_id", id)
     .order("created_at", { ascending: false });
-  if (!includeUnapproved) {
-    query = publishedFilter(query);
-  }
-  let { data, error } = await query;
-  if (error && isMissingColumnError(error, "is_testimonial")) {
-    let fallback = supabase
-      .from("reviews")
-      .select("*")
-      .eq("product_id", Number(productId))
-      .order("created_at", { ascending: false });
-    if (!includeUnapproved) {
-      fallback = fallback.or("is_approved.eq.true,status.eq.Published,status.eq.Testimonial");
-    }
-    ({ data, error } = await fallback);
-  }
+
   throwIf(error, "Unable to load reviews.", 500);
-  return (data || []).map(mapReview);
+
+  const rows = (data || []).filter((row) => (includeUnapproved ? true : isReviewPublicRow(row)));
+  return rows.map(mapReview).filter(Boolean);
 }
 
 export async function getTestimonialReviews({ limit = TESTIMONIAL_LIMIT } = {}) {
   const supabase = anonClient();
-  const featured = await supabase
+  const { data, error } = await supabase
     .from("reviews")
     .select("*")
-    .eq("is_testimonial", true)
     .order("created_at", { ascending: false })
-    .limit(limit);
+    .limit(120);
 
-  if (!featured.error) {
-    return (featured.data || []).map(mapReview);
-  }
+  throwIf(error, "Unable to load testimonials.", 500);
 
-  if (!isMissingColumnError(featured.error, "is_testimonial")) {
-    throwIf(featured.error, "Unable to load testimonials.", 500);
-  }
-
-  const published = await supabase
-    .from("reviews")
-    .select("*")
-    .or("is_approved.eq.true,status.eq.Published")
-    .order("created_at", { ascending: false })
-    .limit(80);
-  throwIf(published.error, "Unable to load testimonials.", 500);
-  return (published.data || [])
+  return (data || [])
+    .filter((row) => isHomepageTestimonialRow(row))
+    .slice(0, limit)
     .map(mapReview)
-    .filter((review) => review.isTestimonial)
-    .slice(0, limit);
+    .filter(Boolean);
 }
 
 export async function getAllReviews(accessToken) {
@@ -106,18 +128,18 @@ export async function getAllReviews(accessToken) {
 }
 
 async function refreshProductReviewStats(supabase, productId) {
-  const { data } = await publishedFilter(
-    supabase.from("reviews").select("rating").eq("product_id", Number(productId))
-  );
-  const ratings = (data || []).map((row) => Number(row.rating)).filter((value) => value > 0);
-  const review_count = ratings.length;
-  const rating = review_count
-    ? Math.round((ratings.reduce((sum, value) => sum + value, 0) / review_count) * 100) / 100
-    : 0;
-  await supabase
-    .from("products")
-    .update({ review_count, rating })
-    .eq("id", Number(productId));
+  const id = Number(productId);
+  if (!id) return;
+  const { data, error } = await supabase
+    .from("reviews")
+    .select("product_id, rating, status, is_approved, is_testimonial, comment")
+    .eq("product_id", id);
+  if (error) return;
+  const stats = statsFromReviewRows(data || []).get(id) || { review_count: 0, rating: 0, reviewCount: 0 };
+  const review_count = stats.reviewCount ?? stats.review_count ?? 0;
+  const rating = stats.rating ?? 0;
+  await supabase.from("products").update({ review_count, rating }).eq("id", id);
+  invalidateReviewStatsCache();
 }
 
 export async function createReview(input) {
@@ -148,8 +170,8 @@ export async function createReview(input) {
       rating,
       title,
       comment,
-      status: REVIEW_STATUS.PUBLISHED,
-      is_approved: true,
+      status: REVIEW_STATUS.PENDING,
+      is_approved: false,
       is_testimonial: false,
     };
     const inserted = await service.from("reviews").insert(row).select("*").maybeSingle();
@@ -176,6 +198,7 @@ export async function createReview(input) {
     p_user_id: input.userId || null,
   });
   if (!rpc.error && rpc.data) {
+    invalidateReviewStatsCache();
     return mapReview(rpc.data);
   }
 
@@ -195,12 +218,10 @@ async function enforceTestimonialLimit(supabase, keepId) {
 
   let rows = listed.data;
   if (listed.error && isMissingColumnError(listed.error, "is_testimonial")) {
-    const byStatus = await supabase
-      .from("reviews")
-      .select("id, created_at")
-      .eq("status", REVIEW_STATUS.TESTIMONIAL)
-      .order("created_at", { ascending: false });
-    rows = byStatus.data;
+    const all = await supabase.from("reviews").select("id, created_at, comment, is_testimonial").order("created_at", {
+      ascending: false,
+    });
+    rows = (all.data || []).filter((row) => isHomepageTestimonialRow(row));
   }
 
   const extras = (rows || []).filter((row) => row.id !== keepId).slice(TESTIMONIAL_LIMIT - 1);
@@ -227,9 +248,8 @@ async function enforceTestimonialLimit(supabase, keepId) {
 }
 
 function dbStatus(status) {
-  if (wantsTestimonialStatus(status) || status === REVIEW_STATUS.PUBLISHED) {
-    return REVIEW_STATUS.PUBLISHED;
-  }
+  if (wantsTestimonialStatus(status)) return REVIEW_STATUS.PUBLISHED;
+  if (status === REVIEW_STATUS.PUBLISHED) return REVIEW_STATUS.PUBLISHED;
   if (status === REVIEW_STATUS.HIDDEN) return REVIEW_STATUS.HIDDEN;
   if (status === REVIEW_STATUS.PENDING) return REVIEW_STATUS.PENDING;
   return REVIEW_STATUS.PUBLISHED;
@@ -237,9 +257,10 @@ function dbStatus(status) {
 
 function reviewStatusPatch(status) {
   const featured = wantsTestimonialStatus(status);
+  const published = featured || status === REVIEW_STATUS.PUBLISHED;
   return {
     status: dbStatus(status),
-    is_approved: featured || isPublicReviewStatus(status),
+    is_approved: published,
     is_testimonial: featured,
   };
 }
@@ -274,7 +295,7 @@ export async function updateReview(id, input, accessToken) {
     const current = await supabase.from("reviews").select("*").eq("id", id).maybeSingle();
     const fallback = {
       status: dbStatus(input.status || current.data?.status),
-      is_approved: featured || current.data?.is_approved === true,
+      is_approved: featured || input.status === REVIEW_STATUS.PUBLISHED || Boolean(input.isApproved),
       comment: withTestimonialMarker(
         input.comment ?? current.data?.comment,
         featured
@@ -307,11 +328,14 @@ export async function deleteReview(id, accessToken) {
     .from("reviews")
     .delete()
     .eq("id", id)
-    .select("product_id")
+    .select("product_id, product_name")
     .maybeSingle();
   throwIf(error, "Unable to delete review.");
   if (data?.product_id) {
     await refreshProductReviewStats(supabase, data.product_id);
   }
-  return true;
+  invalidateReviewStatsCache();
+  return data
+    ? { product_id: data.product_id, productId: Number(data.product_id) }
+    : true;
 }

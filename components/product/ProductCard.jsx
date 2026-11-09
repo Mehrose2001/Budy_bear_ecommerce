@@ -13,7 +13,7 @@ import { useWishlist } from "@/context/WishlistContext";
 import { getEffectivePrice } from "@/lib/productFilters";
 import { formatPrice, getDiscountPercent, cn } from "@/lib/utils";
 import { getProductStock } from "@/lib/variantStock";
-import StarRating from "@/components/ui/StarRating";
+import ProductRating from "@/components/ui/ProductRating";
 
 export default function ProductCard({ product, className }) {
   const [isHovered, setIsHovered] = useState(false);
@@ -153,7 +153,7 @@ export default function ProductCard({ product, className }) {
           </h3>
         </Link>
         <div className="mt-2">
-          <StarRating rating={product.rating} count={product.reviewCount} />
+          <ProductRating product={product} />
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <span className="text-base font-bold text-neutral-900">

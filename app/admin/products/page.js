@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import AdminTable from "@/components/admin/AdminTable";
 import ProductForm from "@/components/admin/ProductForm";
@@ -55,6 +55,16 @@ export default function AdminProductsPage() {
 
   const filtered = products.filter((product) =>
     product.name.toLowerCase().includes(query.toLowerCase())
+  );
+
+  const closeModal = useCallback(() => {
+    setOpen(false);
+    setEditing(null);
+  }, []);
+
+  const formKey = useMemo(
+    () => (open ? (editing?.id != null ? `edit-${editing.id}` : "new") : "closed"),
+    [open, editing?.id]
   );
 
   return (
@@ -154,14 +164,15 @@ export default function AdminProductsPage() {
 
       <Modal
         isOpen={open}
-        onClose={() => setOpen(false)}
+        onClose={closeModal}
         title={editing ? "Edit product" : "Add product"}
         className="max-w-4xl"
       >
         <ProductForm
+          key={formKey}
           product={editing}
           categories={categories}
-          onCancel={() => setOpen(false)}
+          onCancel={closeModal}
           onSave={saveProduct}
         />
       </Modal>

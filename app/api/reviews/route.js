@@ -41,7 +41,7 @@ export async function POST(request) {
         author: body.author || user?.name || "Customer",
       });
       invalidateCatalogSnapshot();
-      return NextResponse.json({ review }, { status: 201 });
+      return NextResponse.json({ review, pending: review?.status === "Pending" }, { status: 201 });
     }
     const review = addReview({
       ...body,

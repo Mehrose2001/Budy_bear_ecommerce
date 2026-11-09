@@ -6,6 +6,49 @@ import AdminTable from "@/components/admin/AdminTable";
 import { adminFetch } from "@/lib/adminApi";
 import { useAdminAuth } from "@/context/AdminAuthContext";
 
+function StockField({ product, onSave }) {
+  const [value, setValue] = useState(String(product.stock ?? 0));
+  const [dirty, setDirty] = useState(false);
+
+  useEffect(() => {
+    setValue(String(product.stock ?? 0));
+    setDirty(false);
+  }, [product.id, product.stock]);
+
+  const commit = () => {
+    const next = Math.max(0, Number(value) || 0);
+    if (next === Number(product.stock)) {
+      setDirty(false);
+      return;
+    }
+    onSave(product, next).finally(() => setDirty(false));
+  };
+
+  return (
+    <input
+      type="number"
+      min="0"
+      value={value}
+      onChange={(event) => {
+        setValue(event.target.value);
+        setDirty(true);
+      }}
+      onBlur={() => {
+        if (dirty) commit();
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          commit();
+          event.currentTarget.blur();
+        }
+      }}
+      className="h-10 w-24 rounded-xl border border-border px-3"
+      aria-label={`Stock for ${product.name}`}
+    />
+  );
+}
+
 export default function AdminInventoryPage() {
   const { admin } = useAdminAuth();
   const [products, setProducts] = useState([]);
@@ -29,7 +72,9 @@ export default function AdminInventoryPage() {
       },
       admin.token
     );
-    await load();
+    setProducts((current) =>
+      current.map((item) => (item.id === product.id ? { ...item, stock } : item))
+    );
   };
 
   return (
@@ -58,23 +103,16 @@ export default function AdminInventoryPage() {
                     <p className="text-xs text-neutral-600">
                       {Object.entries(product.variantStock)
                         .map(([color, sizes]) => {
-                          const total = Object.values(sizes).reduce((sum, qty) => sum + Number(qty || 0), 0);
+                          const total = Object.values(sizes).reduce(
+                            (sum, qty) => sum + Number(qty || 0),
+                            0
+                          );
                           return `${color} ${total}`;
                         })
                         .join(" · ")}
                     </p>
                   ) : (
-                    <input
-                      type="number"
-                      min="0"
-                      defaultValue={product.stock}
-                      key={`${product.id}-${product.stock}`}
-                      onBlur={(event) => {
-                        const next = Number(event.target.value);
-                        if (next !== product.stock) updateStock(product, next);
-                      }}
-                      className="h-10 w-24 rounded-xl border border-border px-3"
-                    />
+                    <StockField product={product} onSave={updateStock} />
                   )}
                 </td>
                 <td className="px-4 py-3">

@@ -4,6 +4,8 @@ import { isMissingColumn } from "@/data/seo";
 import { removeEntitySeo, saveEntitySeo } from "@/services/contentService";
 import { createServerClient, createUserClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { mergeProductReviewStats } from "@/lib/ratings";
+import { loadPublicReviewStatsMap } from "@/services/reviewService";
 
 function client(accessToken) {
   if (!isSupabaseConfigured()) {
@@ -23,7 +25,9 @@ export async function getProducts({ includeInactive = false, accessToken } = {})
   if (!includeInactive) query = query.eq("is_active", true);
   const { data, error } = await query;
   throwIf(error, "Unable to load products.", 500);
-  return (data || []).map(mapProduct);
+  const products = (data || []).map(mapProduct);
+  const statsMap = await loadPublicReviewStatsMap();
+  return products.map((product) => mergeProductReviewStats(product, statsMap));
 }
 
 export async function getProductById(id, options = {}) {
@@ -50,7 +54,8 @@ export async function getRelatedProducts(product, limit = 8) {
     .neq("id", Number(product.id))
     .limit(limit);
   throwIf(error, "Unable to load related products.", 500);
-  return (data || []).map(mapProduct);
+  const statsMap = await loadPublicReviewStatsMap();
+  return (data || []).map(mapProduct).map((item) => mergeProductReviewStats(item, statsMap));
 }
 
 export async function getProductBySlug(slug, options = {}) {
@@ -63,7 +68,9 @@ export async function getProductBySlug(slug, options = {}) {
   throwIf(error, "Unable to load product.", 500);
   const product = mapProduct(data);
   if (product && product.isActive === false && !options.includeInactive) return null;
-  return product;
+  if (!product) return null;
+  const statsMap = await loadPublicReviewStatsMap();
+  return mergeProductReviewStats(product, statsMap);
 }
 
 async function writeProductRow(supabase, id, row, mode) {

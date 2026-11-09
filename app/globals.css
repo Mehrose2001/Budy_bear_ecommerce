@@ -37,6 +37,12 @@
   --shadow-sm: 0 1px 2px 0 rgb(22 50 79 / 0.06);
   --shadow-md: 0 8px 18px -8px rgb(22 50 79 / 0.18);
   --shadow-lg: 0 16px 30px -12px rgb(22 50 79 / 0.22);
+
+  --space-section-y: 3.5rem;
+  --space-section-y-lg: 4.5rem;
+  --motion-fast: 180ms;
+  --motion-base: 240ms;
+  --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @theme inline {
@@ -76,6 +82,35 @@
 
 html {
   scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.store-section {
+  padding-block: var(--space-section-y);
+}
+
+@media (min-width: 1024px) {
+  .store-section {
+    padding-block: var(--space-section-y-lg);
+  }
+}
+
+.ui-transition {
+  transition-duration: var(--motion-base);
+  transition-timing-function: var(--motion-ease);
 }
 
 body {

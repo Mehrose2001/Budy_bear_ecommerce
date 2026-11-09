@@ -7,6 +7,10 @@ import { isMissingColumn, normalizeSeo, withEntitySeo } from "@/data/seo";
 import { normalizeOffer } from "@/lib/storeOffer";
 import { normalizeDeliverySettings } from "@/lib/deliverySettings";
 import { parseStoreJsonField } from "@/lib/storeSettingsJson";
+import {
+  normalizeCategoryBanner,
+  normalizeSubcategoryBannerMap,
+} from "@/lib/categoryBanner";
 import { normalizeSeasonalBanners } from "@/lib/seasonalCollection";
 import { getSettings as getMemorySettings, updateSettings as updateMemorySettings } from "@/lib/catalogStore";
 
@@ -428,4 +432,60 @@ export async function removeWishlistItem(userId, productId, accessToken) {
     .eq("user_id", userId)
     .eq("product_id", Number(productId));
   throwIf(error, "Unable to update saved favourites.");
+}
+
+const CATEGORY_BANNER_STORE_KEY = "_categoryBanners";
+
+export async function getCategoryBannerOverlays(accessToken) {
+  if (!isSupabaseConfigured()) {
+    const legal = parseStoreJsonField(getMemorySettings()?.legalPages) || {};
+    return legal[CATEGORY_BANNER_STORE_KEY] || {};
+  }
+  const supabase = client(accessToken);
+  const { data, error } = await supabase
+    .from("store_settings")
+    .select("legal_pages")
+    .eq("id", 1)
+    .maybeSingle();
+  throwIf(error, "Unable to load category banners.", 500);
+  const legal = parseStoreJsonField(data?.legal_pages) || {};
+  return legal[CATEGORY_BANNER_STORE_KEY] || {};
+}
+
+export async function persistCategoryBannerOverlay(slug, input, accessToken) {
+  const categorySlug = String(slug || "").trim();
+  if (!categorySlug) return;
+
+  const entry = {
+    banner: normalizeCategoryBanner(input.banner),
+    subcategoryBanners: normalizeSubcategoryBannerMap(input.subcategoryBanners),
+  };
+
+  if (!isSupabaseConfigured()) {
+    const memory = getMemorySettings();
+    const legal = parseStoreJsonField(memory?.legalPages) || {};
+    updateMemorySettings({
+      legalPages: {
+        ...legal,
+        [CATEGORY_BANNER_STORE_KEY]: {
+          ...(legal[CATEGORY_BANNER_STORE_KEY] || {}),
+          [categorySlug]: entry,
+        },
+      },
+    });
+    return;
+  }
+
+  const supabase = writeClient(accessToken);
+  const current = await supabase.from("store_settings").select("legal_pages").eq("id", 1).maybeSingle();
+  const legal = parseStoreJsonField(current.data?.legal_pages) || {};
+  const next = {
+    ...legal,
+    [CATEGORY_BANNER_STORE_KEY]: {
+      ...(legal[CATEGORY_BANNER_STORE_KEY] || {}),
+      [categorySlug]: entry,
+    },
+  };
+  const { error } = await supabase.from("store_settings").update({ legal_pages: next }).eq("id", 1);
+  throwIf(error, "Unable to save category banner.");
 }
