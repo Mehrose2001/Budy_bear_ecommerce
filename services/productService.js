@@ -1,6 +1,7 @@
 import { AppError, throwIf } from "@/lib/errors";
 import { mapProduct, productToRow } from "@/lib/mappers";
 import { isMissingColumn } from "@/data/seo";
+import { parseSubcategoryValue } from "@/lib/productSubcategories";
 import { removeEntitySeo, saveEntitySeo } from "@/services/contentService";
 import { createServerClient, createUserClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -75,20 +76,33 @@ export async function getProductBySlug(slug, options = {}) {
 
 async function writeProductRow(supabase, id, row, mode) {
   let payload = { ...row };
+  let seoStoredSeparately = false;
   const run = () =>
     mode === "insert"
       ? supabase.from("products").insert({ id, ...payload }).select("*").single()
       : supabase.from("products").update(payload).eq("id", Number(id)).select("*").single();
   let result = await run();
-  if (isMissingVariantStockColumn(result.error)) {
-    delete payload.variant_stock;
+  for (let attempt = 0; attempt < 3 && result.error; attempt += 1) {
+    let changed = false;
+    if (isMissingVariantStockColumn(result.error)) {
+      delete payload.variant_stock;
+      changed = true;
+    }
+    if (isMissingColumn(result.error, "subcategories")) {
+      const list = parseSubcategoryValue(payload.subcategories);
+      delete payload.subcategories;
+      payload.subcategory = list.length > 1 ? JSON.stringify(list) : list[0] || "";
+      changed = true;
+    }
+    if (isMissingColumn(result.error, "seo")) {
+      delete payload.seo;
+      seoStoredSeparately = true;
+      changed = true;
+    }
+    if (!changed) break;
     result = await run();
   }
-  if (isMissingColumn(result.error, "seo")) {
-    delete payload.seo;
-    result = await run();
-    result.seoStoredSeparately = true;
-  }
+  result.seoStoredSeparately = seoStoredSeparately;
   return result;
 }
 

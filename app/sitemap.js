@@ -26,7 +26,7 @@ export default async function sitemap() {
   }));
 
   const productRoutes = (products || [])
-    .filter((product) => product?.slug)
+    .filter((product) => product?.slug && product.isActive !== false)
     .map((product) => ({
       url: `${base}/product/${product.slug}`,
       changeFrequency: "weekly",
@@ -52,5 +52,10 @@ export default async function sitemap() {
       }))
   );
 
-  return [...staticRoutes, ...categoryRoutes, ...subcategoryRoutes, ...productRoutes];
+  const seen = new Set();
+  return [...staticRoutes, ...categoryRoutes, ...subcategoryRoutes, ...productRoutes].filter((entry) => {
+    if (!entry?.url || seen.has(entry.url)) return false;
+    seen.add(entry.url);
+    return true;
+  });
 }

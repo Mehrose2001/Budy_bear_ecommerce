@@ -1,8 +1,20 @@
 import Link from "next/link";
 import InfoPage from "@/components/layout/InfoPage";
 import { brand } from "@/data/brand";
+import { buildMetadata } from "@/data/seo";
+import { getStorefrontSettings } from "@/lib/catalog";
 
-export const metadata = { title: "FAQs" };
+export async function generateMetadata() {
+  const settings = await getStorefrontSettings().catch(() => null);
+  return buildMetadata({
+    seo: settings?.seo,
+    entry: settings?.seo?.pages?.faqs,
+    path: "/faqs",
+    fallbackTitle: "FAQs",
+    fallbackDescription:
+      "Answers about Cash on Delivery, delivery times, sizing, returns, and contacting Budy Bear.",
+  });
+}
 
 const faqs = [
   {

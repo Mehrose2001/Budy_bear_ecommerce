@@ -6,8 +6,9 @@ import ProductGrid from "@/components/product/ProductGrid";
 import RecentlyViewed from "@/components/product/RecentlyViewed";
 import { getProductPage, getStorefrontSettings, listProducts } from "@/lib/catalog";
 import { getProductColors } from "@/lib/productImages";
-import { formatLabel } from "@/lib/utils";
-import { buildMetadata, chooseEntry, productJsonLd } from "@/data/seo";
+import { formatLabel, slugify } from "@/lib/utils";
+import { buildMetadata, chooseEntry, productJsonLd, siteBase } from "@/data/seo";
+import { productSubcategories } from "@/lib/productSubcategories";
 import JsonLd from "@/components/seo/JsonLd";
 
 export const revalidate = 30;
@@ -51,17 +52,23 @@ export default async function ProductPage({ params }) {
   const related = page.related || [];
 
   const settings = await getStorefrontSettings().catch(() => null);
+  const subcategories = productSubcategories(product);
+  const crumbs = [
+    { label: "Home", href: "/" },
+    { label: formatLabel(product.category), href: `/category/${product.category}` },
+  ];
+  if (subcategories[0]) {
+    crumbs.push({
+      label: formatLabel(subcategories[0]),
+      href: `/category/${product.category}?subcategory=${slugify(subcategories[0])}`,
+    });
+  }
+  crumbs.push({ label: product.name });
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <JsonLd data={productJsonLd(product, settings?.seo)} />
-      <Breadcrumbs
-        items={[
-          { label: "Home", href: "/" },
-          { label: formatLabel(product.category), href: `/category/${product.category}` },
-          { label: product.name },
-        ]}
-      />
+      <Breadcrumbs items={crumbs} baseUrl={siteBase(settings?.seo)} />
 
       <ProductDetailsClient product={product} />
 
@@ -76,7 +83,7 @@ export default async function ProductPage({ params }) {
             {[
               ["Brand", product.brand],
               ["Category", formatLabel(product.category)],
-              ["Type", formatLabel(product.subcategory)],
+              ["Type", subcategories.map((name) => formatLabel(name)).join(", ") || "—"],
               ["Available sizes", product.sizes.join(", ")],
               ["Available colors", getProductColors(product).join(", ") || "—"],
               ["Stock", product.stock > 0 ? String(product.stock) : "Sold out"],

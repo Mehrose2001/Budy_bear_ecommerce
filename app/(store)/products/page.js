@@ -1,9 +1,8 @@
 import { Suspense } from "react";
 import ProductListing from "@/components/product/ProductListing";
-import { listCategories, listProducts } from "@/lib/catalog";
+import { getStorefrontSettings, listCategories, listProducts } from "@/lib/catalog";
 import { brand } from "@/data/brand";
-import { buildMetadata } from "@/data/seo";
-import { getStorefrontSettings } from "@/lib/catalog";
+import { buildMetadata, siteBase } from "@/data/seo";
 
 function ProductsFallback() {
   return (
@@ -53,12 +52,17 @@ export default async function ProductsPage({ searchParams }) {
         ? "Explore the latest additions to our collection."
         : "Browse our complete catalogue of kids fashion and essentials.";
 
-  const [products, categories] = await Promise.all([listProducts(), listCategories().catch(() => [])]);
+  const [products, categories, settings] = await Promise.all([
+    listProducts(),
+    listCategories().catch(() => []),
+    getStorefrontSettings().catch(() => null),
+  ]);
 
   return (
     <Suspense fallback={<ProductsFallback />}>
       <ProductListing
         products={products}
+        siteUrl={siteBase(settings?.seo)}
         categories={categories}
         title={title}
         description={description}

@@ -1,6 +1,18 @@
 import { Suspense } from "react";
 import ProductListing from "@/components/product/ProductListing";
-import { listCategories, searchCatalog } from "@/lib/catalog";
+import { getStorefrontSettings, listCategories, searchCatalog } from "@/lib/catalog";
+import { buildMetadata, siteBase } from "@/data/seo";
+
+export async function generateMetadata() {
+  const settings = await getStorefrontSettings().catch(() => null);
+  const meta = buildMetadata({
+    seo: settings?.seo,
+    path: "/search",
+    fallbackTitle: "Search Products",
+    fallbackDescription: "Search Budy Bear kidswear by name, category, or type.",
+  });
+  return { ...meta, robots: { index: false, follow: true } };
+}
 
 function SearchFallback() {
   return (
@@ -13,12 +25,16 @@ function SearchFallback() {
 export default async function SearchPage({ searchParams }) {
   const resolvedSearchParams = await searchParams;
   const query = resolvedSearchParams?.q || "";
-  const results = query ? await searchCatalog(query) : [];
+  const [results, settings] = await Promise.all([
+    query ? searchCatalog(query) : [],
+    getStorefrontSettings().catch(() => null),
+  ]);
 
   return (
     <Suspense fallback={<SearchFallback />}>
       <ProductListing
         products={results}
+        siteUrl={siteBase(settings?.seo)}
         categories={await listCategories().catch(() => [])}
         title={query ? `Search results for "${query}"` : "Search Products"}
         description={

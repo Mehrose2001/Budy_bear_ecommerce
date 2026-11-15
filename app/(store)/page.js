@@ -14,19 +14,26 @@ import {
 } from "@/lib/catalog";
 import { getSeasonalCollection, seasonalBannerFor } from "@/lib/seasonalCollection";
 import { brand } from "@/data/brand";
-import { buildMetadata } from "@/data/seo";
+import { buildMetadata, websiteJsonLd } from "@/data/seo";
+import JsonLd from "@/components/seo/JsonLd";
 
-export async function generateMetadata() {
-  const settings = await getStorefrontSettings().catch(() => null);
+export const dynamic = "force-dynamic";
+
+function homeMetadata(settings) {
   return buildMetadata({
     seo: settings?.seo,
     entry: settings?.seo?.home,
     path: "/",
     home: true,
-    fallbackTitle: `${brand.name} | Premium Kids Wear`,
-    fallbackDescription: `${brand.slogan} Shop premium kids clothing and accessories. Free delivery on orders above Rs. 3,000 across Pakistan.`,
+    fallbackTitle: brand.name,
+    fallbackDescription: brand.description,
     fallbackImage: brand.logo,
   });
+}
+
+export async function generateMetadata() {
+  const settings = await getStorefrontSettings().catch(() => null);
+  return homeMetadata(settings);
 }
 
 export default async function HomePage() {
@@ -47,9 +54,12 @@ export default async function HomePage() {
     rating: review.rating,
     quote: review.comment,
   }));
+  const heading = homeMetadata(settings).title?.absolute || brand.name;
 
   return (
     <>
+      <h1 className="sr-only">{heading}</h1>
+      <JsonLd data={websiteJsonLd(settings?.seo)} />
       <Hero banners={banners} />
       <CategoryCircles categories={categories} />
       <CategoryGrid categories={categories} />

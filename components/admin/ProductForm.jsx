@@ -16,6 +16,8 @@ import {
 } from "@/lib/variantStock";
 import { emptyEntry } from "@/data/seo";
 import { SeoEntryFields } from "@/components/admin/SeoFields";
+import SubcategoryMultiSelect from "@/components/admin/SubcategoryMultiSelect";
+import { productSubcategories, uniqueSubcategories } from "@/lib/productSubcategories";
 
 const emptyProduct = {
   name: "",
@@ -23,6 +25,7 @@ const emptyProduct = {
   description: "",
   category: "boys",
   subcategory: "",
+  subcategories: [],
   price: "",
   salePrice: "",
   stock: 0,
@@ -97,11 +100,13 @@ function toForm(product) {
   const imageItems = toImageItems(product);
   const colors = uniqueColors(imageItems.map((item) => item.color));
   const sizes = product.sizes || [];
+  const subcategories = productSubcategories(product);
 
   return {
     ...emptyProduct,
     ...product,
-    subcategory: product.subcategory || "",
+    subcategories,
+    subcategory: subcategories[0] || "",
     salePrice: product.salePrice ?? "",
     sizes: sizes.join(", "),
     imageItems,
@@ -117,11 +122,33 @@ export default function ProductForm({ product, categories, onCancel, onSave }) {
   const [saving, setSaving] = useState(false);
   const [uploadingId, setUploadingId] = useState("");
   const [error, setError] = useState("");
+  const [subcategoryNote, setSubcategoryNote] = useState("");
 
   const editingId = product?.id ?? "new";
   useEffect(() => {
     setForm(toForm(product));
+    setSubcategoryNote("");
   }, [editingId]);
+
+  useEffect(() => {
+    if (!categories?.length) return;
+    setForm((current) => {
+      const category = categories.find((item) => item.slug === current.category);
+      const options = category?.subcategories || [];
+      const aligned = uniqueSubcategories(
+        productSubcategories(current).map((value) => {
+          const match = options.find(
+            (option) =>
+              String(option).toLowerCase() === value.toLowerCase() ||
+              slugify(String(option)) === slugify(value)
+          );
+          return match || value;
+        })
+      );
+      if (aligned.join("\n") === productSubcategories(current).join("\n")) return current;
+      return { ...current, subcategories: aligned, subcategory: aligned[0] || "" };
+    });
+  }, [categories, form.category]);
 
   const colorOptions = useMemo(() => {
     return uniqueColors([
@@ -274,7 +301,8 @@ export default function ProductForm({ product, categories, onCancel, onSave }) {
         ...rest,
         id: product?.id,
         slug,
-        subcategory: String(form.subcategory || "").trim(),
+        subcategories: uniqueSubcategories(form.subcategories),
+        subcategory: uniqueSubcategories(form.subcategories)[0] || "",
         price: Number(form.price),
         salePrice: form.salePrice === "" ? null : Number(form.salePrice),
         stock: sumVariantStock(variantStock),
@@ -344,7 +372,27 @@ export default function ProductForm({ product, categories, onCancel, onSave }) {
         <select
           id="category"
           value={form.category}
-          onChange={(event) => updateField("category", event.target.value)}
+          onChange={(event) => {
+            const slug = event.target.value;
+            const nextCategory = categories.find((category) => category.slug === slug);
+            const allowed = new Set(
+              (nextCategory?.subcategories || []).map((name) => String(name).toLowerCase())
+            );
+            const currentList = productSubcategories(form);
+            const kept = currentList.filter((name) => allowed.has(name.toLowerCase()));
+            const removed = currentList.filter((name) => !allowed.has(name.toLowerCase()));
+            setSubcategoryNote(
+              removed.length
+                ? `Removed ${removed.join(", ")} because ${removed.length === 1 ? "it does" : "they do"} not belong to ${nextCategory?.name || "the selected category"}.`
+                : ""
+            );
+            setForm((current) => ({
+              ...current,
+              category: slug,
+              subcategories: kept,
+              subcategory: kept[0] || "",
+            }));
+          }}
           className="h-11 w-full rounded-xl border border-neutral-200 bg-white px-4 text-sm"
         >
           {categories.map((category) => (
@@ -354,14 +402,19 @@ export default function ProductForm({ product, categories, onCancel, onSave }) {
           ))}
         </select>
       </div>
-      <Input
-        label="Subcategory"
-        id="subcategory"
-        name="subcategory"
-        value={form.subcategory}
-        onChange={(event) => updateField("subcategory", event.target.value)}
-        placeholder="Enter a subcategory"
-        autoComplete="off"
+      <SubcategoryMultiSelect
+        options={categories.find((category) => category.slug === form.category)?.subcategories || []}
+        value={form.subcategories || []}
+        note={subcategoryNote}
+        onChange={(subcategories) => {
+          const next = uniqueSubcategories(subcategories);
+          setSubcategoryNote("");
+          setForm((current) => ({
+            ...current,
+            subcategories: next,
+            subcategory: next[0] || "",
+          }));
+        }}
       />
       <Input
         label="Price (PKR)"

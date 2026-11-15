@@ -1,4 +1,8 @@
 import { normalizeEntry, normalizeSeo, seoHasContent } from "../../../data/seo.js";
+import {
+  readProductSubcategories,
+  subcategoryListFromInput,
+} from "../../../lib/productSubcategories.js";
 
 function normalizeMediaUrl(value) {
   const url = String(value || "").trim();
@@ -93,13 +97,15 @@ function colorsFromImages(row) {
 
 export function mapProduct(row) {
   if (!row) return null;
+  const subcategories = readProductSubcategories(row);
   return {
     id: Number(row.id),
     name: row.name,
     slug: row.slug,
     description: row.description || "",
     category: row.category_id || row.category,
-    subcategory: row.subcategory || "",
+    subcategory: subcategories[0] || "",
+    subcategories,
     price: Number(row.price),
     salePrice: row.compare_at_price == null && row.sale_price == null ? null : Number(row.compare_at_price ?? row.sale_price),
     images: normalizeMediaList(row.images),
@@ -131,12 +137,14 @@ export function productToRow(input, existing = {}) {
     ? sumVariantStock(variantStock)
     : Number(input.stock ?? input.stock_quantity ?? existing.stock ?? 0);
 
+  const subcategories = subcategoryListFromInput(input, existing);
   return {
     name: input.name ?? existing.name,
     slug: slugify(input.slug ?? existing.slug ?? ""),
     description: input.description ?? existing.description ?? "",
     category_id: input.category ?? input.category_id ?? existing.category_id,
-    subcategory: input.subcategory ?? existing.subcategory ?? "",
+    subcategory: subcategories[0] || "",
+    subcategories,
     price: Number(input.price ?? existing.price ?? 0),
     sale_price:
       input.salePrice === "" || input.salePrice == null

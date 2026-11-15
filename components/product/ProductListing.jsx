@@ -24,6 +24,7 @@ import {
   PRODUCTS_PER_PAGE,
 } from "@/lib/productFilters";
 import { formatLabel, formatPrice, slugify } from "@/lib/utils";
+import { resolveSubcategoryName, uniqueSubcategories } from "@/lib/productSubcategories";
 import CategoryHeroBanner from "@/components/category/CategoryHeroBanner";
 import { resolveListingBanner } from "@/lib/categoryBanner";
 
@@ -51,6 +52,7 @@ export default function ProductListing({
   searchQuery = "",
   categories = [],
   category = null,
+  siteUrl = "",
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -68,8 +70,12 @@ export default function ProductListing({
       parsed.categories = [lockedCategory];
     }
 
+    parsed.subcategories = uniqueSubcategories(
+      parsed.subcategories.map((value) => resolveSubcategoryName(value, categories))
+    );
+
     return parsed;
-  }, [searchParams, lockedCategory, presetFilter]);
+  }, [searchParams, lockedCategory, presetFilter, categories]);
 
   const sortBy = searchParams.get("sort") || DEFAULT_SORT;
 
@@ -80,10 +86,16 @@ export default function ProductListing({
     return resolveListingBanner(category, fromFilter || fromQuery);
   }, [category, filters.subcategories, searchParams]);
 
-  const filteredProducts = useMemo(
-    () => sortProducts(applyFilters(products, filters), sortBy),
-    [products, filters, sortBy]
-  );
+  const filteredProducts = useMemo(() => {
+    const sorted = sortProducts(applyFilters(products, filters), sortBy);
+    const seen = new Set();
+    return sorted.filter((product) => {
+      const key = product?.id ?? product?.slug;
+      if (key == null || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [products, filters, sortBy]);
 
   const facets = useMemo(
     () => getFilterFacets(products, filters),
@@ -220,6 +232,18 @@ export default function ProductListing({
     activeChips.push({ key: "bestSellers", label: "Sale" });
   }
 
+  const activeSubcategory = lockedCategory && filters.subcategories.length === 1 ? filters.subcategories[0] : "";
+  const heading = activeSubcategory ? formatLabel(activeSubcategory) : title;
+  const crumbItems = useMemo(() => {
+    if (!activeSubcategory) return breadcrumbs;
+    const items = breadcrumbs.map((item, index) => {
+      if (index !== breadcrumbs.length - 1) return item;
+      return { ...item, href: item.href || basePath };
+    });
+    items.push({ label: formatLabel(activeSubcategory) });
+    return items;
+  }, [activeSubcategory, breadcrumbs, basePath]);
+
   const filterProps = {
     categories,
     filters,
@@ -236,12 +260,12 @@ export default function ProductListing({
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       {listingBanner ? <CategoryHeroBanner banner={listingBanner} /> : null}
-      <Breadcrumbs items={breadcrumbs} />
+      <Breadcrumbs items={crumbItems} baseUrl={siteUrl} />
 
       <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 className="text-3xl font-black tracking-tight text-neutral-900 sm:text-4xl">
-            {title}
+            {heading}
           </h1>
           {description && (
             <p className="mt-2 max-w-2xl text-neutral-600">{description}</p>

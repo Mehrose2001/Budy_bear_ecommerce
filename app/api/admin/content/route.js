@@ -202,6 +202,8 @@ export async function POST(request) {
         const settings = await saveStoreSeo(body.data, token);
         invalidateCatalogSnapshot();
         revalidatePath("/", "layout");
+        revalidatePath("/sitemap.xml");
+        revalidatePath("/robots.txt");
         return NextResponse.json({ settings });
       }
       if (body.resource === "pages") {
@@ -241,6 +243,8 @@ export async function POST(request) {
       });
       invalidateCatalogSnapshot();
       revalidatePath("/", "layout");
+      revalidatePath("/sitemap.xml");
+      revalidatePath("/robots.txt");
       return NextResponse.json({ settings });
     }
     if (body.resource === "pages") {

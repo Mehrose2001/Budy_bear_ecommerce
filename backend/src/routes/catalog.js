@@ -8,6 +8,7 @@ import {
   validateCoupon,
 } from "../services/catalog.js";
 import { optionalUser } from "../middleware/auth.js";
+import { sharesSubcategory, subcategorySearchText } from "../../../lib/productSubcategories.js";
 
 export const catalogRouter = Router();
 
@@ -39,7 +40,7 @@ catalogRouter.get(
         (product) =>
           product.name.toLowerCase().includes(query) ||
           product.category.toLowerCase().includes(query) ||
-          product.subcategory.toLowerCase().includes(query) ||
+          subcategorySearchText(product).includes(query) ||
           product.brand.toLowerCase().includes(query)
       );
     }
@@ -58,7 +59,7 @@ catalogRouter.get(
       .filter(
         (item) =>
           item.id !== product.id &&
-          (item.category === product.category || item.subcategory === product.subcategory)
+          (item.category === product.category || sharesSubcategory(item, product))
       )
       .slice(0, 8);
     res.json({ product, reviews, related });

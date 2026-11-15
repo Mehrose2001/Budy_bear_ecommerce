@@ -10,6 +10,7 @@ import { adminFetch } from "@/lib/adminApi";
 import { formatPrice } from "@/lib/utils";
 import { getProductListImage } from "@/lib/productImages";
 import { useAdminAuth } from "@/context/AdminAuthContext";
+import { productSubcategories } from "@/lib/productSubcategories";
 
 export default function AdminProductsPage() {
   const { admin } = useAdminAuth();
@@ -118,7 +119,7 @@ export default function AdminProductsPage() {
                 </td>
                 <td className="px-4 py-3 font-semibold text-brand-primary">{product.name}</td>
                 <td className="px-4 py-3">
-                  {product.category} / {product.subcategory}
+                  {product.category} / {productSubcategories(product).join(", ") || "—"}
                 </td>
                 <td className="px-4 py-3">{formatPrice(product.salePrice || product.price)}</td>
                 <td className="px-4 py-3 text-xs">

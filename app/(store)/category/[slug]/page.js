@@ -2,8 +2,13 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import ProductListing from "@/components/product/ProductListing";
 import { getCategoryBySlug, getProductsByCategory, getStorefrontSettings, listCategories } from "@/lib/catalog";
-import { buildMetadata, chooseEntry } from "@/data/seo";
+import { buildMetadata, chooseEntry, siteBase } from "@/data/seo";
 import { formatLabel, slugify } from "@/lib/utils";
+
+function queryList(value) {
+  const list = Array.isArray(value) ? value : value ? [value] : [];
+  return list.map((item) => String(item || "").trim()).filter(Boolean);
+}
 
 function CategoryFallback() {
   return (
@@ -34,20 +39,24 @@ export async function generateMetadata({ params, searchParams }) {
   }
 
   const settings = await getStorefrontSettings().catch(() => null);
-  const subSlug = slugify(String(query?.subcategory || ""));
-  const subName = (category.subcategories || []).find(
-    (name) => slugify(String(name)) === subSlug || String(name) === query?.subcategory
-  );
-  if (subSlug) {
+  const requested = queryList(query?.subcategory);
+  const subName =
+    requested.length === 1
+      ? (category.subcategories || []).find(
+          (name) => slugify(String(name)) === slugify(requested[0]) || String(name) === requested[0]
+        )
+      : null;
+  if (requested.length === 1) {
+    const subSlug = slugify(String(subName || requested[0]));
     const entry = chooseEntry(
-      category.subcategorySeo?.[subSlug] || category.subcategorySeo?.[slugify(String(subName || ""))],
+      category.subcategorySeo?.[subSlug],
       settings?.seo?.entities?.subcategories?.[`${category.slug}/${subSlug}`]
     );
     return buildMetadata({
       seo: settings?.seo,
       entry,
       path: `/category/${category.slug}?subcategory=${subSlug}`,
-      fallbackTitle: formatLabel(subName || subSlug),
+      fallbackTitle: formatLabel(subName || requested[0]),
       fallbackDescription: category.description,
       fallbackImage: category.image,
     });
@@ -71,13 +80,17 @@ export default async function CategoryPage({ params }) {
     notFound();
   }
 
-  const categoryProducts = await getProductsByCategory(slug);
+  const [categoryProducts, settings] = await Promise.all([
+    getProductsByCategory(slug),
+    getStorefrontSettings().catch(() => null),
+  ]);
 
   return (
     <Suspense fallback={<CategoryFallback />}>
       <ProductListing
         products={categoryProducts}
         category={category}
+        siteUrl={siteBase(settings?.seo)}
         categories={await listCategories().catch(() => [])}
         title={category.name}
         description={category.description}

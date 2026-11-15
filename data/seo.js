@@ -13,9 +13,16 @@ export const SEO_PAGES = [
   { key: "about", label: "About Budy Bear", path: "/about" },
   { key: "contact", label: "Contact Us", path: "/contact" },
   { key: "products", label: "Shop / All Products", path: "/products" },
+  { key: "faqs", label: "FAQs", path: "/faqs" },
+  { key: "size-guide", label: "Size Guide", path: "/size-guide" },
   { key: "shipping", label: "Shipping & Delivery", path: "/shipping" },
   { key: "privacy", label: "Privacy Policy", path: "/privacy" },
   { key: "terms", label: "Terms & Conditions", path: "/terms" },
+  { key: "complaints", label: "Customer Complaints", path: "/complaints" },
+  { key: "exchange", label: "Exchange Policy", path: "/exchange" },
+  { key: "returns", label: "Return Policy", path: "/returns" },
+  { key: "refund", label: "Refund Policy", path: "/refund" },
+  { key: "cancellation", label: "Order Cancellation", path: "/cancellation" },
 ];
 
 const PAGE_KEYS = SEO_PAGES.map((page) => page.key);
@@ -182,13 +189,22 @@ export function parseRobots(value) {
   };
 }
 
-export function chooseEntry(primary, fallback) {
-  if (entryHasContent(primary)) return normalizeEntry(primary);
-  if (entryHasContent(fallback)) return normalizeEntry(fallback);
-  return normalizeEntry(primary);
+export function mergeEntries(...entries) {
+  const normalized = entries.filter((entry) => entry != null).map((entry) => normalizeEntry(entry));
+  const pick = (key) =>
+    normalized.map((entry) => entry[key]).find((value) => String(value || "").trim()) || "";
+  return {
+    title: pick("title"),
+    description: pick("description"),
+    keyword: pick("keyword"),
+    canonical: pick("canonical"),
+    image: pick("image"),
+  };
 }
 
-const DEFAULT_DESCRIPTION = `${brand.slogan} Shop premium kids clothing and accessories. Free delivery on orders above Rs. 3,000 across Pakistan.`;
+export function chooseEntry(primary, fallback) {
+  return mergeEntries(primary, fallback);
+}
 
 export function buildMetadata({
   seo,
@@ -202,54 +218,39 @@ export function buildMetadata({
   const settings = normalizeSeo(seo);
   const page = normalizeEntry(entry);
   const base = siteBase(settings);
+  const explicitTitle = home ? first(page.title, settings.title) : first(page.title);
   const title = home
-    ? first(page.title, settings.title, fallbackTitle, `${brand.name} | Premium Kids Wear`)
-    : first(page.title, fallbackTitle, settings.title, brand.name);
+    ? first(explicitTitle, fallbackTitle, brand.name)
+    : first(explicitTitle, fallbackTitle, settings.title, brand.name);
+  const displayTitle =
+    explicitTitle || title.toLowerCase().includes(brand.name.toLowerCase()) || title.toLowerCase().includes("budybear")
+      ? title
+      : `${title} | ${brand.name}`;
   const description = home
-    ? first(page.description, settings.description, fallbackDescription, DEFAULT_DESCRIPTION)
-    : first(page.description, fallbackDescription, settings.description, DEFAULT_DESCRIPTION);
+    ? first(page.description, settings.description, fallbackDescription, brand.description)
+    : first(page.description, fallbackDescription, settings.description, brand.description);
   const canonical = absoluteUrl(base, page.canonical || path);
-  const image = first(
-    page.image,
-    fallbackImage,
-    home ? settings.social.ogImage : "",
-    settings.social.ogImage,
-    settings.image,
-    settings.logo,
-    brand.logo
-  );
+  const image = home
+    ? first(page.image, settings.social.ogImage, settings.image, settings.logo, fallbackImage, brand.logo)
+    : first(page.image, fallbackImage, settings.social.ogImage, settings.image, settings.logo, brand.logo);
   const imageUrl = absoluteUrl(base, image);
-  const ogTitle = first(home ? settings.social.ogTitle : "", page.title, fallbackTitle, settings.social.ogTitle, title);
-  const ogDescription = first(
-    home ? settings.social.ogDescription : "",
-    page.description,
-    fallbackDescription,
-    settings.social.ogDescription,
-    description
-  );
-  const twitterTitle = first(
-    home ? settings.social.twitterTitle : "",
-    page.title,
-    fallbackTitle,
-    settings.social.twitterTitle,
-    ogTitle
-  );
-  const twitterDescription = first(
-    home ? settings.social.twitterDescription : "",
-    page.description,
-    fallbackDescription,
-    settings.social.twitterDescription,
-    ogDescription
-  );
+  const ogTitle = home ? first(settings.social.ogTitle, displayTitle) : displayTitle;
+  const ogDescription = home ? first(settings.social.ogDescription, description) : description;
+  const twitterTitle = home ? first(settings.social.twitterTitle, ogTitle) : ogTitle;
+  const twitterDescription = home ? first(settings.social.twitterDescription, ogDescription) : ogDescription;
   const twitterImage = absoluteUrl(
     base,
-    first(
-      home ? settings.social.twitterImage : "",
-      page.image,
-      fallbackImage,
-      settings.social.twitterImage,
-      image
-    )
+    home
+      ? first(
+          settings.social.twitterImage,
+          page.image,
+          settings.social.ogImage,
+          settings.image,
+          settings.logo,
+          fallbackImage,
+          brand.logo
+        )
+      : first(page.image, fallbackImage, settings.social.twitterImage, image)
   );
   const siteKeywords = splitKeywords(settings.keywords);
   const keywords = [
@@ -262,7 +263,7 @@ export function buildMetadata({
   ];
 
   return {
-    title: home ? { absolute: title } : title,
+    title: { absolute: displayTitle },
     description,
     keywords,
     alternates: { canonical },
@@ -314,11 +315,25 @@ export function organizationJsonLd(seo) {
     "@context": "https://schema.org",
     "@type": "Organization",
     name: brand.name,
+    alternateName: "BudyBear",
     url: `${base}/`,
     logo,
     description: first(settings.description, brand.description),
     email: brand.supportEmail,
     telephone: brand.supportPhone,
+  };
+}
+
+export function websiteJsonLd(seo) {
+  const settings = normalizeSeo(seo);
+  const base = siteBase(settings);
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: brand.name,
+    alternateName: "BudyBear",
+    url: `${base}/`,
+    description: first(settings.home.description, settings.description, brand.description),
   };
 }
 
@@ -332,7 +347,7 @@ export function productJsonLd(product, seo) {
   const data = {
     "@context": "https://schema.org",
     "@type": "Product",
-    name: first(entry.title, product.name),
+    name: product.name,
     description: first(entry.description, product.description),
     image: image ? [absoluteUrl(base, image)] : undefined,
     sku: String(product.id || product.slug || ""),
@@ -356,7 +371,7 @@ export function productJsonLd(product, seo) {
 }
 
 export function breadcrumbJsonLd(items, seo) {
-  const base = siteBase(seo);
+  const base = typeof seo === "string" && seo ? seo.replace(/\/$/, "") : siteBase(seo);
   const list = (items || []).filter((item) => item?.label);
   if (!list.length) return null;
   return {

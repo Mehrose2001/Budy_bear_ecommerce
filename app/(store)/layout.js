@@ -31,6 +31,7 @@ export default async function StoreLayout({ children }) {
         shopLinks={shopLinks}
         supportEmail={settings?.supportEmail}
         supportPhone={settings?.supportPhone}
+        description={settings?.seo?.home?.description || settings?.seo?.description || ""}
       />
       <WhatsAppFloat />
     </>

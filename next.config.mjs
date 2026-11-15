@@ -50,6 +50,23 @@ function mediaRemotePatterns() {
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  htmlLimitedBots: /.*/,
+  async redirects() {
+    return [
+      {
+        source: "/",
+        has: [{ type: "host", value: "www.budybear.com" }],
+        destination: "https://budybear.com",
+        permanent: true,
+      },
+      {
+        source: "/:path+",
+        has: [{ type: "host", value: "www.budybear.com" }],
+        destination: "https://budybear.com/:path+",
+        permanent: true,
+      },
+    ];
+  },
   experimental: {
     cpus: 4,
   },

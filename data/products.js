@@ -1,4 +1,5 @@
 import { slugify } from "@/lib/utils";
+import { sharesSubcategory, subcategorySearchText } from "@/lib/productSubcategories";
 
 const brands = ["Budy Bear", "LittleStar", "PlayJoy", "MiniStyle", "TinyTrend"];
 const sizes = {
@@ -102,7 +103,7 @@ export function getRelatedProducts(product, limit = 8) {
       if (item.id === product.id) return false;
       return (
         item.category === product.category ||
-        item.subcategory === product.subcategory
+        sharesSubcategory(item, product)
       );
     })
     .slice(0, limit);
@@ -116,7 +117,7 @@ export function searchProducts(query) {
     return (
       product.name.toLowerCase().includes(normalizedQuery) ||
       product.category.toLowerCase().includes(normalizedQuery) ||
-      product.subcategory.toLowerCase().includes(normalizedQuery) ||
+      subcategorySearchText(product).includes(normalizedQuery) ||
       product.brand.toLowerCase().includes(normalizedQuery)
     );
   });

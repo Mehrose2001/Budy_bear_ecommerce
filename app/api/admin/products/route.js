@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { isAdminRequest, getAccessToken } from "@/lib/adminAuth";
 import {
   createProduct as createMemoryProduct,
@@ -64,6 +65,11 @@ export async function POST(request) {
     body.slug = slug;
     if (isSupabaseConfigured()) {
       const product = await createProduct(body, getAccessToken(request));
+      invalidateCatalogSnapshot();
+      revalidatePath("/", "layout");
+      revalidatePath("/products");
+      revalidatePath("/sitemap.xml");
+      if (product?.slug) revalidatePath(`/product/${product.slug}`);
       return NextResponse.json({ product }, { status: 201 });
     }
     return NextResponse.json({ product: createMemoryProduct(body) }, { status: 201 });
@@ -83,6 +89,11 @@ export async function PUT(request) {
     body.slug = slug;
     if (isSupabaseConfigured()) {
       const product = await updateProduct(body.id, body, getAccessToken(request));
+      invalidateCatalogSnapshot();
+      revalidatePath("/", "layout");
+      revalidatePath("/products");
+      revalidatePath("/sitemap.xml");
+      if (product?.slug) revalidatePath(`/product/${product.slug}`);
       return NextResponse.json({ product });
     }
     const product = updateMemoryProduct(body.id, body);

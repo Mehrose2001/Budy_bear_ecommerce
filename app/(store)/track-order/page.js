@@ -2,7 +2,10 @@ import { Suspense } from "react";
 import Breadcrumbs from "@/components/ui/Breadcrumbs";
 import TrackOrderForm from "@/components/order/TrackOrderForm";
 
-export const metadata = { title: "Track your order" };
+export const metadata = {
+  title: "Track your order",
+  robots: { index: false, follow: false },
+};
 
 export default function TrackOrderPage() {
   return (

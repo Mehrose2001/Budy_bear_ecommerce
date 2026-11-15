@@ -3,9 +3,11 @@ import AppProviders from "@/components/providers/AppProviders";
 import SiteTracking from "@/components/analytics/SiteTracking";
 import JsonLd from "@/components/seo/JsonLd";
 import { brand } from "@/data/brand";
-import { buildMetadata, normalizeSeo, organizationJsonLd, siteBase } from "@/data/seo";
+import { normalizeSeo, organizationJsonLd, parseRobots, siteBase, splitKeywords } from "@/data/seo";
 import { getStorefrontSettings } from "@/lib/catalog";
 import "./globals.css";
+
+export const dynamic = "force-dynamic";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -13,29 +15,27 @@ const inter = Inter({
   display: "swap",
 });
 
-const fallbackDescription = `${brand.slogan} Shop premium kids clothing and accessories. Free delivery on orders above Rs. 3,000 across Pakistan.`;
-
 export async function generateMetadata() {
   const settings = await getStorefrontSettings().catch(() => null);
   const seo = normalizeSeo(settings?.seo);
-  const meta = buildMetadata({
-    seo,
-    path: "/",
-    home: true,
-    fallbackTitle: `${brand.name} | Premium Kids Wear`,
-    fallbackDescription,
-    fallbackImage: brand.logo,
-  });
-  const title = typeof meta.title === "string" ? meta.title : meta.title.absolute;
-  return {
+  const keywords = splitKeywords(seo.keywords);
+  const metadata = {
     metadataBase: new URL(siteBase(seo)),
-    title: { default: title, template: `%s | ${brand.name}` },
-    description: meta.description,
-    keywords: meta.keywords,
-    robots: meta.robots,
-    openGraph: meta.openGraph,
-    twitter: meta.twitter,
+    title: {
+      default: seo.title || brand.name,
+      template: `%s | ${brand.name}`,
+    },
+    description: seo.description || brand.description,
+    keywords: keywords.length ? keywords : undefined,
+    robots: parseRobots(seo.robots),
   };
+  if (seo.logo) {
+    metadata.icons = {
+      icon: [{ url: seo.logo }],
+      apple: [{ url: seo.logo }],
+    };
+  }
+  return metadata;
 }
 
 export default async function RootLayout({ children }) {

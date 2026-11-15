@@ -14,6 +14,7 @@ import {
 import { requireSupabase } from "../supabase.js";
 import { getDefaultLegalPage, mergeLegalPage } from "../../../data/legalPages.js";
 import { isMissingColumn, normalizeEntry, normalizeSeo, withEntitySeo } from "../../../data/seo.js";
+import { parseSubcategoryValue } from "../../../lib/productSubcategories.js";
 
 async function fetchAll(table, orderColumn = "id") {
   const supabase = await requireSupabase();
@@ -132,15 +133,28 @@ async function writeProductRow(supabase, id, row, mode) {
       ? supabase.from("products").insert({ id, ...payload }).select("*").single()
       : supabase.from("products").update(payload).eq("id", Number(id)).select("*").single();
   let result = await run();
-  if (result.error && /variant_stock/i.test(String(result.error.message || ""))) {
-    delete payload.variant_stock;
+  let seoStoredSeparately = false;
+  for (let attempt = 0; attempt < 3 && result.error; attempt += 1) {
+    let changed = false;
+    if (/variant_stock/i.test(String(result.error.message || ""))) {
+      delete payload.variant_stock;
+      changed = true;
+    }
+    if (isMissingColumn(result.error, "subcategories")) {
+      const list = parseSubcategoryValue(payload.subcategories);
+      delete payload.subcategories;
+      payload.subcategory = list.length > 1 ? JSON.stringify(list) : list[0] || "";
+      changed = true;
+    }
+    if (isMissingColumn(result.error, "seo")) {
+      delete payload.seo;
+      seoStoredSeparately = true;
+      changed = true;
+    }
+    if (!changed) break;
     result = await run();
   }
-  if (isMissingColumn(result.error, "seo")) {
-    delete payload.seo;
-    result = await run();
-    result.seoStoredSeparately = true;
-  }
+  result.seoStoredSeparately = seoStoredSeparately;
   return result;
 }
 
