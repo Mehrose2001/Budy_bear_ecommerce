@@ -3,7 +3,7 @@ import AppProviders from "@/components/providers/AppProviders";
 import SiteTracking from "@/components/analytics/SiteTracking";
 import JsonLd from "@/components/seo/JsonLd";
 import { brand } from "@/data/brand";
-import { normalizeSeo, organizationJsonLd, parseRobots, siteBase, splitKeywords } from "@/data/seo";
+import { normalizeSeo, organizationJsonLd, parseRobots, SITE_NAME, siteBase } from "@/data/seo";
 import { getStorefrontSettings } from "@/lib/catalog";
 import "./globals.css";
 
@@ -18,15 +18,13 @@ const inter = Inter({
 export async function generateMetadata() {
   const settings = await getStorefrontSettings().catch(() => null);
   const seo = normalizeSeo(settings?.seo);
-  const keywords = splitKeywords(seo.keywords);
   const metadata = {
     metadataBase: new URL(siteBase(seo)),
     title: {
-      default: seo.title || brand.name,
-      template: `%s | ${brand.name}`,
+      default: seo.title || SITE_NAME,
+      template: `%s | ${SITE_NAME}`,
     },
     description: seo.description || brand.description,
-    keywords: keywords.length ? keywords : undefined,
     robots: parseRobots(seo.robots),
   };
   if (seo.logo) {

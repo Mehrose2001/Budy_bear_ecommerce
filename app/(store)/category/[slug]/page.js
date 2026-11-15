@@ -29,6 +29,8 @@ function CategoryFallback() {
   );
 }
 
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata({ params, searchParams }) {
   const { slug } = await params;
   const query = await searchParams;
@@ -57,7 +59,9 @@ export async function generateMetadata({ params, searchParams }) {
       entry,
       path: `/category/${category.slug}?subcategory=${subSlug}`,
       fallbackTitle: formatLabel(subName || requested[0]),
-      fallbackDescription: category.description,
+      fallbackDescription:
+        category.description ||
+        `Shop ${formatLabel(subName || requested[0])} in the ${category.name} collection at BudyBear.`,
       fallbackImage: category.image,
     });
   }
@@ -67,7 +71,9 @@ export async function generateMetadata({ params, searchParams }) {
     entry: chooseEntry(category.seo, settings?.seo?.entities?.categories?.[category.slug]),
     path: `/category/${category.slug}`,
     fallbackTitle: `${category.name} Collection`,
-    fallbackDescription: category.description,
+    fallbackDescription:
+      category.description ||
+      `Shop the ${category.name} collection at BudyBear. Kids clothing with delivery across Pakistan.`,
     fallbackImage: category.image,
   });
 }

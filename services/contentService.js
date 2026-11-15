@@ -3,7 +3,7 @@ import { mapBanner, mapCoupon, mapProduct, mapSettings } from "@/lib/mappers";
 import { createServerClient, createServiceClient, createUserClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { getDefaultLegalPage, mergeLegalPage } from "@/data/legalPages";
-import { isMissingColumn, normalizeSeo, withEntitySeo } from "@/data/seo";
+import { entryUrlError, isMissingColumn, normalizeSeo, seoInputError, withEntitySeo } from "@/data/seo";
 import { normalizeOffer } from "@/lib/storeOffer";
 import { normalizeDeliverySettings } from "@/lib/deliverySettings";
 import { parseStoreJsonField } from "@/lib/storeSettingsJson";
@@ -113,6 +113,8 @@ async function persistSeoDocument(supabase, seo) {
 }
 
 export async function saveStoreSeo(input, accessToken) {
+  const invalid = seoInputError(input);
+  if (invalid) throw new AppError(invalid, 400);
   const supabase = writeClient(accessToken);
   const current = await getStoreSettings();
   const seo = normalizeSeo({ ...normalizeSeo(input), entities: current.seo?.entities });
@@ -130,6 +132,8 @@ export async function removeEntitySeo(group, key, accessToken) {
 }
 
 export async function saveEntitySeo(group, key, entry, accessToken) {
+  const invalid = entryUrlError(entry, "Saved");
+  if (invalid) throw new AppError(invalid, 400);
   const supabase = writeClient(accessToken);
   const current = await getStoreSettings();
   const seo = withEntitySeo(current.seo, group, key, entry);

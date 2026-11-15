@@ -5,7 +5,7 @@ import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { adminUploadFile } from "@/lib/adminApi";
 import { useAdminAuth } from "@/context/AdminAuthContext";
-import { absoluteUrl, buildMetadata, lengthWarning, siteBase } from "@/data/seo";
+import { absoluteUrl, buildMetadata, canonicalUrl, lengthWarning, siteBase } from "@/data/seo";
 
 function countHint(value, min, max) {
   const length = String(value || "").trim().length;
@@ -101,7 +101,7 @@ export function metadataPreview(seo, { home = false, entry, path = "/" } = {}) {
   return {
     title,
     description: meta.description,
-    url: meta.alternates.canonical,
+    url: canonicalUrl({ seo, entry, path }),
     image: absoluteUrl(siteBase(seo), meta.openGraph?.images?.[0]?.url || ""),
     twitterTitle: meta.twitter.title,
     twitterDescription: meta.twitter.description,

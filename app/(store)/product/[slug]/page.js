@@ -11,7 +11,7 @@ import { buildMetadata, chooseEntry, productJsonLd, siteBase } from "@/data/seo"
 import { productSubcategories } from "@/lib/productSubcategories";
 import JsonLd from "@/components/seo/JsonLd";
 
-export const revalidate = 30;
+export const dynamic = "force-dynamic";
 
 export async function generateStaticParams() {
   const products = await listProducts();
@@ -35,7 +35,9 @@ export async function generateMetadata({ params }) {
     entry: chooseEntry(product.seo, settings?.seo?.entities?.products?.[product.slug]),
     path: `/product/${product.slug}`,
     fallbackTitle: product.name,
-    fallbackDescription: product.description,
+    fallbackDescription:
+      product.description ||
+      `Shop ${product.name} at BudyBear. Kids clothing available with delivery across Pakistan.`,
     fallbackImage: product.images?.[0],
   });
 }

@@ -15,6 +15,7 @@ import {
 } from "@/services/contentService";
 import { listCoupons } from "@/lib/catalogStore";
 import { createOrder } from "@/services/orderService";
+import { isValidPakistaniMobile, PAKISTANI_MOBILE_ERROR } from "@/lib/pakistaniPhone";
 
 function validateOrder(body) {
   const requiredCustomer = ["fullName", "phone"];
@@ -26,6 +27,9 @@ function validateOrder(body) {
   const email = body.customer.email?.trim();
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return "Enter a valid email address.";
+  }
+  if (!isValidPakistaniMobile(body.customer.phone)) {
+    return PAKISTANI_MOBILE_ERROR;
   }
   if (!body.shippingAddress || requiredAddress.some((key) => !body.shippingAddress[key]?.trim())) {
     return "Please complete your delivery address.";

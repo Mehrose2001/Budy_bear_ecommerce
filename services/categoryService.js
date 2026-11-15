@@ -1,6 +1,6 @@
 import { AppError, throwIf } from "@/lib/errors";
 import { mapCategory } from "@/lib/mappers";
-import { isMissingColumn, normalizeEntry } from "@/data/seo";
+import { entryUrlError, isMissingColumn, normalizeEntry } from "@/data/seo";
 import {
   getCategoryBannerOverlays,
   persistCategoryBannerOverlay,
@@ -150,7 +150,19 @@ async function storeCategoryEntities(input, accessToken, slug) {
   }
 }
 
+function assertCategorySeo(input) {
+  const invalid = entryUrlError(input?.seo, "Category");
+  if (invalid) throw new AppError(invalid, 400);
+  const map = input?.subcategorySeo || input?.subcategory_seo;
+  if (!map || typeof map !== "object") return;
+  for (const [key, entry] of Object.entries(map)) {
+    const subError = entryUrlError(entry, `Subcategory ${key}`);
+    if (subError) throw new AppError(subError, 400);
+  }
+}
+
 export async function createCategory(input, accessToken) {
+  assertCategorySeo(input);
   const supabase = writeClient(accessToken);
   const slug = String(input.slug || "").trim();
   const result = await writeCategory(
@@ -207,6 +219,7 @@ async function findCategoryRow(supabase, id) {
 }
 
 export async function updateCategory(id, input, accessToken) {
+  assertCategorySeo(input);
   const supabase = writeClient(accessToken);
   const existing = await findCategoryRow(supabase, id);
   throwIf(existing.error, "Unable to update category.");

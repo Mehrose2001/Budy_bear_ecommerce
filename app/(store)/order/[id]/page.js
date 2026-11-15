@@ -73,7 +73,7 @@ export default function OrderConfirmationPage() {
       <p className="text-sm font-semibold uppercase tracking-wide text-brand-primary">
         Thank you
       </p>
-      <h1 className="mt-2 text-3xl font-black tracking-tight text-neutral-900">
+      <h1 className="mt-2 break-words text-2xl font-black leading-tight tracking-tight text-neutral-900 sm:text-3xl">
         Order {order.id} placed
       </h1>
       <p className="mt-3 text-neutral-600">

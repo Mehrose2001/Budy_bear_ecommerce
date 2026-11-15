@@ -1,5 +1,7 @@
 import { brand } from "./brand.js";
 
+export const SITE_NAME = "BudyBear";
+
 export const ROBOTS_OPTIONS = [
   "index, follow",
   "index, nofollow",
@@ -170,6 +172,79 @@ export function absoluteUrl(base, value) {
   return `${base}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
+export function canonicalUrl({ seo, entry, path = "/" } = {}) {
+  const settings = normalizeSeo(seo);
+  const page = normalizeEntry(entry);
+  return absoluteUrl(siteBase(settings), page.canonical || path);
+}
+
+export function collapsesToOrigin(value) {
+  try {
+    const url = new URL(value);
+    return url.pathname === "/" && !url.search;
+  } catch {
+    return false;
+  }
+}
+
+function isAllowedPublicUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return true;
+  if (/^(javascript|data|vbscript):/i.test(raw)) return false;
+  if (raw.startsWith("/") && !raw.startsWith("//")) return true;
+  try {
+    const url = new URL(raw);
+    return url.protocol === "https:" || url.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
+function isAllowedBase(value) {
+  const raw = String(value || "").trim();
+  if (!raw || /\s/.test(raw)) return !raw;
+  return isAllowedPublicUrl(raw.startsWith("http") ? raw : `https://${raw}`);
+}
+
+export function entryUrlError(entry, label = "SEO") {
+  const value = normalizeEntry(entry);
+  if (!isAllowedPublicUrl(value.canonical)) {
+    return `${label} canonical URL must be an http(s) address or a path starting with /.`;
+  }
+  if (!isAllowedPublicUrl(value.image)) {
+    return `${label} image must be a public http(s) address or a path starting with /.`;
+  }
+  return "";
+}
+
+export function seoInputError(value) {
+  const seo = normalizeSeo(value);
+  if (!isAllowedBase(seo.canonicalBase)) {
+    return "Website canonical base URL must be a public http(s) address, such as https://budybear.com.";
+  }
+  if (!isAllowedPublicUrl(seo.logo)) return "Website logo must be a public http(s) address or a path starting with /.";
+  if (!isAllowedPublicUrl(seo.image)) return "Default SEO image must be a public http(s) address or a path starting with /.";
+  if (!isAllowedPublicUrl(seo.social.ogImage)) {
+    return "Open Graph image must be a public http(s) address or a path starting with /.";
+  }
+  if (!isAllowedPublicUrl(seo.social.twitterImage)) {
+    return "Twitter card image must be a public http(s) address or a path starting with /.";
+  }
+  const homeError = entryUrlError(seo.home, "Homepage");
+  if (homeError) return homeError;
+  for (const page of SEO_PAGES) {
+    const pageError = entryUrlError(seo.pages[page.key], page.label);
+    if (pageError) return pageError;
+  }
+  return "";
+}
+
+function metaDescription(value) {
+  const clean = String(value || "").replace(/\s+/g, " ").trim();
+  if (clean.length <= 320) return clean;
+  return `${clean.slice(0, 317).trim()}...`;
+}
+
 function first(...values) {
   return values.map((value) => String(value || "").trim()).find(Boolean) || "";
 }
@@ -220,16 +295,17 @@ export function buildMetadata({
   const base = siteBase(settings);
   const explicitTitle = home ? first(page.title, settings.title) : first(page.title);
   const title = home
-    ? first(explicitTitle, fallbackTitle, brand.name)
-    : first(explicitTitle, fallbackTitle, settings.title, brand.name);
-  const displayTitle =
-    explicitTitle || title.toLowerCase().includes(brand.name.toLowerCase()) || title.toLowerCase().includes("budybear")
-      ? title
-      : `${title} | ${brand.name}`;
-  const description = home
-    ? first(page.description, settings.description, fallbackDescription, brand.description)
-    : first(page.description, fallbackDescription, settings.description, brand.description);
-  const canonical = absoluteUrl(base, page.canonical || path);
+    ? first(explicitTitle, fallbackTitle, SITE_NAME)
+    : first(explicitTitle, fallbackTitle, settings.title, SITE_NAME);
+  const branded = title.toLowerCase().includes("budybear") || title.toLowerCase().includes(brand.name.toLowerCase());
+  const displayTitle = explicitTitle || branded ? title : `${title} | ${SITE_NAME}`;
+  const description = metaDescription(
+    home
+      ? first(page.description, settings.description, fallbackDescription, brand.description)
+      : first(page.description, fallbackDescription, settings.description, brand.description)
+  );
+  const canonical = canonicalUrl({ seo: settings, entry: page, path });
+  const manualRootCanonical = collapsesToOrigin(canonical);
   const image = home
     ? first(page.image, settings.social.ogImage, settings.image, settings.logo, fallbackImage, brand.logo)
     : first(page.image, fallbackImage, settings.social.ogImage, settings.image, settings.logo, brand.logo);
@@ -252,30 +328,19 @@ export function buildMetadata({
         )
       : first(page.image, fallbackImage, settings.social.twitterImage, image)
   );
-  const siteKeywords = splitKeywords(settings.keywords);
-  const keywords = [
-    ...new Set([
-      ...(siteKeywords.length
-        ? siteKeywords
-        : ["kids wear", "children clothing", "kids fashion Pakistan", brand.name]),
-      ...splitKeywords(page.keyword),
-    ]),
-  ];
-
   return {
     title: { absolute: displayTitle },
     description,
-    keywords,
-    alternates: { canonical },
+    alternates: manualRootCanonical ? undefined : { canonical },
     robots: parseRobots(settings.robots),
     openGraph: {
       title: ogTitle,
       description: ogDescription,
-      url: canonical,
-      siteName: brand.name,
+      url: manualRootCanonical ? undefined : canonical,
+      siteName: SITE_NAME,
       locale: "en_PK",
       type: "website",
-      images: imageUrl ? [{ url: imageUrl, alt: ogTitle || brand.name }] : undefined,
+      images: imageUrl ? [{ url: imageUrl, alt: ogTitle || SITE_NAME }] : undefined,
     },
     twitter: {
       card: settings.social.twitterCard || "summary_large_image",
@@ -314,8 +379,8 @@ export function organizationJsonLd(seo) {
   return {
     "@context": "https://schema.org",
     "@type": "Organization",
-    name: brand.name,
-    alternateName: "BudyBear",
+    name: SITE_NAME,
+    alternateName: brand.name,
     url: `${base}/`,
     logo,
     description: first(settings.description, brand.description),
@@ -330,8 +395,8 @@ export function websiteJsonLd(seo) {
   return {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    name: brand.name,
-    alternateName: "BudyBear",
+    name: SITE_NAME,
+    alternateName: brand.name,
     url: `${base}/`,
     description: first(settings.home.description, settings.description, brand.description),
   };

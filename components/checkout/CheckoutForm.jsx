@@ -10,8 +10,9 @@ import { DELIVERY_METHODS, PAKISTAN_PROVINCES, PAYMENT_METHODS, isExpressAvailab
 import { computeCheckoutTotals } from "@/lib/checkoutTotals";
 import { useDeliverySettings } from "@/context/DeliverySettingsContext";
 import { useStoreOffer } from "@/context/StoreOfferContext";
-import { payableUnitPrice } from "@/lib/storeOffer";
+import { LIMITED_TIME_OFFER_AFFECTS_TOTALS, payableUnitPrice } from "@/lib/storeOffer";
 import { emitOrdersChanged } from "@/lib/adminSession";
+import { isValidPakistaniMobile, PAKISTANI_MOBILE_ERROR } from "@/lib/pakistaniPhone";
 import { cn } from "@/lib/utils";
 import { useCustomerAuth } from "@/context/CustomerAuthContext";
 import { useOrders } from "@/context/OrdersContext";
@@ -36,8 +37,8 @@ function validate(form) {
   if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
     errors.email = "Enter a valid email address.";
   }
-  if (!/^0?3\d{9}$/.test(form.phone.replace(/\s|-/g, ""))) {
-    errors.phone = "Enter a valid Pakistani mobile number.";
+  if (!isValidPakistaniMobile(form.phone)) {
+    errors.phone = PAKISTANI_MOBILE_ERROR;
   }
   if (!form.address.trim()) errors.address = "Street address is required.";
   if (!form.city.trim()) errors.city = "City is required.";
@@ -105,12 +106,14 @@ export function useCheckoutForm(totals) {
     () =>
       items.map((item) => {
         const base = Number(item.basePrice ?? item.unitPrice ?? item.salePrice ?? item.price) || 0;
-        const unitPrice = payableUnitPrice({ ...item, basePrice: base }, offer);
+        const unitPrice = LIMITED_TIME_OFFER_AFFECTS_TOTALS
+          ? payableUnitPrice({ ...item, basePrice: base }, offer)
+          : base;
         return {
           ...item,
           basePrice: base,
           unitPrice,
-          offerApplied: unitPrice < base,
+          offerApplied: LIMITED_TIME_OFFER_AFFECTS_TOTALS && unitPrice < base,
         };
       }),
     [items, offer]
@@ -284,7 +287,7 @@ export function CheckoutFields({
             value={form.phone}
             onChange={(event) => updateField("phone", event.target.value)}
             error={errors.phone}
-            placeholder="03XXXXXXXXX"
+            placeholder="03XXXXXXXXX or +92XXXXXXXXXX"
             autoComplete="tel"
             className="sm:col-span-2"
             required

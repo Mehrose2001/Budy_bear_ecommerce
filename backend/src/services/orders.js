@@ -2,6 +2,7 @@ import { invalidateCatalogCache } from "../lib/cache.js";
 import { HttpError } from "../lib/http.js";
 import { mapOrder } from "../lib/map.js";
 import { requireSupabase } from "../supabase.js";
+import { isValidPakistaniMobile, PAKISTANI_MOBILE_ERROR } from "../../../lib/pakistaniPhone.js";
 
 const EXPRESS_CITIES = new Set(["karachi"]);
 
@@ -14,6 +15,9 @@ function assertOrder(body) {
   const email = body.customer.email?.trim();
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     throw new HttpError(400, "Enter a valid email address.");
+  }
+  if (!isValidPakistaniMobile(body.customer.phone)) {
+    throw new HttpError(400, PAKISTANI_MOBILE_ERROR);
   }
   const requiredAddress = ["address", "city", "province"];
   if (

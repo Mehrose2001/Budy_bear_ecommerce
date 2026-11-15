@@ -34,21 +34,23 @@ export default function CheckoutPage() {
           </Button>
         </div>
       ) : (
-        <div className="mt-8 grid gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
-          <CheckoutFields
-            form={checkout.form}
-            errors={checkout.errors}
-            updateField={checkout.updateField}
-            handleSubmit={checkout.handleSubmit}
-            isSubmitting={checkout.isSubmitting}
-            selectedPayment={checkout.selectedPayment}
-            couponCode={checkout.couponCode}
-            setCouponCode={checkout.setCouponCode}
-            coupon={checkout.coupon}
-            couponError={checkout.couponError}
-            applyCoupon={checkout.applyCoupon}
-          />
-          <div className="h-fit xl:sticky xl:top-36">
+        <div className="mt-8 grid min-w-0 gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="min-w-0">
+            <CheckoutFields
+              form={checkout.form}
+              errors={checkout.errors}
+              updateField={checkout.updateField}
+              handleSubmit={checkout.handleSubmit}
+              isSubmitting={checkout.isSubmitting}
+              selectedPayment={checkout.selectedPayment}
+              couponCode={checkout.couponCode}
+              setCouponCode={checkout.setCouponCode}
+              coupon={checkout.coupon}
+              couponError={checkout.couponError}
+              applyCoupon={checkout.applyCoupon}
+            />
+          </div>
+          <div className="h-fit min-w-0 xl:sticky xl:top-36">
             <OrderSummary
               items={checkout.checkoutItems}
               subtotal={checkout.liveTotals.subtotal}

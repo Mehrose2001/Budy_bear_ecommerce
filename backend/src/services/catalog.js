@@ -13,7 +13,7 @@ import {
 } from "../lib/map.js";
 import { requireSupabase } from "../supabase.js";
 import { getDefaultLegalPage, mergeLegalPage } from "../../../data/legalPages.js";
-import { isMissingColumn, normalizeEntry, normalizeSeo, withEntitySeo } from "../../../data/seo.js";
+import { entryUrlError, isMissingColumn, normalizeEntry, normalizeSeo, seoInputError, withEntitySeo } from "../../../data/seo.js";
 import { parseSubcategoryValue } from "../../../lib/productSubcategories.js";
 
 async function fetchAll(table, orderColumn = "id") {
@@ -114,6 +114,8 @@ async function readSettingsRow() {
 }
 
 export async function saveStoreSeo(input) {
+  const invalid = seoInputError(input);
+  if (invalid) throw new HttpError(400, invalid);
   const current = await readSettingsRow();
   const seo = normalizeSeo({ ...normalizeSeo(input), entities: current?.seo?.entities });
   invalidateCatalogCache();
@@ -121,6 +123,8 @@ export async function saveStoreSeo(input) {
 }
 
 async function saveEntitySeo(group, key, entry) {
+  const invalid = entryUrlError(entry, "Saved");
+  if (invalid) throw new HttpError(400, invalid);
   const current = await readSettingsRow();
   invalidateCatalogCache();
   return persistSeoDocument(withEntitySeo(current?.seo, group, key, entry));

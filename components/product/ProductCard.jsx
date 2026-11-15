@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Eye, Heart, ShoppingBag } from "lucide-react";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
@@ -19,10 +19,8 @@ function isDesktopListing() {
   return window.matchMedia("(min-width: 1024px)").matches;
 }
 
-export default function ProductCard({ product, className, mobileClickActions = false }) {
+export default function ProductCard({ product, className, mobileClickActions = true }) {
   const [isHovered, setIsHovered] = useState(false);
-  const [showActions, setShowActions] = useState(false);
-  const cardRef = useRef(null);
   const { addItem } = useCart();
   const { openQuickView } = useQuickView();
   const { showToast } = useToast();
@@ -35,28 +33,6 @@ export default function ProductCard({ product, className, mobileClickActions = f
   const secondaryImage = product.images[1] || product.images[0];
   const inStock = getProductStock(product) > 0;
 
-  useEffect(() => {
-    if (!showActions) return undefined;
-
-    const handlePointer = (event) => {
-      if (!cardRef.current?.contains(event.target)) {
-        setShowActions(false);
-      }
-    };
-
-    document.addEventListener("pointerdown", handlePointer);
-    return () => document.removeEventListener("pointerdown", handlePointer);
-  }, [showActions]);
-
-  useEffect(() => {
-    const media = window.matchMedia("(min-width: 1024px)");
-    const clearOnDesktop = () => {
-      if (media.matches) setShowActions(false);
-    };
-    media.addEventListener("change", clearOnDesktop);
-    return () => media.removeEventListener("change", clearOnDesktop);
-  }, []);
-
   const handleAddToCart = (event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -65,15 +41,15 @@ export default function ProductCard({ product, className, mobileClickActions = f
     showToast(`${product.name} added to cart`);
   };
 
-  const revealMobileActions = (event) => {
+  const handleImageClick = (event) => {
     if (!mobileClickActions || isDesktopListing()) return;
     event.preventDefault();
-    setShowActions(true);
+    event.stopPropagation();
+    openQuickView(product);
   };
 
   return (
     <article
-      ref={cardRef}
       className={cn("group relative flex flex-col", className)}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -82,7 +58,7 @@ export default function ProductCard({ product, className, mobileClickActions = f
         <Link
           href={`/product/${product.slug}`}
           className="block"
-          onClick={revealMobileActions}
+          onClick={handleImageClick}
         >
           <div className="relative aspect-[4/5] overflow-hidden">
             <Image
@@ -127,9 +103,7 @@ export default function ProductCard({ product, className, mobileClickActions = f
         <div
           className={cn(
             "absolute inset-x-2 bottom-2 flex flex-col gap-2 transition-all duration-300 sm:inset-x-3 sm:bottom-3",
-            showActions
-              ? "pointer-events-auto translate-y-0 opacity-100"
-              : "pointer-events-none translate-y-2 opacity-0 lg:group-hover:pointer-events-auto lg:group-hover:translate-y-0 lg:group-hover:opacity-100"
+            "pointer-events-none translate-y-2 opacity-0 lg:group-hover:pointer-events-auto lg:group-hover:translate-y-0 lg:group-hover:opacity-100"
           )}
         >
           <Button
@@ -160,28 +134,24 @@ export default function ProductCard({ product, className, mobileClickActions = f
       </div>
 
       <div className="mt-4 flex flex-1 flex-col">
-        <Link
-          href={`/product/${product.slug}`}
-          className="group/link flex-1"
-          onClick={revealMobileActions}
-        >
+        <Link href={`/product/${product.slug}`} className="group/link flex flex-1 flex-col">
           <h3 className="line-clamp-2 text-sm font-semibold leading-5 text-neutral-900 transition-colors group-hover/link:text-brand-primary">
             {product.name}
           </h3>
-        </Link>
-        <div className="mt-2">
-          <ProductRating product={product} />
-        </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="text-base font-bold text-neutral-900">
-            {formatPrice(displayPrice)}
-          </span>
-          {displayPrice < listPrice && (
-            <span className="text-sm text-error line-through">
-              {formatPrice(listPrice)}
+          <div className="mt-2">
+            <ProductRating product={product} />
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="text-base font-bold text-neutral-900">
+              {formatPrice(displayPrice)}
             </span>
-          )}
-        </div>
+            {displayPrice < listPrice && (
+              <span className="text-sm text-error line-through">
+                {formatPrice(listPrice)}
+              </span>
+            )}
+          </div>
+        </Link>
       </div>
     </article>
   );

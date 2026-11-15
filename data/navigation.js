@@ -87,7 +87,7 @@ export const footerLinks = {
   social: [
     {
       label: "Instagram",
-      href: "https://www.instagram.com/budybear_kidswear_?stkn=MW94Z3Vqa2JjdngwYQ==",
+      href: "https://www.instagram.com/budybear_kidswear?xtok=ZGUyZHR4ZjdoZHF3",
     },
     {
       label: "Facebook",

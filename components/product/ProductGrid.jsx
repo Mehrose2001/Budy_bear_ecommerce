@@ -5,7 +5,7 @@ export default function ProductGrid({
   products,
   className,
   emptyMessage,
-  mobileClickActions = false,
+  mobileClickActions = true,
 }) {
   if (!products.length) {
     return (

@@ -26,8 +26,8 @@ export default function OrderSummary({
   const remaining = Math.max(0, freeDeliveryThreshold - payableSubtotal);
 
   return (
-    <aside className="rounded-3xl border border-neutral-200 bg-white p-6">
-      <h2 className="text-lg font-black text-neutral-900">Order summary</h2>
+    <aside className="min-w-0 rounded-3xl border border-neutral-200 bg-white p-4 sm:p-6">
+      <h2 className="text-lg font-black leading-tight text-neutral-900">Order summary</h2>
 
       <ul className="mt-5 space-y-4">
         {items.map((item) => {
@@ -35,15 +35,15 @@ export default function OrderSummary({
           const lineOriginal = (item.basePrice ?? item.unitPrice) * item.quantity;
           const showOfferLine = item.offerApplied && lineOriginal > lineTotal;
           return (
-            <li key={item.id} className="flex gap-3">
+            <li key={item.id} className="flex min-w-0 items-start gap-3">
               <span className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-neutral-100">
                 <Image src={item.image} alt={item.name} fill className="object-cover" sizes="64px" />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-semibold text-neutral-900">
+                <span className="block break-words text-sm font-semibold leading-5 text-neutral-900">
                   {item.name}
                 </span>
-                <span className="text-xs text-neutral-500">
+                <span className="block break-words text-xs leading-5 text-neutral-500">
                   {item.color} · {item.size} · Qty {item.quantity}
                 </span>
                 {showOfferLine ? (
@@ -52,7 +52,7 @@ export default function OrderSummary({
                   </span>
                 ) : null}
               </span>
-              <span className="text-right text-sm">
+              <span className="shrink-0 whitespace-nowrap text-right text-sm">
                 {showOfferLine ? (
                   <>
                     <span className="block text-xs text-neutral-500 line-through">
@@ -70,47 +70,47 @@ export default function OrderSummary({
       </ul>
 
       <dl className="mt-5 space-y-3 border-t border-neutral-200 pt-4 text-sm">
-        <div className="flex justify-between">
-          <dt className="text-neutral-500">Subtotal</dt>
-          <dd>{formatPrice(subtotal)}</dd>
+        <div className="flex items-start justify-between gap-3">
+          <dt className="min-w-0 text-neutral-500">Subtotal</dt>
+          <dd className="shrink-0">{formatPrice(subtotal)}</dd>
         </div>
         {saleOff > 0 ? (
-          <div className="flex justify-between">
-            <dt className="text-neutral-500">Sale discount</dt>
-            <dd className="text-brand-primary">-{formatPrice(saleOff)}</dd>
+          <div className="flex items-start justify-between gap-3">
+            <dt className="min-w-0 text-neutral-500">Sale discount</dt>
+            <dd className="shrink-0 text-brand-primary">-{formatPrice(saleOff)}</dd>
           </div>
         ) : null}
         {offerOff > 0 ? (
-          <div className="flex justify-between">
-            <dt className="text-neutral-500">{LIMITED_TIME_OFFER_LABEL}</dt>
-            <dd className="text-brand-primary">-{formatPrice(offerOff)}</dd>
+          <div className="flex items-start justify-between gap-3">
+            <dt className="min-w-0 text-neutral-500">{LIMITED_TIME_OFFER_LABEL}</dt>
+            <dd className="shrink-0 text-brand-primary">-{formatPrice(offerOff)}</dd>
           </div>
         ) : productOff > 0 && saleOff === 0 && offerOff === 0 ? (
-          <div className="flex justify-between">
-            <dt className="text-neutral-500">Product discount</dt>
-            <dd className="text-brand-primary">-{formatPrice(productOff)}</dd>
+          <div className="flex items-start justify-between gap-3">
+            <dt className="min-w-0 text-neutral-500">Product discount</dt>
+            <dd className="shrink-0 text-brand-primary">-{formatPrice(productOff)}</dd>
           </div>
         ) : null}
         {promoOff > 0 ? (
-          <div className="flex justify-between">
-            <dt className="text-neutral-500">Promo {couponCode || ""}</dt>
-            <dd className="text-brand-primary">-{formatPrice(promoOff)}</dd>
+          <div className="flex items-start justify-between gap-3">
+            <dt className="min-w-0 break-words text-neutral-500">Promo {couponCode || ""}</dt>
+            <dd className="shrink-0 text-brand-primary">-{formatPrice(promoOff)}</dd>
           </div>
         ) : combined > 0 && productOff === 0 && promoOff === 0 ? (
-          <div className="flex justify-between">
-            <dt className="text-neutral-500">Discount</dt>
-            <dd className="text-brand-primary">-{formatPrice(combined)}</dd>
+          <div className="flex items-start justify-between gap-3">
+            <dt className="min-w-0 text-neutral-500">Discount</dt>
+            <dd className="shrink-0 text-brand-primary">-{formatPrice(combined)}</dd>
           </div>
         ) : null}
-        <div className="flex justify-between">
-          <dt className="text-neutral-500">
+        <div className="flex items-start justify-between gap-3">
+          <dt className="min-w-0 text-neutral-500">
             Delivery {deliveryMethod === "express" ? "(Express)" : ""}
           </dt>
-          <dd>{shipping === 0 ? "Free" : formatPrice(shipping)}</dd>
+          <dd className="shrink-0">{shipping === 0 ? "Free" : formatPrice(shipping)}</dd>
         </div>
-        <div className="flex justify-between border-t border-neutral-200 pt-3 text-base">
-          <dt className="font-bold">Total</dt>
-          <dd className="font-black">{formatPrice(total)}</dd>
+        <div className="flex items-start justify-between gap-3 border-t border-neutral-200 pt-3 text-base">
+          <dt className="min-w-0 font-bold">Total</dt>
+          <dd className="shrink-0 font-black">{formatPrice(total)}</dd>
         </div>
       </dl>
 

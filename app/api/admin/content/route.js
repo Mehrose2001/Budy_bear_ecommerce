@@ -40,6 +40,7 @@ import {
   upsertCoupon as upsertDbCoupon,
 } from "@/services/contentService";
 import { getDefaultLegalPage, mergeLegalPage } from "@/data/legalPages";
+import { SEO_PAGES, seoInputError } from "@/data/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -199,9 +200,13 @@ export async function POST(request) {
         return NextResponse.json({ settings });
       }
       if (body.resource === "seo") {
+        const invalid = seoInputError(body.data);
+        if (invalid) return NextResponse.json({ error: invalid }, { status: 400 });
         const settings = await saveStoreSeo(body.data, token);
         invalidateCatalogSnapshot();
         revalidatePath("/", "layout");
+        revalidatePath("/");
+        SEO_PAGES.forEach((page) => revalidatePath(page.path));
         revalidatePath("/sitemap.xml");
         revalidatePath("/robots.txt");
         return NextResponse.json({ settings });
@@ -237,12 +242,16 @@ export async function POST(request) {
       return NextResponse.json({ settings });
     }
     if (body.resource === "seo") {
+      const invalid = seoInputError(body.data);
+      if (invalid) return NextResponse.json({ error: invalid }, { status: 400 });
       const current = getSettings();
       const settings = updateSettings({
         seo: { ...(body.data || {}), entities: current?.seo?.entities },
       });
       invalidateCatalogSnapshot();
       revalidatePath("/", "layout");
+      revalidatePath("/");
+      SEO_PAGES.forEach((page) => revalidatePath(page.path));
       revalidatePath("/sitemap.xml");
       revalidatePath("/robots.txt");
       return NextResponse.json({ settings });

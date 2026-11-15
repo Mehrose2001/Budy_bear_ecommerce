@@ -8,25 +8,27 @@ export default function OrderReceipt({ order }) {
 
   return (
     <article className="overflow-hidden rounded-[1.75rem] border border-brand-primary/15 bg-white shadow-lg">
-      <header className="flex flex-wrap items-center gap-4 bg-brand-primary px-6 py-5 text-white">
-        <Image
-          src={brand.logo}
-          alt={`${brand.name} logo`}
-          width={64}
-          height={64}
-          className="rounded-full bg-white object-cover ring-2 ring-brand-accent"
-        />
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-accent">
-            {brand.tagline}
-          </p>
-          <h2 className="text-2xl font-black">{brand.name} receipt</h2>
-          <p className="text-sm text-white/75">
-            Order {order.id} · {dateLabel}
-          </p>
-        </div>
-        <div className="rounded-full bg-brand-accent px-4 py-1.5 text-xs font-bold text-brand-primary-dark">
-          Cash on Delivery
+      <header className="bg-brand-primary px-4 py-4 text-white sm:px-6 sm:py-5">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+          <Image
+            src={brand.logo}
+            alt={`${brand.name} logo`}
+            width={64}
+            height={64}
+            className="h-12 w-12 shrink-0 rounded-full bg-white object-cover ring-2 ring-brand-accent sm:h-16 sm:w-16"
+          />
+          <div className="min-w-0 flex-1 basis-40">
+            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-brand-accent sm:text-xs sm:tracking-[0.2em]">
+              {brand.tagline}
+            </p>
+            <h2 className="text-lg font-black leading-tight sm:text-2xl">{brand.name} receipt</h2>
+            <p className="mt-0.5 break-words text-xs leading-5 text-white/75 sm:text-sm">
+              Order {order.id} · {dateLabel}
+            </p>
+          </div>
+          <div className="w-fit max-w-full shrink-0 rounded-full bg-brand-accent px-3 py-1.5 text-xs font-bold text-brand-primary-dark sm:px-4">
+            Cash on Delivery
+          </div>
         </div>
       </header>
 

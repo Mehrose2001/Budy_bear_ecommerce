@@ -1,6 +1,6 @@
 import { AppError, throwIf } from "@/lib/errors";
 import { mapProduct, productToRow } from "@/lib/mappers";
-import { isMissingColumn } from "@/data/seo";
+import { entryUrlError, isMissingColumn } from "@/data/seo";
 import { parseSubcategoryValue } from "@/lib/productSubcategories";
 import { removeEntitySeo, saveEntitySeo } from "@/services/contentService";
 import { createServerClient, createUserClient } from "@/lib/supabase/server";
@@ -107,6 +107,8 @@ async function writeProductRow(supabase, id, row, mode) {
 }
 
 export async function createProduct(input, accessToken) {
+  const invalidSeo = entryUrlError(input?.seo, "Product");
+  if (invalidSeo) throw new AppError(invalidSeo, 400);
   const supabase = client(accessToken);
   const row = productToRow(input);
   const { data: nextId, error: seqError } = await supabase.rpc("next_product_id");
@@ -130,6 +132,8 @@ export async function createProduct(input, accessToken) {
 }
 
 export async function updateProduct(id, input, accessToken) {
+  const invalidSeo = entryUrlError(input?.seo, "Product");
+  if (invalidSeo) throw new AppError(invalidSeo, 400);
   const existing = await getProductById(id, { includeInactive: true, accessToken });
   if (!existing) throw new AppError("Product not found", 404);
   const supabase = client(accessToken);

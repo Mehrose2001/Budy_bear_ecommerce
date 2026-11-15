@@ -14,8 +14,9 @@ import {
 } from "@/lib/catalog";
 import { getSeasonalCollection, seasonalBannerFor } from "@/lib/seasonalCollection";
 import { brand } from "@/data/brand";
-import { buildMetadata, websiteJsonLd } from "@/data/seo";
+import { buildMetadata, canonicalUrl, collapsesToOrigin, websiteJsonLd } from "@/data/seo";
 import JsonLd from "@/components/seo/JsonLd";
+import RootCanonical from "@/components/seo/RootCanonical";
 
 export const dynamic = "force-dynamic";
 
@@ -55,9 +56,15 @@ export default async function HomePage() {
     quote: review.comment,
   }));
   const heading = homeMetadata(settings).title?.absolute || brand.name;
+  const canonical = canonicalUrl({
+    seo: settings?.seo,
+    entry: settings?.seo?.home,
+    path: "/",
+  });
 
   return (
     <>
+      {collapsesToOrigin(canonical) ? <RootCanonical href={canonical} /> : null}
       <h1 className="sr-only">{heading}</h1>
       <JsonLd data={websiteJsonLd(settings?.seo)} />
       <Hero banners={banners} />

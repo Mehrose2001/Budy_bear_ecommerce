@@ -85,7 +85,7 @@ export default function OfferPopupCard({
 
       <div className="bg-brand-cream px-5 pb-5 pt-4 sm:px-6 sm:pb-6">
         <p className="text-center text-sm leading-6 text-neutral-600">
-          Applied on every product at checkout. No promo code needed.
+          Limited-time promotion. The amount due is shown in your order summary.
         </p>
         {preview ? (
           <div className="mt-4 flex h-12 items-center justify-center rounded-full bg-brand-primary text-sm font-semibold text-white opacity-90">
