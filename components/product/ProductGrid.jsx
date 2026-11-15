@@ -1,7 +1,12 @@
 import ProductCard from "@/components/product/ProductCard";
 import { cn } from "@/lib/utils";
 
-export default function ProductGrid({ products, className, emptyMessage }) {
+export default function ProductGrid({
+  products,
+  className,
+  emptyMessage,
+  mobileClickActions = false,
+}) {
   if (!products.length) {
     return (
       <div className="rounded-3xl border border-dashed border-neutral-300 bg-neutral-50 px-6 py-16 text-center">
@@ -24,7 +29,11 @@ export default function ProductGrid({ products, className, emptyMessage }) {
       )}
     >
       {products.map((product) => (
-        <ProductCard key={product.id} product={product} />
+        <ProductCard
+          key={product.id}
+          product={product}
+          mobileClickActions={mobileClickActions}
+        />
       ))}
     </div>
   );

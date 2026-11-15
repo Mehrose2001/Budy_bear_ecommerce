@@ -15,7 +15,11 @@ import { formatPrice, getDiscountPercent, cn } from "@/lib/utils";
 import { getProductStock } from "@/lib/variantStock";
 import ProductRating from "@/components/ui/ProductRating";
 
-export default function ProductCard({ product, className }) {
+function isDesktopListing() {
+  return window.matchMedia("(min-width: 1024px)").matches;
+}
+
+export default function ProductCard({ product, className, mobileClickActions = false }) {
   const [isHovered, setIsHovered] = useState(false);
   const [showActions, setShowActions] = useState(false);
   const cardRef = useRef(null);
@@ -44,6 +48,15 @@ export default function ProductCard({ product, className }) {
     return () => document.removeEventListener("pointerdown", handlePointer);
   }, [showActions]);
 
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 1024px)");
+    const clearOnDesktop = () => {
+      if (media.matches) setShowActions(false);
+    };
+    media.addEventListener("change", clearOnDesktop);
+    return () => media.removeEventListener("change", clearOnDesktop);
+  }, []);
+
   const handleAddToCart = (event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -52,12 +65,10 @@ export default function ProductCard({ product, className }) {
     showToast(`${product.name} added to cart`);
   };
 
-  const handleImageClick = (event) => {
-    if (event.nativeEvent.pointerType === "mouse") return;
-    if (!showActions) {
-      event.preventDefault();
-      setShowActions(true);
-    }
+  const revealMobileActions = (event) => {
+    if (!mobileClickActions || isDesktopListing()) return;
+    event.preventDefault();
+    setShowActions(true);
   };
 
   return (
@@ -71,7 +82,7 @@ export default function ProductCard({ product, className }) {
         <Link
           href={`/product/${product.slug}`}
           className="block"
-          onClick={handleImageClick}
+          onClick={revealMobileActions}
         >
           <div className="relative aspect-[4/5] overflow-hidden">
             <Image
@@ -115,8 +126,10 @@ export default function ProductCard({ product, className }) {
 
         <div
           className={cn(
-            "absolute inset-x-3 bottom-3 flex translate-y-2 flex-col gap-2 opacity-0 transition-all duration-300 lg:group-hover:translate-y-0 lg:group-hover:opacity-100",
-            showActions && "translate-y-0 opacity-100"
+            "absolute inset-x-2 bottom-2 flex flex-col gap-2 transition-all duration-300 sm:inset-x-3 sm:bottom-3",
+            showActions
+              ? "pointer-events-auto translate-y-0 opacity-100"
+              : "pointer-events-none translate-y-2 opacity-0 lg:group-hover:pointer-events-auto lg:group-hover:translate-y-0 lg:group-hover:opacity-100"
           )}
         >
           <Button
@@ -147,7 +160,11 @@ export default function ProductCard({ product, className }) {
       </div>
 
       <div className="mt-4 flex flex-1 flex-col">
-        <Link href={`/product/${product.slug}`} className="group/link flex-1">
+        <Link
+          href={`/product/${product.slug}`}
+          className="group/link flex-1"
+          onClick={revealMobileActions}
+        >
           <h3 className="line-clamp-2 text-sm font-semibold leading-5 text-neutral-900 transition-colors group-hover/link:text-brand-primary">
             {product.name}
           </h3>

@@ -62,4 +62,4 @@ export const KID_YEAR_SIZES = [
   "12-13Y",
 ];
 
-export const PRODUCTS_PER_PAGE = 12;
+export const PRODUCTS_PER_PAGE = 20;

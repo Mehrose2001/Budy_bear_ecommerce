@@ -7,6 +7,7 @@ import ProductGallery from "@/components/product/ProductGallery";
 import ProductInfo from "@/components/product/ProductInfo";
 import { getProductColors } from "@/lib/productImages";
 import { applyReviewStatsToProduct } from "@/lib/ratings";
+import { persistListingScroll } from "@/lib/listingScroll";
 
 export default function QuickView({ product, onClose }) {
   const router = useRouter();
@@ -43,13 +44,14 @@ export default function QuickView({ product, onClose }) {
       labelledBy="quick-view-title"
       className="max-w-4xl"
     >
-      <div className="grid gap-8 md:grid-cols-2">
+      <div className="grid gap-5 md:grid-cols-2 md:gap-8">
         <ProductGallery product={displayProduct} compact selectedColor={selectedColor} />
         <ProductInfo
           product={displayProduct}
           compact
           onColorChange={setSelectedColor}
           onViewFull={() => {
+            persistListingScroll();
             const slug = displayProduct.slug;
             onClose();
             router.push(`/product/${slug}`);

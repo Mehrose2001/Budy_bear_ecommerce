@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { SlidersHorizontal, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, SlidersHorizontal, X } from "lucide-react";
 import ProductFilters from "@/components/product/ProductFilters";
 import ProductGrid from "@/components/product/ProductGrid";
 import Breadcrumbs from "@/components/ui/Breadcrumbs";
@@ -19,14 +19,43 @@ import {
   buildSearchParamsFromFilters,
   getActiveFilterCount,
   getFilterFacets,
+  paginateProducts,
   parseFiltersFromSearchParams,
   sortProducts,
   PRODUCTS_PER_PAGE,
 } from "@/lib/productFilters";
-import { formatLabel, formatPrice, slugify } from "@/lib/utils";
+import {
+  clearListingScrollRestore,
+  holdListingScrollRestore,
+  persistListingScroll,
+  readListingScroll,
+  shouldRestoreListingScroll,
+} from "@/lib/listingScroll";
+import { cn, formatLabel, formatPrice, slugify } from "@/lib/utils";
 import { resolveSubcategoryName, uniqueSubcategories } from "@/lib/productSubcategories";
 import CategoryHeroBanner from "@/components/category/CategoryHeroBanner";
 import { resolveListingBanner } from "@/lib/categoryBanner";
+
+function parseListingPage(searchParams) {
+  const raw = Number(searchParams.get("page"));
+  if (!Number.isFinite(raw) || raw < 1) return 1;
+  return Math.floor(raw);
+}
+
+function paginationItems(current, total) {
+  const wanted = new Set([1, total]);
+  for (let page = current - 1; page <= current + 1; page += 1) {
+    if (page >= 1 && page <= total) wanted.add(page);
+  }
+
+  const pages = [...wanted].sort((a, b) => a - b);
+  const items = [];
+  pages.forEach((page, index) => {
+    if (index > 0 && page - pages[index - 1] > 1) items.push(`gap-${page}`);
+    items.push(page);
+  });
+  return items;
+}
 
 function ActiveFilterChip({ label, onRemove }) {
   return (
@@ -56,9 +85,11 @@ export default function ProductListing({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const listingTopRef = useRef(null);
+  const scrollListingIntoView = useRef(false);
+  const listingUrlRef = useRef("");
 
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(PRODUCTS_PER_PAGE);
 
   const filters = useMemo(() => {
     const parsed = parseFiltersFromSearchParams(searchParams, {
@@ -78,6 +109,7 @@ export default function ProductListing({
   }, [searchParams, lockedCategory, presetFilter, categories]);
 
   const sortBy = searchParams.get("sort") || DEFAULT_SORT;
+  const requestedPage = parseListingPage(searchParams);
 
   const listingBanner = useMemo(() => {
     if (!category) return null;
@@ -102,8 +134,11 @@ export default function ProductListing({
     [products, filters]
   );
 
-  const visibleProducts = filteredProducts.slice(0, visibleCount);
-  const hasMore = visibleCount < filteredProducts.length;
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE));
+  const currentPage = Math.min(requestedPage, totalPages);
+  const visibleProducts = paginateProducts(filteredProducts, currentPage, PRODUCTS_PER_PAGE);
+  const pageStart = filteredProducts.length ? (currentPage - 1) * PRODUCTS_PER_PAGE + 1 : 0;
+  const pageEnd = filteredProducts.length ? pageStart + visibleProducts.length - 1 : 0;
   const activeFilterCount = getActiveFilterCount(filters);
 
   const priceBounds = useMemo(
@@ -114,9 +149,83 @@ export default function ProductListing({
     []
   );
 
+  const buildListingHref = (nextFilters, nextSort = sortBy, nextPage = 1) => {
+    const params = buildSearchParamsFromFilters(nextFilters, nextSort);
+    if (searchQuery) params.set("q", searchQuery);
+    const preset = searchParams.get("filter");
+    if (preset) params.set("filter", preset);
+    if (nextPage > 1) params.set("page", String(nextPage));
+    const query = params.toString();
+    return query ? `${basePath}?${query}` : basePath;
+  };
+
   useEffect(() => {
-    setVisibleCount(PRODUCTS_PER_PAGE);
+    listingUrlRef.current = `${window.location.pathname}${window.location.search}`;
+  });
+
+  useEffect(() => {
+    if (!shouldRestoreListingScroll()) return undefined;
+    const y = readListingScroll();
+    const clearFlag = window.setTimeout(clearListingScrollRestore, 0);
+    if (y == null) {
+      return () => window.clearTimeout(clearFlag);
+    }
+
+    holdListingScrollRestore(900);
+    let cancelled = false;
+    const apply = () => {
+      if (!cancelled) window.scrollTo(0, y);
+    };
+    apply();
+    const frame = window.requestAnimationFrame(apply);
+    const timers = [0, 60, 180, 400, 800].map((delay) => window.setTimeout(apply, delay));
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(clearFlag);
+      window.cancelAnimationFrame(frame);
+      timers.forEach((timer) => window.clearTimeout(timer));
+    };
   }, [searchParams]);
+
+  useEffect(() => {
+    let timer = 0;
+    const onScroll = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        const current = `${window.location.pathname}${window.location.search}`;
+        if (current !== listingUrlRef.current) return;
+        persistListingScroll();
+      }, 120);
+    };
+
+    const onProductLink = (event) => {
+      const anchor = event.target instanceof Element ? event.target.closest("a") : null;
+      if (!anchor) return;
+      const href = anchor.getAttribute("href") || "";
+      if (!href.startsWith("/product/")) return;
+      persistListingScroll();
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    document.addEventListener("click", onProductLink, true);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("scroll", onScroll);
+      document.removeEventListener("click", onProductLink, true);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (requestedPage <= totalPages) return;
+    router.replace(buildListingHref(filters, sortBy, totalPages), { scroll: false });
+  }, [requestedPage, totalPages, filters, sortBy, searchQuery, basePath, router, searchParams]);
+
+  useEffect(() => {
+    if (!scrollListingIntoView.current) return;
+    scrollListingIntoView.current = false;
+    listingTopRef.current?.scrollIntoView({ block: "start" });
+  }, [currentPage, searchParams]);
 
   useEffect(() => {
     document.body.style.overflow = mobileFiltersOpen ? "hidden" : "";
@@ -125,13 +234,16 @@ export default function ProductListing({
     };
   }, [mobileFiltersOpen]);
 
-  const updateUrl = (nextFilters, nextSort = sortBy) => {
-    const params = buildSearchParamsFromFilters(nextFilters, nextSort);
-    if (searchQuery) {
-      params.set("q", searchQuery);
-    }
-    const query = params.toString();
-    router.push(query ? `${basePath}?${query}` : basePath, { scroll: false });
+  const updateUrl = (nextFilters, nextSort = sortBy, nextPage = 1) => {
+    persistListingScroll();
+    router.push(buildListingHref(nextFilters, nextSort, nextPage), { scroll: false });
+  };
+
+  const goToPage = (nextPage) => {
+    const page = Math.min(Math.max(1, nextPage), totalPages);
+    if (page === currentPage) return;
+    scrollListingIntoView.current = true;
+    updateUrl(filters, sortBy, page);
   };
 
   const toggleArrayFilter = (key, value) => {
@@ -271,8 +383,9 @@ export default function ProductListing({
             <p className="mt-2 max-w-2xl text-neutral-600">{description}</p>
           )}
           <p className="mt-3 text-sm text-neutral-500">
-            {filteredProducts.length} product
-            {filteredProducts.length === 1 ? "" : "s"}
+            {filteredProducts.length
+              ? `Showing ${pageStart}–${pageEnd} of ${filteredProducts.length} products`
+              : "0 products"}
           </p>
         </div>
 
@@ -338,20 +451,59 @@ export default function ProductListing({
           </div>
         </div>
 
-        <div>
-          <ProductGrid products={visibleProducts} />
-          {hasMore && (
-            <div className="mt-10 flex justify-center">
-              <Button
-                onClick={() =>
-                  setVisibleCount((current) => current + PRODUCTS_PER_PAGE)
-                }
-                variant="outline"
-                size="lg"
-              >
-                Load More Products
-              </Button>
-            </div>
+        <div ref={listingTopRef} className="scroll-mt-36">
+          <ProductGrid products={visibleProducts} mobileClickActions />
+          {totalPages > 1 && (
+            <nav
+              className="mt-10 flex flex-col items-center gap-3"
+              aria-label="Pagination"
+            >
+              <p className="text-sm font-medium text-neutral-600">
+                Page {currentPage} of {totalPages}
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => goToPage(currentPage - 1)}
+                  disabled={currentPage <= 1}
+                  className="inline-flex h-10 items-center gap-1 rounded-full border border-neutral-200 bg-white px-3 text-sm font-semibold text-neutral-800 transition-colors hover:border-brand-primary hover:text-brand-primary disabled:pointer-events-none disabled:opacity-40"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  <span className="hidden sm:inline">Previous</span>
+                </button>
+                {paginationItems(currentPage, totalPages).map((item) =>
+                  typeof item === "number" ? (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => goToPage(item)}
+                      aria-current={item === currentPage ? "page" : undefined}
+                      className={cn(
+                        "inline-flex h-10 min-w-10 items-center justify-center rounded-full px-3 text-sm font-semibold transition-colors",
+                        item === currentPage
+                          ? "bg-brand-primary text-white"
+                          : "border border-neutral-200 bg-white text-neutral-800 hover:border-brand-primary hover:text-brand-primary"
+                      )}
+                    >
+                      {item}
+                    </button>
+                  ) : (
+                    <span key={item} className="px-1 text-sm text-neutral-400" aria-hidden="true">
+                      …
+                    </span>
+                  )
+                )}
+                <button
+                  type="button"
+                  onClick={() => goToPage(currentPage + 1)}
+                  disabled={currentPage >= totalPages}
+                  className="inline-flex h-10 items-center gap-1 rounded-full border border-neutral-200 bg-white px-3 text-sm font-semibold text-neutral-800 transition-colors hover:border-brand-primary hover:text-brand-primary disabled:pointer-events-none disabled:opacity-40"
+                >
+                  <span className="hidden sm:inline">Next</span>
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </nav>
           )}
         </div>
       </div>
