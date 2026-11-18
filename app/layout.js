@@ -15,9 +15,30 @@ const inter = Inter({
   display: "swap",
 });
 
+// export async function generateMetadata() {
+//   const settings = await getStorefrontSettings().catch(() => null);
+//   const seo = normalizeSeo(settings?.seo);
+//   const metadata = {
+//     metadataBase: new URL(siteBase(seo)),
+//     title: {
+//       default: seo.title || SITE_NAME,
+//       template: `%s | ${SITE_NAME}`,
+//     },
+//     description: seo.description || brand.description,
+//     robots: parseRobots(seo.robots),
+//   };
+//   if (seo.logo) {
+//     metadata.icons = {
+//       icon: [{ url: seo.logo }],
+//       apple: [{ url: seo.logo }],
+//     };
+//   }
+//   return metadata;
+// }
 export async function generateMetadata() {
   const settings = await getStorefrontSettings().catch(() => null);
   const seo = normalizeSeo(settings?.seo);
+
   const metadata = {
     metadataBase: new URL(siteBase(seo)),
     title: {
@@ -26,13 +47,19 @@ export async function generateMetadata() {
     },
     description: seo.description || brand.description,
     robots: parseRobots(seo.robots),
+
+    verification: {
+      google: "or7i2T48S4_TFHIG-2PHzjMDHOOM-em-MSDSVGCbL68",
+    },
   };
+
   if (seo.logo) {
     metadata.icons = {
       icon: [{ url: seo.logo }],
       apple: [{ url: seo.logo }],
     };
   }
+
   return metadata;
 }
 
