@@ -34,9 +34,9 @@ export const config = {
     user: process.env.HOSTINGER_FTP_USER || "",
     password: process.env.HOSTINGER_FTP_PASSWORD || "",
     port: Number(process.env.HOSTINGER_FTP_PORT || 21),
-    remoteDir: process.env.HOSTINGER_REMOTE_DIR || "/public_html/media",
+    remoteDir: process.env.HOSTINGER_REMOTE_DIR || "/uploads",
     publicBaseUrl: (
-      process.env.HOSTINGER_PUBLIC_BASE_URL || "https://budybear.com/media"
+      process.env.HOSTINGER_PUBLIC_BASE_URL || "https://budybear.com/uploads"
     ).replace(/\/$/, ""),
   },
   catalogCacheMs: Number(process.env.CATALOG_CACHE_MS || 15000),

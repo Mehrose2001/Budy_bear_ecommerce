@@ -3,9 +3,8 @@ import path from "node:path";
 import { Readable } from "node:stream";
 import { fileURLToPath } from "node:url";
 import { Client } from "basic-ftp";
-import { config, isFtpConfigured, isSupabaseConfigured } from "../config.js";
+import { config, isFtpConfigured } from "../config.js";
 import { HttpError } from "../lib/http.js";
-import { getServiceClient } from "../supabase.js";
 
 const ALLOWED_TYPES = new Set([
   "image/jpeg",
@@ -64,16 +63,11 @@ export async function storeImage(file, folder = "products") {
     return `${config.ftp.publicBaseUrl}/${folder}/${filename}`;
   }
 
-  if (isSupabaseConfigured()) {
-    const supabase = getServiceClient();
-    const objectPath = `${folder}/${filename}`;
-    const { error } = await supabase.storage.from("product-images").upload(objectPath, buffer, {
-      contentType: file.mimetype || "image/jpeg",
-      upsert: false,
-    });
-    if (error) throw new HttpError(500, error.message);
-    const { data } = supabase.storage.from("product-images").getPublicUrl(objectPath);
-    return data.publicUrl;
+  if (config.nodeEnv === "production") {
+    throw new HttpError(
+      503,
+      "Set HOSTINGER_FTP_HOST, HOSTINGER_FTP_USER, and HOSTINGER_FTP_PASSWORD. New images are stored on Hostinger."
+    );
   }
 
   const dir = path.join(uploadsRoot, folder);
