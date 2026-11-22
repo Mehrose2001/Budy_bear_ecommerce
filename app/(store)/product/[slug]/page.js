@@ -4,7 +4,7 @@ import ProductDetailsClient from "@/components/product/ProductDetailsClient";
 import ProductReviews from "@/components/product/ProductReviews";
 import ProductGrid from "@/components/product/ProductGrid";
 import RecentlyViewed from "@/components/product/RecentlyViewed";
-import { getProductPage, getStorefrontSettings, listProducts } from "@/lib/catalog";
+import { getProductPage, getStorefrontSettings } from "@/lib/catalog";
 import { getProductColors } from "@/lib/productImages";
 import { formatLabel, slugify } from "@/lib/utils";
 import { buildMetadata, chooseEntry, productJsonLd, siteBase } from "@/data/seo";
@@ -12,12 +12,11 @@ import { productSubcategories } from "@/lib/productSubcategories";
 import JsonLd from "@/components/seo/JsonLd";
 
 export const dynamic = "force-dynamic";
+export const dynamicParams = true;
+export const runtime = "nodejs";
 
-export async function generateStaticParams() {
-  const products = await listProducts();
-  return products
-    .filter((product) => product.slug)
-    .map((product) => ({ slug: product.slug }));
+export function generateStaticParams() {
+  return [];
 }
 
 export async function generateMetadata({ params }) {

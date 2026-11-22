@@ -16,9 +16,9 @@ export function adminLoginEmail() {
   return ADMIN_LOGIN_EMAIL;
 }
 
-/** Admin sign-in must use this exact lowercase address, not mixed case. */
+/** Admin sign-in must use this Gmail address. Case is ignored after trim. */
 export function isExactAdminLoginEmail(value) {
-  return String(value || "").trim() === ADMIN_LOGIN_EMAIL;
+  return String(value || "").trim().toLowerCase() === ADMIN_LOGIN_EMAIL;
 }
 
 export const ORDER_STATUSES = [

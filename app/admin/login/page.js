@@ -48,8 +48,7 @@ export default function AdminLoginPage() {
           Admin login
         </h1>
         <p className="mt-2 text-sm text-neutral-600">
-          Sign in with {adminLoginEmail()} and your password. Mixed-case
-          spellings of this Gmail address are not accepted. You stay signed in
+          Sign in with {adminLoginEmail()} and your password. You stay signed in
           on this browser while the panel is in use. The session ends after 8
           hours without activity, or 7 days after sign-in. Signing in on another
           device does not sign this one out.

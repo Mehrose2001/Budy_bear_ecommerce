@@ -84,7 +84,7 @@ export async function getRelatedProducts(product, limit = 8) {
       [product.category, Number(product.id)]
     )
   );
-  return withStats(rows.map(mapProduct).filter(Boolean));
+  return rows.map(mapProduct).filter(Boolean);
 }
 
 export async function getProductBySlug(slug, options = {}) {
@@ -92,8 +92,7 @@ export async function getProductBySlug(slug, options = {}) {
   const product = mapProduct(row);
   if (product && product.isActive === false && !options.includeInactive) return null;
   if (!product) return null;
-  const [mapped] = await withStats([product]);
-  return mapped;
+  return product;
 }
 
 export async function createProduct(input) {

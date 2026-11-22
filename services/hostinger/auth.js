@@ -68,8 +68,8 @@ function supabaseAuthClient() {
   });
 }
 
-async function upsertLocalAccount({ id, email, password, fullName, phone, role }) {
-  const passwordHash = await hashPassword(password);
+async function upsertLocalAccount({ id, email, password, fullName, phone, role, allowShortPassword = false }) {
+  const passwordHash = await hashPassword(password, { allowShort: allowShortPassword });
   const existing = await queryOne("SELECT id FROM users WHERE email = ?", [email]);
   const userId = existing?.id || id || nextId();
   const meta = asJson({ full_name: fullName, phone: phone || "" }, {});
@@ -105,18 +105,38 @@ async function upsertLocalAccount({ id, email, password, fullName, phone, role }
 async function importVerifiedSupabaseUser(email, password) {
   const client = supabaseAuthClient();
   if (!client) return null;
-  const { data, error } = await client.auth.signInWithPassword({ email, password });
-  if (error || !data?.user) return null;
-  const authUser = data.user;
-  const role = email === adminLoginEmail() ? "admin" : "customer";
-  return upsertLocalAccount({
-    id: authUser.id,
-    email,
-    password,
-    fullName: authUser.user_metadata?.full_name || (role === "admin" ? "Budy Bear" : "Customer"),
-    phone: authUser.user_metadata?.phone || "",
-    role,
-  });
+  let timer;
+  try {
+    const { data, error } = await Promise.race([
+      client.auth.signInWithPassword({ email, password }),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error("supabase_auth_timeout")), 8_000);
+      }),
+    ]);
+    if (error || !data?.user) {
+      if (error) console.warn("Hostinger login: Supabase check failed.", error.message);
+      return null;
+    }
+    const authUser = data.user;
+    const role = email === adminLoginEmail() ? "admin" : "customer";
+    return upsertLocalAccount({
+      id: authUser.id,
+      email,
+      password,
+      fullName: authUser.user_metadata?.full_name || (role === "admin" ? "Budy Bear" : "Customer"),
+      phone: authUser.user_metadata?.phone || "",
+      role,
+      allowShortPassword: true,
+    });
+  } catch (error) {
+    if (error?.message === "supabase_auth_timeout") {
+      throw new AppError("Sign-in is taking too long. Please try again.", 503);
+    }
+    console.warn("Hostinger login: Supabase check threw.", error.message);
+    throw new AppError("Sign-in is temporarily unavailable. Please try again.", 503);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function importBootstrapAdmin(email, password) {
