@@ -4,6 +4,7 @@ import { query, queryOne, withTransaction } from "@/lib/db";
 import { asJson, nextId, normalizeMysqlRow, normalizeMysqlRows } from "@/lib/mysql/helpers";
 import { mapOrder, toDbOrderStatus, toDbPaymentStatus } from "@/lib/mappers";
 import { orderPhone, phonesMatch, toPublicTrackOrder } from "@/lib/orderTracking";
+import { importMissingSupabaseOrders } from "@/services/hostinger/importSupabaseOrders";
 
 function withItems(orderRow) {
   if (!orderRow) return null;
@@ -89,6 +90,14 @@ export async function createOrder(orderData, orderItems) {
       const total = Number(orderData.total);
       const customer = orderData.customer || {};
       const address = orderData.shippingAddress || {};
+      const requestedUserId = String(orderData.userId || "").trim();
+      let userId = null;
+      if (requestedUserId) {
+        const [profileRows] = await connection.execute("SELECT id FROM profiles WHERE id = ? LIMIT 1", [
+          requestedUserId,
+        ]);
+        userId = profileRows[0]?.id || null;
+      }
       await connection.execute(
         `INSERT INTO orders (
           id, user_id, items, subtotal, discount, shipping, shipping_fee, total, total_amount,
@@ -98,7 +107,7 @@ export async function createOrder(orderData, orderItems) {
         ) VALUES (${Array(23).fill("?").join(", ")})`,
         [
           orderId,
-          orderData.userId || null,
+          userId,
           asJson(items, []),
           Number(orderData.subtotal),
           Number(orderData.discount || 0),
@@ -172,10 +181,20 @@ export async function getUserOrders(userId) {
 }
 
 export async function getAllOrders() {
+  try {
+    await importMissingSupabaseOrders();
+  } catch (error) {
+    console.warn("Supabase order import skipped:", error?.message || error);
+  }
   const rows = normalizeMysqlRows(await query("SELECT * FROM orders ORDER BY created_at DESC"));
   const results = [];
   for (const row of rows) {
-    results.push(await loadOrder(row.id));
+    try {
+      const order = await loadOrder(row.id);
+      if (order) results.push(order);
+    } catch (error) {
+      console.warn(`Skipping unreadable order ${row.id}:`, error?.message || error);
+    }
   }
   return results;
 }

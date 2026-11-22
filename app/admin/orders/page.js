@@ -28,11 +28,14 @@ export default function AdminOrdersPage() {
   const load = useCallback(async () => {
     if (!admin?.token) return;
     const data = await adminFetch("/api/admin/orders", {}, admin.token);
-    setOrders(data.orders);
+    setOrders(Array.isArray(data.orders) ? data.orders : []);
+    setError("");
   }, [admin?.token]);
 
   useEffect(() => {
-    load().catch(() => {});
+    load().catch((err) => {
+      setError(err?.message || "Unable to load orders.");
+    });
   }, [load]);
 
   const updateStatus = async (order, orderStatus) => {
@@ -172,6 +175,13 @@ export default function AdminOrdersPage() {
             </tr>
           </thead>
           <tbody>
+            {!orders.length ? (
+              <tr>
+                <td colSpan={9} className="px-4 py-10 text-center text-neutral-500">
+                  {error ? "Orders could not be loaded." : "No orders yet."}
+                </td>
+              </tr>
+            ) : null}
             {orders.map((order) => {
               const waUrl = getCustomerConfirmWhatsAppUrl(order);
               return (
