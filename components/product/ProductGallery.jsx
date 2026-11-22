@@ -78,8 +78,8 @@ export default function ProductGallery({ product, compact = false, selectedColor
         onTouchEnd={onTouchEnd}
       >
         <Image
-          key={images[activeIndex]}
-          src={images[activeIndex]}
+          key={images[activeIndex] || "fallback"}
+          src={images[activeIndex] || "/images/products/product-1.svg"}
           alt={product.name}
           fill
           priority={!compact}

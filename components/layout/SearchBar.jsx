@@ -73,7 +73,7 @@ export default function SearchBar({
           aria-label="Search suggestions"
         >
           {suggestions.map((product) => (
-            <Link
+            <a
               key={product.id}
               href={`/product/${product.slug}`}
               className="flex items-center gap-3 px-3 py-2.5 transition-colors hover:bg-brand-cream"
@@ -84,7 +84,7 @@ export default function SearchBar({
             >
               <span className="relative h-12 w-12 overflow-hidden rounded-xl bg-neutral-100">
                 <Image
-                  src={product.images[0]}
+                  src={product.images?.[0] || "/images/products/product-1.svg"}
                   alt={product.name}
                   fill
                   sizes="48px"
@@ -99,7 +99,7 @@ export default function SearchBar({
                   {formatPrice(getEffectivePrice(product))}
                 </span>
               </span>
-            </Link>
+            </a>
           ))}
           <Link
             href={`/search?q=${encodeURIComponent(value.trim())}`}

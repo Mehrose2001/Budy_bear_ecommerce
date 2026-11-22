@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useState } from "react";
 import { Eye, Heart, ShoppingBag } from "lucide-react";
 import Badge from "@/components/ui/Badge";
@@ -30,8 +29,12 @@ export default function ProductCard({ product, className, mobileClickActions = t
   const displayPrice = getEffectivePrice(product);
   const listPrice = Number(product.price) || displayPrice;
   const discount = getDiscountPercent(listPrice, displayPrice);
-  const images = Array.isArray(product.images) ? product.images : [];
-  const secondaryImage = images[1] || images[0];
+  const images = (Array.isArray(product.images) ? product.images : [])
+    .map((item) => (typeof item === "string" ? item : item?.url || ""))
+    .filter(Boolean);
+  const fallbackImage = "/images/products/product-1.svg";
+  const primaryImage = images[0] || fallbackImage;
+  const secondaryImage = images[1] || primaryImage;
   const inStock = getProductStock(product) > 0;
 
   const handleAddToCart = (event) => {
@@ -56,21 +59,21 @@ export default function ProductCard({ product, className, mobileClickActions = t
       onMouseLeave={() => setIsHovered(false)}
     >
       <div className="relative overflow-hidden rounded-2xl bg-neutral-100 ring-1 ring-neutral-200/80">
-        <Link
+        <a
           href={`/product/${product.slug}`}
           className="block"
           onClick={handleImageClick}
         >
           <div className="relative aspect-[4/5] overflow-hidden">
             <Image
-              src={isHovered ? secondaryImage : images[0]}
+              src={isHovered ? secondaryImage : primaryImage}
               alt={product.name}
               fill
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
               className="object-cover transition-transform duration-500 group-hover:scale-105"
             />
           </div>
-        </Link>
+        </a>
 
         <div className="absolute left-3 top-3 flex flex-col gap-2">
           {product.newArrival && <Badge variant="new">New</Badge>}
@@ -135,7 +138,7 @@ export default function ProductCard({ product, className, mobileClickActions = t
       </div>
 
       <div className="mt-4 flex flex-1 flex-col">
-        <Link href={`/product/${product.slug}`} className="group/link flex flex-1 flex-col">
+        <a href={`/product/${product.slug}`} className="group/link flex flex-1 flex-col">
           <h3 className="line-clamp-2 text-sm font-semibold leading-5 text-neutral-900 transition-colors group-hover/link:text-brand-primary">
             {product.name}
           </h3>
@@ -152,7 +155,7 @@ export default function ProductCard({ product, className, mobileClickActions = t
               </span>
             )}
           </div>
-        </Link>
+        </a>
       </div>
     </article>
   );

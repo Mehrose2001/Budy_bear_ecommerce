@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { Heart, Minus, Plus, Truck, RefreshCcw } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
@@ -279,12 +278,12 @@ export default function ProductInfo({
             View full product
           </button>
         ) : (
-          <Link
+          <a
             href={`/product/${product.slug}`}
             className="mt-4 inline-flex text-sm font-semibold text-brand-primary hover:underline"
           >
             View full product
-          </Link>
+          </a>
         ))}
 
       {!compact && (
