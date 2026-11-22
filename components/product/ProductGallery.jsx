@@ -64,7 +64,7 @@ export default function ProductGallery({ product, compact = false, selectedColor
             aria-label={`View image ${index + 1}`}
             aria-pressed={activeIndex === index}
           >
-            <Image src={image} alt="" fill className="object-cover" sizes="64px" />
+            <Image src={image || "/images/products/product-1.svg"} alt="" fill className="object-cover" sizes="64px" />
           </button>
         ))}
       </div>

@@ -20,35 +20,44 @@ export function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }) {
-  const { slug } = await params;
-  const page = await getProductPage(slug);
-  const product = page?.product;
+  try {
+    const { slug } = await params;
+    const page = await getProductPage(slug);
+    const product = page?.product;
 
-  if (!product) {
-    return { title: "Product not found" };
+    if (!product) {
+      return { title: "Product not found" };
+    }
+
+    const settings = await getStorefrontSettings().catch(() => null);
+    const fallbackImage =
+      typeof product.images?.[0] === "string" ? product.images[0] : product.images?.[0]?.url || "";
+    return buildMetadata({
+      seo: settings?.seo,
+      entry: chooseEntry(product.seo, settings?.seo?.entities?.products?.[product.slug]),
+      path: `/product/${product.slug}`,
+      fallbackTitle: product.name,
+      fallbackDescription:
+        product.description ||
+        `Shop ${product.name} at BudyBear. Kids clothing available with delivery across Pakistan.`,
+      fallbackImage,
+    });
+  } catch (error) {
+    console.error("Product metadata failed.", error);
+    return { title: "Product" };
   }
-
-  const settings = await getStorefrontSettings().catch(() => null);
-  return buildMetadata({
-    seo: settings?.seo,
-    entry: chooseEntry(product.seo, settings?.seo?.entities?.products?.[product.slug]),
-    path: `/product/${product.slug}`,
-    fallbackTitle: product.name,
-    fallbackDescription:
-      product.description ||
-      `Shop ${product.name} at BudyBear. Kids clothing available with delivery across Pakistan.`,
-    fallbackImage: product.images?.[0],
-  });
 }
 
 export default async function ProductPage({ params }) {
-  const { slug } = await params;
-  const page = await getProductPage(slug);
-  const product = page?.product;
+  let slug = "";
+  try {
+    ({ slug } = await params);
+    const page = await getProductPage(slug);
+    const product = page?.product;
 
-  if (!product) {
-    notFound();
-  }
+    if (!product) {
+      notFound();
+    }
 
   const related = page.related || [];
 
@@ -112,4 +121,14 @@ export default async function ProductPage({ params }) {
       <RecentlyViewed currentProductId={product.id} />
     </div>
   );
+  } catch (error) {
+    if (error && typeof error === "object" && "digest" in error) throw error;
+    console.error("Product page failed.", error);
+    return (
+      <div className="mx-auto max-w-xl px-4 py-16">
+        <h1 className="text-2xl font-black text-neutral-900">This product page failed to render</h1>
+        <p className="mt-4 text-sm text-neutral-600">{error?.message || String(error)}</p>
+      </div>
+    );
+  }
 }
