@@ -30,7 +30,8 @@ export default function ProductCard({ product, className, mobileClickActions = t
   const displayPrice = getEffectivePrice(product);
   const listPrice = Number(product.price) || displayPrice;
   const discount = getDiscountPercent(listPrice, displayPrice);
-  const secondaryImage = product.images[1] || product.images[0];
+  const images = Array.isArray(product.images) ? product.images : [];
+  const secondaryImage = images[1] || images[0];
   const inStock = getProductStock(product) > 0;
 
   const handleAddToCart = (event) => {
@@ -62,7 +63,7 @@ export default function ProductCard({ product, className, mobileClickActions = t
         >
           <div className="relative aspect-[4/5] overflow-hidden">
             <Image
-              src={isHovered ? secondaryImage : product.images[0]}
+              src={isHovered ? secondaryImage : images[0]}
               alt={product.name}
               fill
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"

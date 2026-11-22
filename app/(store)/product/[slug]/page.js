@@ -86,7 +86,7 @@ export default async function ProductPage({ params }) {
               ["Brand", product.brand],
               ["Category", formatLabel(product.category)],
               ["Type", subcategories.map((name) => formatLabel(name)).join(", ") || "—"],
-              ["Available sizes", product.sizes.join(", ")],
+              ["Available sizes", (Array.isArray(product.sizes) ? product.sizes : []).join(", ")],
               ["Available colors", getProductColors(product).join(", ") || "—"],
               ["Stock", product.stock > 0 ? String(product.stock) : "Sold out"],
             ].map(([label, value]) => (

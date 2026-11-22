@@ -1,9 +1,11 @@
+import { createClient } from "@supabase/supabase-js";
 import { adminLoginEmail } from "@/data/admin";
 import { AppError, throwIf } from "@/lib/errors";
 import { query, queryOne } from "@/lib/db";
 import { asJson, nextId, normalizeMysqlRow } from "@/lib/mysql/helpers";
 import { mapProfile } from "@/lib/mappers";
 import { hashPassword, verifyPassword, assertPassword } from "@/lib/auth/passwords";
+import { getSupabaseConfig, isSupabaseConfigured } from "@/lib/supabase/config";
 import {
   createResetToken,
   hashResetToken,
@@ -57,24 +59,98 @@ function tokensFor(user) {
   return sessionPayload(user, signAccessToken(user), signRefreshToken(user));
 }
 
+function supabaseAuthClient() {
+  if (!isSupabaseConfigured()) return null;
+  const { url, anonKey } = getSupabaseConfig();
+  if (!url || !anonKey) return null;
+  return createClient(url, anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
+async function upsertLocalAccount({ id, email, password, fullName, phone, role }) {
+  const passwordHash = await hashPassword(password);
+  const existing = await queryOne("SELECT id FROM users WHERE email = ?", [email]);
+  const userId = existing?.id || id || nextId();
+  const meta = asJson({ full_name: fullName, phone: phone || "" }, {});
+  if (existing) {
+    await query(
+      `UPDATE users
+       SET password_hash = ?, password_algo = 'bcrypt', password_needs_reset = 0, last_sign_in_at = ?
+       WHERE id = ?`,
+      [passwordHash, new Date(), userId]
+    );
+  } else {
+    await query(
+      `INSERT INTO users (id, email, password_hash, password_algo, password_needs_reset, email_confirmed_at, last_sign_in_at, raw_user_meta)
+       VALUES (?, ?, ?, 'bcrypt', 0, ?, ?, ?)`,
+      [userId, email, passwordHash, new Date(), new Date(), meta]
+    );
+  }
+  const profile = await queryOne("SELECT id FROM profiles WHERE id = ?", [userId]);
+  if (profile) {
+    await query(
+      "UPDATE profiles SET email = ?, full_name = COALESCE(?, full_name), phone = COALESCE(?, phone), role = ? WHERE id = ?",
+      [email, fullName || null, phone || null, role, userId]
+    );
+  } else {
+    await query(
+      "INSERT INTO profiles (id, email, full_name, phone, role) VALUES (?, ?, ?, ?, ?)",
+      [userId, email, fullName || "", phone || null, role]
+    );
+  }
+  return loadMappedProfile(userId);
+}
+
+async function importVerifiedSupabaseUser(email, password) {
+  const client = supabaseAuthClient();
+  if (!client) return null;
+  const { data, error } = await client.auth.signInWithPassword({ email, password });
+  if (error || !data?.user) return null;
+  const authUser = data.user;
+  const role = email === adminLoginEmail() ? "admin" : "customer";
+  return upsertLocalAccount({
+    id: authUser.id,
+    email,
+    password,
+    fullName: authUser.user_metadata?.full_name || (role === "admin" ? "Budy Bear" : "Customer"),
+    phone: authUser.user_metadata?.phone || "",
+    role,
+  });
+}
+
+async function importBootstrapAdmin(email, password) {
+  if (email !== adminLoginEmail()) return null;
+  const bootstrap = String(process.env.ADMIN_BOOTSTRAP_PASSWORD || "");
+  if (!bootstrap || password !== bootstrap) return null;
+  return upsertLocalAccount({
+    email,
+    password,
+    fullName: "Budy Bear",
+    phone: "",
+    role: "admin",
+  });
+}
+
 export async function loginWithPassword(email, password, attemptKey = "unknown") {
   guardLogin(String(attemptKey || "unknown"));
   if (!email || !password) throw new AppError("Email and password are required.", 400);
   const address = normalizedEmail(email);
   const user = await queryOne("SELECT * FROM users WHERE email = ?", [address]);
-  if (!user) throw new AppError("Invalid email or password.", 401);
-  if (!user.password_hash || Number(user.password_needs_reset) === 1) {
-    throw new AppError(
-      "This account needs a password reset before it can be used on the new login system. Use Forgot password.",
-      401
-    );
+  if (user?.password_hash && Number(user.password_needs_reset) !== 1) {
+    const ok = await verifyPassword(password, user.password_hash);
+    if (!ok) throw new AppError("Invalid email or password.", 401);
+    await query("UPDATE users SET last_sign_in_at = ? WHERE id = ?", [new Date(), user.id]);
+    const profile = await loadMappedProfile(user.id);
+    if (!profile) throw new AppError("Invalid email or password.", 401);
+    return tokensFor(profile);
   }
-  const ok = await verifyPassword(password, user.password_hash);
-  if (!ok) throw new AppError("Invalid email or password.", 401);
-  await query("UPDATE users SET last_sign_in_at = ? WHERE id = ?", [new Date(), user.id]);
-  const profile = await loadMappedProfile(user.id);
-  if (!profile) throw new AppError("Invalid email or password.", 401);
-  return tokensFor(profile);
+
+  const imported =
+    (await importVerifiedSupabaseUser(address, password)) ||
+    (await importBootstrapAdmin(address, password));
+  if (!imported) throw new AppError("Invalid email or password.", 401);
+  return tokensFor(imported);
 }
 
 export async function refreshWithToken(token) {
