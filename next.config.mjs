@@ -50,6 +50,7 @@ function mediaRemotePatterns() {
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  htmlLimitedBots: /.*/,
   async redirects() {
     return [
       {
