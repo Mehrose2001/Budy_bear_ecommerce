@@ -1,5 +1,3 @@
-"use client";
-
 import Breadcrumbs from "@/components/ui/Breadcrumbs";
 import ProductDetailsClient from "@/components/product/ProductDetailsClient";
 import ProductReviews from "@/components/product/ProductReviews";
