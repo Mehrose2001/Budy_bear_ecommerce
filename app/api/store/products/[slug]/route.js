@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { getProductPage } from "@/lib/catalog";
+import { getProductPage, getStorefrontSettings } from "@/lib/catalog";
+import { formatLabel, slugify } from "@/lib/utils";
+import { productSubcategories } from "@/lib/productSubcategories";
+import { siteBase } from "@/data/seo";
+import { storefrontCard, storefrontProduct, storefrontReview } from "@/lib/storefrontProduct";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -8,16 +12,30 @@ export async function GET(_request, { params }) {
   try {
     const { slug } = await params;
     const page = await getProductPage(slug);
-    if (!page?.product) {
+    const product = storefrontProduct(page?.product);
+    if (!product) {
       return NextResponse.json({ error: "Product not found." }, { status: 404 });
     }
+    const settings = await getStorefrontSettings().catch(() => null);
+    const subcategories = productSubcategories(product);
+    const crumbs = [
+      { label: "Home", href: "/" },
+      { label: formatLabel(product.category), href: `/category/${product.category}` },
+    ];
+    if (subcategories[0]) {
+      crumbs.push({
+        label: formatLabel(subcategories[0]),
+        href: `/category/${product.category}?subcategory=${slugify(subcategories[0])}`,
+      });
+    }
+    crumbs.push({ label: product.name });
     return NextResponse.json({
       ok: true,
-      name: page.product.name,
-      slug: page.product.slug,
-      imageCount: Array.isArray(page.product.images) ? page.product.images.length : 0,
-      relatedCount: Array.isArray(page.related) ? page.related.length : 0,
-      reviewCount: Array.isArray(page.reviews) ? page.reviews.length : 0,
+      product,
+      reviews: (page.reviews || []).map(storefrontReview).filter(Boolean),
+      related: (page.related || []).map(storefrontCard).filter(Boolean),
+      crumbs,
+      baseUrl: siteBase(settings?.seo),
     });
   } catch (error) {
     return NextResponse.json(

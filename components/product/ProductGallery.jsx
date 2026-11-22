@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -64,7 +63,11 @@ export default function ProductGallery({ product, compact = false, selectedColor
             aria-label={`View image ${index + 1}`}
             aria-pressed={activeIndex === index}
           >
-            <Image src={image || "/images/products/product-1.svg"} alt="" fill className="object-cover" sizes="64px" />
+            <img
+              src={image || "/images/products/product-1.svg"}
+              alt=""
+              className="h-full w-full object-cover"
+            />
           </button>
         ))}
       </div>
@@ -77,17 +80,14 @@ export default function ProductGallery({ product, compact = false, selectedColor
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
-        <Image
+        <img
           key={images[activeIndex] || "fallback"}
           src={images[activeIndex] || "/images/products/product-1.svg"}
           alt={product.name}
-          fill
-          priority={!compact}
           className={cn(
-            "transition-opacity duration-300",
+            "h-full w-full transition-opacity duration-300",
             compact ? "object-contain p-1" : "object-cover"
           )}
-          sizes={compact ? "min(100vw, 440px)" : "(max-width: 1024px) 100vw, 50vw"}
           draggable={false}
         />
 
