@@ -3,7 +3,7 @@ import { isExpressAvailable } from "@/data/checkout";
 import { createOrder as createMemoryOrder } from "@/lib/orders";
 import { withBackend } from "@/lib/withBackend";
 import { sendOrderPlacedEmail } from "@/lib/orderEmail";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { isLiveBackendConfigured } from "@/lib/backendMode";
 import { getRequestUser, getBearerToken } from "@/lib/supabase/server";
 import { computeCheckoutTotals } from "@/lib/checkoutTotals";
 import { getStorefrontSettings } from "@/lib/catalog";
@@ -62,7 +62,7 @@ export async function POST(request) {
     let couponPercent = 0;
     if (body.couponCode) {
       try {
-        if (isSupabaseConfigured()) {
+        if (isLiveBackendConfigured()) {
           const saleSubtotal = (body.items || []).reduce(
             (sum, item) => sum + Number(item.unitPrice || item.price || 0) * Number(item.quantity || 1),
             0
@@ -84,11 +84,11 @@ export async function POST(request) {
     let offer = normalizeOffer(null);
     let deliverySettings = null;
     try {
-      const settings = isSupabaseConfigured()
+      const settings = isLiveBackendConfigured()
         ? await getStoreSettings()
         : await getStorefrontSettings();
       offer = normalizeOffer(settings?.offer);
-      deliverySettings = isSupabaseConfigured()
+      deliverySettings = isLiveBackendConfigured()
         ? await getDeliverySettingsForStorefront()
         : {
             deliveryFee: settings?.deliveryFee,
@@ -115,7 +115,7 @@ export async function POST(request) {
       couponCode: body.couponCode || "",
     };
 
-    if (isSupabaseConfigured()) {
+    if (isLiveBackendConfigured()) {
       const user = await getRequestUser(request);
       const order = await createOrder(
         { ...payload, userId: user?.id || body.userId || "" },

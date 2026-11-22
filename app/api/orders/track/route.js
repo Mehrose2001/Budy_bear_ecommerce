@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getOrderById as getMemoryOrder } from "@/lib/orders";
 import { withBackend } from "@/lib/withBackend";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { isLiveBackendConfigured } from "@/lib/backendMode";
 import { trackOrder } from "@/services/orderService";
 import { orderPhone, phonesMatch, toPublicTrackOrder } from "@/lib/orderTracking";
 
@@ -17,7 +17,7 @@ export async function POST(request) {
       );
     }
 
-    if (isSupabaseConfigured()) {
+    if (isLiveBackendConfigured()) {
       const order = await trackOrder(orderId, phone);
       return NextResponse.json({ order });
     }

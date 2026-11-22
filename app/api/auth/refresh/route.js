@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { AppError } from "@/lib/errors";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { isLiveBackendConfigured } from "@/lib/backendMode";
 import { refreshWithToken } from "@/services/authService";
 
 const refreshAttempts = new Map();
@@ -25,7 +25,7 @@ export async function POST(request) {
   if (!allowRefresh(attemptKey)) {
     return NextResponse.json({ error: "Please sign in again." }, { status: 429 });
   }
-  if (!isSupabaseConfigured()) {
+  if (!isLiveBackendConfigured()) {
     return NextResponse.json({ error: "Please sign in again." }, { status: 401 });
   }
 

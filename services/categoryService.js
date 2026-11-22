@@ -13,6 +13,8 @@ import {
 } from "@/lib/categoryBanner";
 import { createServerClient, createServiceClient, createUserClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { useHostingerBackend } from "@/lib/backendMode";
+import * as hostingerCategories from "@/services/hostinger/categories";
 
 function client(accessToken) {
   if (!isSupabaseConfigured()) {
@@ -49,6 +51,7 @@ function applyBannerOverlay(category, overlays) {
 }
 
 export async function getCategories({ includeInactive = false, accessToken } = {}) {
+  if (useHostingerBackend()) return hostingerCategories.getCategories({ includeInactive, accessToken });
   const supabase = client(accessToken);
   let query = supabase.from("categories").select("*").order("name", { ascending: true });
   if (!includeInactive) query = query.eq("is_active", true);
@@ -64,6 +67,7 @@ export async function getCategories({ includeInactive = false, accessToken } = {
 }
 
 export async function getCategoryBySlug(slug, options = {}) {
+  if (useHostingerBackend()) return hostingerCategories.getCategoryBySlug(slug, options);
   const supabase = client(options.accessToken);
   const { data, error } = await supabase
     .from("categories")
@@ -162,6 +166,7 @@ function assertCategorySeo(input) {
 }
 
 export async function createCategory(input, accessToken) {
+  if (useHostingerBackend()) return hostingerCategories.createCategory(input, accessToken);
   assertCategorySeo(input);
   const supabase = writeClient(accessToken);
   const slug = String(input.slug || "").trim();
@@ -196,6 +201,7 @@ export async function createCategory(input, accessToken) {
 }
 
 export async function getCategoryRecord(id, options = {}) {
+  if (useHostingerBackend()) return hostingerCategories.getCategoryRecord(id, options);
   if (!id) return null;
   const supabase = client(options.accessToken);
   const existing = await findCategoryRow(supabase, id);
@@ -219,6 +225,7 @@ async function findCategoryRow(supabase, id) {
 }
 
 export async function updateCategory(id, input, accessToken) {
+  if (useHostingerBackend()) return hostingerCategories.updateCategory(id, input, accessToken);
   assertCategorySeo(input);
   const supabase = writeClient(accessToken);
   const existing = await findCategoryRow(supabase, id);
@@ -259,6 +266,7 @@ export async function updateCategory(id, input, accessToken) {
 }
 
 export async function deleteCategory(id, accessToken) {
+  if (useHostingerBackend()) return hostingerCategories.deleteCategory(id, accessToken);
   const supabase = writeClient(accessToken);
   const existing = await findCategoryRow(supabase, id);
   throwIf(existing.error, "Unable to delete category.");

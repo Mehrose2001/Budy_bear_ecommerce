@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { listCoupons } from "@/lib/catalogStore";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { isLiveBackendConfigured } from "@/lib/backendMode";
 import { validateCoupon } from "@/services/contentService";
 import { AppError } from "@/lib/errors";
 
@@ -27,7 +27,7 @@ function applyMemoryCoupon(code, subtotal) {
 
 export async function POST(request) {
   const body = await request.json().catch(() => ({}));
-  if (isSupabaseConfigured()) {
+  if (isLiveBackendConfigured()) {
     try {
       const data = await validateCoupon(body.code, body.subtotal);
       return NextResponse.json(data);

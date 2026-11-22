@@ -16,7 +16,7 @@ import {
 } from "@/lib/catalogStore";
 import { listOrders } from "@/lib/orders";
 import { withBackend } from "@/lib/withBackend";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { isLiveBackendConfigured } from "@/lib/backendMode";
 import { revalidatePath } from "next/cache";
 import { invalidateCatalogSnapshot } from "@/lib/catalog";
 import { getProducts } from "@/services/productService";
@@ -96,7 +96,7 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const resource = searchParams.get("resource") || "stats";
 
-    if (isSupabaseConfigured()) {
+    if (isLiveBackendConfigured()) {
       if (resource === "stats") {
         const [orders, products] = await Promise.all([
           getAllOrders(token),
@@ -182,7 +182,7 @@ export async function POST(request) {
     }
     const body = await request.json();
     const token = getAccessToken(request);
-    if (isSupabaseConfigured()) {
+    if (isLiveBackendConfigured()) {
       if (body.resource === "coupons") return NextResponse.json({ coupon: await upsertDbCoupon(body.data, token) });
       if (body.resource === "banners") {
         const banner = await upsertDbBanner(body.data, token);
@@ -284,7 +284,7 @@ export async function DELETE(request) {
     const resource = searchParams.get("resource");
     const id = searchParams.get("id");
     const token = getAccessToken(request);
-    if (isSupabaseConfigured()) {
+    if (isLiveBackendConfigured()) {
       if (resource === "coupons") await deleteDbCoupon(id, token);
       if (resource === "banners") {
         await deleteDbBanner(id, token);

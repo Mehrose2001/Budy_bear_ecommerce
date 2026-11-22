@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import { getOrderById as getMemoryOrder } from "@/lib/orders";
 import { withBackend } from "@/lib/withBackend";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { isLiveBackendConfigured } from "@/lib/backendMode";
 import { getBearerToken, getRequestUser } from "@/lib/supabase/server";
 import { getOrderById } from "@/services/orderService";
 
 export async function GET(request, { params }) {
   const { id } = await params;
   return withBackend(request, `/orders/${encodeURIComponent(id)}`, async () => {
-    if (isSupabaseConfigured()) {
+    if (isLiveBackendConfigured()) {
       const user = await getRequestUser(request);
       const order = await getOrderById(id, getBearerToken(request));
       if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });

@@ -15,7 +15,9 @@ import {
   createUserClient,
 } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { useHostingerBackend } from "@/lib/backendMode";
 import { isAccessTokenFresh } from "@/lib/adminSession";
+import * as hostingerReviews from "@/services/hostinger/reviews";
 
 function anonClient() {
   if (!isSupabaseConfigured()) {
@@ -39,6 +41,7 @@ let reviewStatsCache = { at: 0, map: new Map() };
 const REVIEW_STATS_TTL_MS = 20_000;
 
 export async function loadPublicReviewStatsMap() {
+  if (useHostingerBackend()) return hostingerReviews.loadPublicReviewStatsMap();
   if (!isSupabaseConfigured()) return new Map();
   if (Date.now() - reviewStatsCache.at < REVIEW_STATS_TTL_MS) {
     return reviewStatsCache.map;
@@ -81,9 +84,11 @@ export async function loadPublicReviewStatsMap() {
 
 export function invalidateReviewStatsCache() {
   reviewStatsCache = { at: 0, map: new Map() };
+  if (useHostingerBackend()) hostingerReviews.invalidateReviewStatsCache();
 }
 
 export async function getProductReviews(productId, { includeUnapproved = false } = {}) {
+  if (useHostingerBackend()) return hostingerReviews.getProductReviews(productId, { includeUnapproved });
   const supabase = anonClient();
   const id = Number(productId);
   if (!id) return [];
@@ -101,6 +106,7 @@ export async function getProductReviews(productId, { includeUnapproved = false }
 }
 
 export async function getTestimonialReviews({ limit = TESTIMONIAL_LIMIT } = {}) {
+  if (useHostingerBackend()) return hostingerReviews.getTestimonialReviews({ limit });
   const supabase = anonClient();
   const { data, error } = await supabase
     .from("reviews")
@@ -118,6 +124,7 @@ export async function getTestimonialReviews({ limit = TESTIMONIAL_LIMIT } = {}) 
 }
 
 export async function getAllReviews(accessToken) {
+  if (useHostingerBackend()) return hostingerReviews.getAllReviews(accessToken);
   const supabase = writeClient(accessToken);
   const { data, error } = await supabase
     .from("reviews")
@@ -143,6 +150,7 @@ async function refreshProductReviewStats(supabase, productId) {
 }
 
 export async function createReview(input) {
+  if (useHostingerBackend()) return hostingerReviews.createReview(input);
   const author = String(input.author || input.customerName || "").trim();
   const comment = String(input.comment || "").trim();
   const title = String(input.title || "").trim() || "Customer review";
@@ -266,6 +274,7 @@ function reviewStatusPatch(status) {
 }
 
 export async function updateReview(id, input, accessToken) {
+  if (useHostingerBackend()) return hostingerReviews.updateReview(id, input, accessToken);
   const supabase = writeClient(accessToken);
   const featured = wantsTestimonialStatus(input.status);
   const patch = {};
@@ -323,6 +332,7 @@ export async function updateReview(id, input, accessToken) {
 }
 
 export async function deleteReview(id, accessToken) {
+  if (useHostingerBackend()) return hostingerReviews.deleteReview(id, accessToken);
   const supabase = writeClient(accessToken);
   const { data, error } = await supabase
     .from("reviews")

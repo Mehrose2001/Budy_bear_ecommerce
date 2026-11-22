@@ -9,7 +9,7 @@ import {
 import { ORDER_STATUSES } from "@/data/admin";
 import { invalidateCatalogSnapshot } from "@/lib/catalog";
 import { withBackend } from "@/lib/withBackend";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { isLiveBackendConfigured } from "@/lib/backendMode";
 import {
   deleteOrder,
   getAllOrders,
@@ -22,7 +22,7 @@ export async function GET(request) {
     if (!(await isAdminRequest(request))) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    if (isSupabaseConfigured()) {
+    if (isLiveBackendConfigured()) {
       const orders = await getAllOrders(getAccessToken(request));
       return NextResponse.json({ orders });
     }
@@ -36,14 +36,14 @@ export async function PATCH(request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const body = await request.json();
-    if (body.paymentStatus && isSupabaseConfigured()) {
+    if (body.paymentStatus && isLiveBackendConfigured()) {
       const order = await updatePaymentStatus(body.id, body.paymentStatus, getAccessToken(request));
       return NextResponse.json({ order });
     }
     if (!ORDER_STATUSES.includes(body.orderStatus)) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
     }
-    if (isSupabaseConfigured()) {
+    if (isLiveBackendConfigured()) {
       const order = await updateOrderStatus(body.id, body.orderStatus, getAccessToken(request));
       return NextResponse.json({ order });
     }
@@ -60,7 +60,7 @@ export async function DELETE(request) {
     }
     const id = new URL(request.url).searchParams.get("id");
     if (!id) return NextResponse.json({ error: "Order id is required." }, { status: 400 });
-    if (isSupabaseConfigured()) {
+    if (isLiveBackendConfigured()) {
       try {
         await deleteOrder(id, getAccessToken(request));
         invalidateCatalogSnapshot();

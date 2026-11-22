@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { withBackend } from "@/lib/withBackend";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { isLiveBackendConfigured } from "@/lib/backendMode";
 import { registerWithPassword } from "@/services/authService";
 
 export async function POST(request) {
   return withBackend(request, "/auth/register", async () => {
-    if (!isSupabaseConfigured()) {
+    if (!isLiveBackendConfigured()) {
       return NextResponse.json(
-        { error: "Customer accounts need Supabase Auth to be configured." },
+        { error: "Customer accounts are not configured." },
         { status: 503 }
       );
     }

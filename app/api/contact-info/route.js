@@ -2,12 +2,12 @@ import { NextResponse } from "next/server";
 import { senderFromContactPage } from "@/lib/contactSender";
 import { getDefaultLegalPage, mergeLegalPage } from "@/data/legalPages";
 import { getStorePage } from "@/services/contentService";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { isLiveBackendConfigured } from "@/lib/backendMode";
 
 export async function GET() {
   try {
     let page = null;
-    if (isSupabaseConfigured()) {
+    if (isLiveBackendConfigured()) {
       page = await getStorePage("contact");
     }
     if (!page) {

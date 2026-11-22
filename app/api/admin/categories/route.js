@@ -7,7 +7,7 @@ import {
   upsertCategory as upsertMemoryCategory,
 } from "@/lib/catalogStore";
 import { withBackend } from "@/lib/withBackend";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { isLiveBackendConfigured } from "@/lib/backendMode";
 import { invalidateCatalogSnapshot } from "@/lib/catalog";
 import {
   createCategory,
@@ -50,7 +50,7 @@ export async function GET(request) {
     if (!(await isAdminRequest(request))) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    if (isSupabaseConfigured()) {
+    if (isLiveBackendConfigured()) {
       const categories = await withStoredCategorySeo(
         await getCategories({
           includeInactive: true,
@@ -72,7 +72,7 @@ export async function POST(request) {
     if (!body.name || !body.slug) {
       return NextResponse.json({ error: "Name and slug are required." }, { status: 400 });
     }
-    if (isSupabaseConfigured()) {
+    if (isLiveBackendConfigured()) {
       const token = getAccessToken(request);
       const lookup = body.id || body.originalSlug || body.slug;
       const existing = lookup
@@ -97,7 +97,7 @@ export async function DELETE(request) {
     }
     const { searchParams } = new URL(request.url);
     const slug = searchParams.get("slug");
-    if (isSupabaseConfigured()) {
+    if (isLiveBackendConfigured()) {
       await deleteCategory(slug, getAccessToken(request));
       refreshStoreCategories();
       return NextResponse.json({ ok: true });

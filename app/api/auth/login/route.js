@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { DEMO_ADMIN, ADMIN_TOKEN, adminLoginEmail, isExactAdminLoginEmail } from "@/data/admin";
 import { AppError } from "@/lib/errors";
 import { withBackend } from "@/lib/withBackend";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { isLiveBackendConfigured } from "@/lib/backendMode";
 import { loginWithPassword } from "@/services/authService";
 
 const loginAttempts = new Map();
@@ -45,7 +45,7 @@ export async function POST(request) {
 
     const email = typedEmail.toLowerCase();
 
-    if (isSupabaseConfigured()) {
+    if (isLiveBackendConfigured()) {
       const result = await loginWithPassword(email, password, attemptKey);
       if (audience === "admin") {
         const role = String(result.user?.role || "").toLowerCase();

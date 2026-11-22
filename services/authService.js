@@ -3,6 +3,8 @@ import { AppError, throwIf } from "@/lib/errors";
 import { mapProfile } from "@/lib/mappers";
 import { createServerClient, createServiceClient, createUserClient, getAuthUser } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { useHostingerBackend } from "@/lib/backendMode";
+import * as hostingerAuth from "@/services/hostinger/auth";
 
 const loginAttempts = new Map();
 
@@ -154,6 +156,7 @@ export async function ensureProfile(authUser, extra = {}) {
 }
 
 export async function loginWithPassword(email, password, attemptKey = "unknown") {
+  if (useHostingerBackend()) return hostingerAuth.loginWithPassword(email, password, attemptKey);
   guardLogin(String(attemptKey || "unknown"));
   if (!isSupabaseConfigured()) {
     throw new AppError("Supabase is not configured.", 503);
@@ -182,6 +185,7 @@ export async function loginWithPassword(email, password, attemptKey = "unknown")
 }
 
 export async function refreshWithToken(refreshToken) {
+  if (useHostingerBackend()) return hostingerAuth.refreshWithToken(refreshToken);
   if (!isSupabaseConfigured()) {
     throw new AppError("Please sign in again.", 401);
   }
@@ -212,6 +216,7 @@ export async function refreshWithToken(refreshToken) {
 }
 
 export async function registerWithPassword(input) {
+  if (useHostingerBackend()) return hostingerAuth.registerWithPassword(input);
   if (!isSupabaseConfigured()) {
     throw new AppError("Customer accounts need Supabase Auth to be configured.", 503);
   }
@@ -266,6 +271,7 @@ export async function registerWithPassword(input) {
 }
 
 export async function loadProfile(accessToken, userId) {
+  if (useHostingerBackend()) return hostingerAuth.loadProfile(accessToken, userId);
   const service = createServiceClient();
   const db = service || createUserClient(accessToken) || createServerClient();
   const { data, error } = await db
@@ -282,6 +288,7 @@ export async function loadProfile(accessToken, userId) {
 }
 
 export async function updateAdminAccount(accessToken, input = {}) {
+  if (useHostingerBackend()) return hostingerAuth.updateAdminAccount(accessToken, input);
   if (!isSupabaseConfigured()) {
     throw new AppError("Account updates need Supabase Auth.", 503);
   }
@@ -406,6 +413,7 @@ const GENERIC_RESET_MESSAGE =
   "If an account exists for that email, we sent a password reset link. Check your inbox and spam folder.";
 
 export async function requestPasswordReset(email, redirectTo, attemptKey = "unknown") {
+  if (useHostingerBackend()) return hostingerAuth.requestPasswordReset(email, redirectTo, attemptKey);
   guardLogin(String(attemptKey || "unknown"));
   if (!isSupabaseConfigured()) {
     throw new AppError("Password reset needs email to be configured.", 503);
@@ -433,6 +441,9 @@ export async function requestPasswordReset(email, redirectTo, attemptKey = "unkn
 }
 
 export async function resetPasswordWithToken({ accessToken, tokenHash, code, token, email, password }) {
+  if (useHostingerBackend()) {
+    return hostingerAuth.resetPasswordWithToken({ accessToken, tokenHash, code, token, email, password });
+  }
   if (!isSupabaseConfigured()) {
     throw new AppError("Password reset needs email to be configured.", 503);
   }

@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { withBackend } from "@/lib/withBackend";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { isLiveBackendConfigured } from "@/lib/backendMode";
 import { getBearerToken, getRequestUser } from "@/lib/supabase/server";
 import { addWishlistItem, listWishlist } from "@/services/contentService";
 
 export async function GET(request) {
   return withBackend(request, "/wishlist", async () => {
-    if (!isSupabaseConfigured()) {
+    if (!isLiveBackendConfigured()) {
       return NextResponse.json({ error: "Sign in to load saved favourites." }, { status: 401 });
     }
     const user = await getRequestUser(request);
@@ -20,7 +20,7 @@ export async function GET(request) {
 
 export async function POST(request) {
   return withBackend(request, "/wishlist", async () => {
-    if (!isSupabaseConfigured()) {
+    if (!isLiveBackendConfigured()) {
       return NextResponse.json({ error: "Sign in to save favourites to your account." }, { status: 401 });
     }
     const user = await getRequestUser(request);

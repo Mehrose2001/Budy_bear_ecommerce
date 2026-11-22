@@ -10,7 +10,7 @@ import {
 } from "@/lib/catalogStore";
 import { withBackend } from "@/lib/withBackend";
 import { invalidateCatalogSnapshot } from "@/lib/catalog";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { isLiveBackendConfigured } from "@/lib/backendMode";
 import {
   createProduct,
   deleteProduct,
@@ -36,7 +36,7 @@ export async function GET(request) {
     if (!(await isAdminRequest(request))) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    if (isSupabaseConfigured()) {
+    if (isLiveBackendConfigured()) {
       const products = await withStoredProductSeo(
         await getProducts({
           includeInactive: true,
@@ -63,7 +63,7 @@ export async function POST(request) {
       return NextResponse.json({ error: "Slug is required." }, { status: 400 });
     }
     body.slug = slug;
-    if (isSupabaseConfigured()) {
+    if (isLiveBackendConfigured()) {
       const product = await createProduct(body, getAccessToken(request));
       invalidateCatalogSnapshot();
       revalidatePath("/", "layout");
@@ -87,7 +87,7 @@ export async function PUT(request) {
       return NextResponse.json({ error: "Slug is required." }, { status: 400 });
     }
     body.slug = slug;
-    if (isSupabaseConfigured()) {
+    if (isLiveBackendConfigured()) {
       const product = await updateProduct(body.id, body, getAccessToken(request));
       invalidateCatalogSnapshot();
       revalidatePath("/", "layout");
@@ -109,7 +109,7 @@ export async function DELETE(request) {
     }
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
-    if (isSupabaseConfigured()) {
+    if (isLiveBackendConfigured()) {
       const existing = await getProductById(id, {
         includeInactive: true,
         accessToken: getAccessToken(request),

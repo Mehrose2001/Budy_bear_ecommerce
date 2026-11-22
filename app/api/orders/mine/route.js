@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { withBackend } from "@/lib/withBackend";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { isLiveBackendConfigured } from "@/lib/backendMode";
 import { getBearerToken, getRequestUser } from "@/lib/supabase/server";
 import { getUserOrders } from "@/services/orderService";
 
 export async function GET(request) {
   return withBackend(request, "/orders/mine", async () => {
-    if (!isSupabaseConfigured()) {
+    if (!isLiveBackendConfigured()) {
       return NextResponse.json({ orders: [] });
     }
     const user = await getRequestUser(request);

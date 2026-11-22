@@ -2,6 +2,8 @@ import { throwIf, AppError } from "@/lib/errors";
 import { mapBanner, mapCoupon, mapProduct, mapSettings } from "@/lib/mappers";
 import { createServerClient, createServiceClient, createUserClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { useHostingerBackend } from "@/lib/backendMode";
+import * as hostingerContent from "@/services/hostinger/content";
 import { getDefaultLegalPage, mergeLegalPage } from "@/data/legalPages";
 import { entryUrlError, isMissingColumn, normalizeSeo, seoInputError, withEntitySeo } from "@/data/seo";
 import { normalizeOffer } from "@/lib/storeOffer";
@@ -113,6 +115,7 @@ async function persistSeoDocument(supabase, seo) {
 }
 
 export async function saveStoreSeo(input, accessToken) {
+  if (useHostingerBackend()) return hostingerContent.saveStoreSeo(input, accessToken);
   const invalid = seoInputError(input);
   if (invalid) throw new AppError(invalid, 400);
   const supabase = writeClient(accessToken);
@@ -122,6 +125,7 @@ export async function saveStoreSeo(input, accessToken) {
 }
 
 export async function removeEntitySeo(group, key, accessToken) {
+  if (useHostingerBackend()) return hostingerContent.removeEntitySeo(group, key, accessToken);
   if (!key) return null;
   const supabase = writeClient(accessToken);
   const current = await getStoreSettings();
@@ -132,6 +136,7 @@ export async function removeEntitySeo(group, key, accessToken) {
 }
 
 export async function saveEntitySeo(group, key, entry, accessToken) {
+  if (useHostingerBackend()) return hostingerContent.saveEntitySeo(group, key, entry, accessToken);
   const invalid = entryUrlError(entry, "Saved");
   if (invalid) throw new AppError(invalid, 400);
   const supabase = writeClient(accessToken);
@@ -141,6 +146,7 @@ export async function saveEntitySeo(group, key, entry, accessToken) {
 }
 
 export async function getStoreSettings() {
+  if (useHostingerBackend()) return hostingerContent.getStoreSettings();
   const supabase = createServiceClient() || client();
   const { data, error } = await supabase.from("store_settings").select("*").eq("id", 1).maybeSingle();
   throwIf(error, "Unable to load settings.", 500);
@@ -148,6 +154,7 @@ export async function getStoreSettings() {
 }
 
 export async function getDeliverySettingsForStorefront() {
+  if (useHostingerBackend()) return hostingerContent.getDeliverySettingsForStorefront();
   if (!isSupabaseConfigured()) {
     const settings = getMemorySettings();
     return normalizeDeliverySettings({
@@ -176,6 +183,7 @@ export async function getDeliverySettingsForStorefront() {
 }
 
 export async function updateStoreSettings(input, accessToken) {
+  if (useHostingerBackend()) return hostingerContent.updateStoreSettings(input, accessToken);
   const supabase = writeClient(accessToken);
   const payload = {
     store_name: input.storeName,
@@ -247,6 +255,7 @@ export async function updateStoreSettings(input, accessToken) {
 }
 
 export async function listCoupons({ includeInactive = false, accessToken } = {}) {
+  if (useHostingerBackend()) return hostingerContent.listCoupons({ includeInactive, accessToken });
   const supabase = client(accessToken);
   let query = supabase.from("coupons").select("*").order("created_at", { ascending: false });
   if (!includeInactive) query = query.eq("active", true);
@@ -256,6 +265,7 @@ export async function listCoupons({ includeInactive = false, accessToken } = {})
 }
 
 export async function validateCoupon(code, subtotal) {
+  if (useHostingerBackend()) return hostingerContent.validateCoupon(code, subtotal);
   const coupons = await listCoupons();
   const normalized = String(code || "").trim().toUpperCase();
   const coupon = coupons.find((item) => item.active && item.code.toUpperCase() === normalized);
@@ -273,6 +283,7 @@ export async function validateCoupon(code, subtotal) {
 }
 
 export async function upsertCoupon(input, accessToken) {
+  if (useHostingerBackend()) return hostingerContent.upsertCoupon(input, accessToken);
   const supabase = client(accessToken);
   const row = {
     id: input.id || `c${Date.now()}`,
@@ -288,12 +299,14 @@ export async function upsertCoupon(input, accessToken) {
 }
 
 export async function deleteCoupon(id, accessToken) {
+  if (useHostingerBackend()) return hostingerContent.deleteCoupon(id, accessToken);
   const supabase = client(accessToken);
   const { error } = await supabase.from("coupons").delete().eq("id", id);
   throwIf(error, "Unable to delete coupon.");
 }
 
 export async function listBanners({ includeInactive = false, accessToken } = {}) {
+  if (useHostingerBackend()) return hostingerContent.listBanners({ includeInactive, accessToken });
   const supabase = client(accessToken);
   let query = supabase.from("banners").select("*").order("created_at", { ascending: true });
   if (!includeInactive) query = query.eq("active", true);
@@ -320,6 +333,7 @@ function bannerRow(input, { includeMobile = true } = {}) {
 }
 
 export async function upsertBanner(input, accessToken) {
+  if (useHostingerBackend()) return hostingerContent.upsertBanner(input, accessToken);
   const supabase = writeClient(accessToken);
   const draft = { ...input, id: input.id || `b${Date.now()}` };
   let saved = await supabase.from("banners").upsert(bannerRow(draft)).select("*").single();
@@ -335,12 +349,14 @@ export async function upsertBanner(input, accessToken) {
 }
 
 export async function deleteBanner(id, accessToken) {
+  if (useHostingerBackend()) return hostingerContent.deleteBanner(id, accessToken);
   const supabase = writeClient(accessToken);
   const { error } = await supabase.from("banners").delete().eq("id", id);
   throwIf(error, "Unable to delete banner.");
 }
 
 export async function listWishlist(userId, accessToken) {
+  if (useHostingerBackend()) return hostingerContent.listWishlist(userId, accessToken);
   const supabase = writeClient(accessToken);
   const { data, error } = await supabase
     .from("wishlists")
@@ -352,6 +368,7 @@ export async function listWishlist(userId, accessToken) {
 }
 
 export async function addWishlistItem(userId, productId, accessToken) {
+  if (useHostingerBackend()) return hostingerContent.addWishlistItem(userId, productId, accessToken);
   const supabase = writeClient(accessToken);
   const { error } = await supabase
     .from("wishlists")
@@ -375,6 +392,7 @@ async function saveLegalPagesJson(supabase, slug, intro, body) {
 }
 
 export async function getStorePage(slug) {
+  if (useHostingerBackend()) return hostingerContent.getStorePage(slug);
   const defaults = getDefaultLegalPage(slug);
   if (!defaults) return null;
   if (!isSupabaseConfigured()) {
@@ -398,6 +416,7 @@ export async function getStorePage(slug) {
 }
 
 export async function upsertStorePage(input, accessToken) {
+  if (useHostingerBackend()) return hostingerContent.upsertStorePage(input, accessToken);
   const slug = String(input.slug || "");
   const defaults = getDefaultLegalPage(slug);
   if (!defaults) throw new AppError("Unknown page.", 400);
@@ -429,6 +448,7 @@ export async function upsertStorePage(input, accessToken) {
 }
 
 export async function removeWishlistItem(userId, productId, accessToken) {
+  if (useHostingerBackend()) return hostingerContent.removeWishlistItem(userId, productId, accessToken);
   const supabase = writeClient(accessToken);
   const { error } = await supabase
     .from("wishlists")
@@ -441,6 +461,7 @@ export async function removeWishlistItem(userId, productId, accessToken) {
 const CATEGORY_BANNER_STORE_KEY = "_categoryBanners";
 
 export async function getCategoryBannerOverlays(accessToken) {
+  if (useHostingerBackend()) return hostingerContent.getCategoryBannerOverlays(accessToken);
   if (!isSupabaseConfigured()) {
     const legal = parseStoreJsonField(getMemorySettings()?.legalPages) || {};
     return legal[CATEGORY_BANNER_STORE_KEY] || {};
@@ -457,6 +478,7 @@ export async function getCategoryBannerOverlays(accessToken) {
 }
 
 export async function persistCategoryBannerOverlay(slug, input, accessToken) {
+  if (useHostingerBackend()) return hostingerContent.persistCategoryBannerOverlay(slug, input, accessToken);
   const categorySlug = String(slug || "").trim();
   if (!categorySlug) return;
 

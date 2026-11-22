@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { ADMIN_TOKEN, DEMO_ADMIN } from "@/data/admin";
 import { withBackend } from "@/lib/withBackend";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { isLiveBackendConfigured } from "@/lib/backendMode";
 import { getRequestUser } from "@/lib/supabase/server";
 import { updateAdminAccount } from "@/services/authService";
 import { getAccessToken, isAdminRequest } from "@/lib/adminAuth";
@@ -23,7 +23,7 @@ function isLocalDemoToken(request) {
 
 export async function GET(request) {
   return withBackend(request, "/auth/me", async () => {
-    if (isSupabaseConfigured()) {
+    if (isLiveBackendConfigured()) {
       const user = await getRequestUser(request);
       if (!user) return NextResponse.json({ error: "Please sign in." }, { status: 401 });
       return NextResponse.json({ user });
@@ -44,7 +44,7 @@ export async function PATCH(request) {
 
     const body = await request.json().catch(() => ({}));
 
-    if (isSupabaseConfigured()) {
+    if (isLiveBackendConfigured()) {
       const result = await updateAdminAccount(getAccessToken(request), body);
       return NextResponse.json(result);
     }

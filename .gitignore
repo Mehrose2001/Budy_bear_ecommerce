@@ -44,6 +44,8 @@ yarn-error.log*
 
 # media migration backups and manifests
 /scripts/migration-reports
+/storage/uploads/*
+!/storage/uploads/.gitkeep
 
 # admin product uploads
 /public/uploads/products/*

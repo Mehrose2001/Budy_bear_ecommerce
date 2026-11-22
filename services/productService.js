@@ -5,8 +5,10 @@ import { parseSubcategoryValue } from "@/lib/productSubcategories";
 import { removeEntitySeo, saveEntitySeo } from "@/services/contentService";
 import { createServerClient, createUserClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { useHostingerBackend } from "@/lib/backendMode";
 import { mergeProductReviewStats } from "@/lib/ratings";
 import { loadPublicReviewStatsMap } from "@/services/reviewService";
+import * as hostingerProducts from "@/services/hostinger/products";
 
 function client(accessToken) {
   if (!isSupabaseConfigured()) {
@@ -21,6 +23,7 @@ function isMissingVariantStockColumn(error) {
 }
 
 export async function getProducts({ includeInactive = false, accessToken } = {}) {
+  if (useHostingerBackend()) return hostingerProducts.getProducts({ includeInactive, accessToken });
   const supabase = client(accessToken);
   let query = supabase.from("products").select("*").order("id", { ascending: true });
   if (!includeInactive) query = query.eq("is_active", true);
@@ -32,6 +35,7 @@ export async function getProducts({ includeInactive = false, accessToken } = {})
 }
 
 export async function getProductById(id, options = {}) {
+  if (useHostingerBackend()) return hostingerProducts.getProductById(id, options);
   const supabase = client(options.accessToken);
   const { data, error } = await supabase
     .from("products")
@@ -46,6 +50,7 @@ export async function getProductById(id, options = {}) {
 
 export async function getRelatedProducts(product, limit = 8) {
   if (!product) return [];
+  if (useHostingerBackend()) return hostingerProducts.getRelatedProducts(product, limit);
   const supabase = client();
   const { data, error } = await supabase
     .from("products")
@@ -60,6 +65,7 @@ export async function getRelatedProducts(product, limit = 8) {
 }
 
 export async function getProductBySlug(slug, options = {}) {
+  if (useHostingerBackend()) return hostingerProducts.getProductBySlug(slug, options);
   const supabase = client(options.accessToken);
   const { data, error } = await supabase
     .from("products")
@@ -107,6 +113,7 @@ async function writeProductRow(supabase, id, row, mode) {
 }
 
 export async function createProduct(input, accessToken) {
+  if (useHostingerBackend()) return hostingerProducts.createProduct(input, accessToken);
   const invalidSeo = entryUrlError(input?.seo, "Product");
   if (invalidSeo) throw new AppError(invalidSeo, 400);
   const supabase = client(accessToken);
@@ -132,6 +139,7 @@ export async function createProduct(input, accessToken) {
 }
 
 export async function updateProduct(id, input, accessToken) {
+  if (useHostingerBackend()) return hostingerProducts.updateProduct(id, input, accessToken);
   const invalidSeo = entryUrlError(input?.seo, "Product");
   if (invalidSeo) throw new AppError(invalidSeo, 400);
   const existing = await getProductById(id, { includeInactive: true, accessToken });
@@ -163,6 +171,7 @@ export async function updateProduct(id, input, accessToken) {
 }
 
 export async function deleteProduct(id, accessToken) {
+  if (useHostingerBackend()) return hostingerProducts.deleteProduct(id, accessToken);
   const supabase = client(accessToken);
   const { error } = await supabase.from("products").delete().eq("id", Number(id));
   throwIf(error, "Unable to delete product.");
@@ -170,6 +179,7 @@ export async function deleteProduct(id, accessToken) {
 }
 
 export async function updateProductStock(id, quantity, accessToken) {
+  if (useHostingerBackend()) return hostingerProducts.updateProductStock(id, quantity, accessToken);
   const stock = Math.max(0, Number(quantity) || 0);
   const supabase = client(accessToken);
   const { data, error } = await supabase

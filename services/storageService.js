@@ -2,6 +2,12 @@ import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { Readable } from "stream";
 import { AppError } from "@/lib/errors";
+import {
+  isMediaRootConfigured,
+  publicMediaUrl,
+  writeMediaFile,
+} from "@/lib/mediaRoot";
+import { normalizeMediaUrl } from "@/lib/mediaUrl";
 
 export const PRODUCT_IMAGE_BUCKET = "product-images";
 const MAX_BYTES = 6 * 1024 * 1024;
@@ -52,6 +58,15 @@ function destinationFolder(folder, productId) {
   return safe;
 }
 
+function relativeUploadPath(folder, productId, filename) {
+  const destination = destinationFolder(folder, productId);
+  const hint = String(productId || "")
+    .trim()
+    .replace(/[^a-zA-Z0-9._-]/g, "");
+  if (hint && destination !== "draft") return `${destination}/${hint}/${filename}`;
+  return `${destination}/${filename}`;
+}
+
 function isFtpConfigured() {
   return Boolean(
     process.env.HOSTINGER_FTP_HOST &&
@@ -61,24 +76,22 @@ function isFtpConfigured() {
 }
 
 function shouldWriteLocalMedia() {
-  if (process.env.VERCEL === "1" || process.env.NODE_ENV === "production") return false;
+  if (process.env.VERCEL === "1") return false;
   const site = process.env.NEXT_PUBLIC_SITE_URL || "";
-  if (site && !/localhost|127\.0\.0\.1/i.test(site)) return false;
+  if (site && !/localhost|127\.0\.0\.1/i.test(site) && !isMediaRootConfigured()) return false;
   return true;
 }
 
 export function getProductImageUrl(objectPath) {
-  if (!objectPath) return "";
-  if (/^https?:\/\//i.test(objectPath) || objectPath.startsWith("/")) return objectPath;
-  const hostinger = mediaBaseUrl();
-  if (hostinger) return `${hostinger}/${objectPath.replace(/^\/+/, "")}`;
-  return objectPath;
+  return normalizeMediaUrl(objectPath) || objectPath || "";
 }
 
-async function uploadToHostingerFtp(bytes, folder, filename) {
+async function uploadToHostingerFtp(bytes, relativePath) {
   const { Client } = await import("basic-ftp");
   const client = new Client(25000);
-  const remoteDir = `${remoteRoot()}/${folder}`;
+  const remoteFile = `${remoteRoot()}/${relativePath}`;
+  const remoteDir = remoteFile.split("/").slice(0, -1).join("/") || remoteRoot();
+  const filename = relativePath.split("/").pop();
   try {
     await client.access({
       host: process.env.HOSTINGER_FTP_HOST,
@@ -92,18 +105,14 @@ async function uploadToHostingerFtp(bytes, folder, filename) {
   } finally {
     client.close();
   }
-  const base = mediaBaseUrl();
-  if (!base) {
-    throw new AppError("Set HOSTINGER_PUBLIC_BASE_URL so uploaded images can be loaded.", 500);
-  }
-  return `${base}/${folder}/${filename}`;
+  return `${mediaBaseUrl()}/${relativePath}`;
 }
 
-async function uploadToLocalMedia(bytes, folder, filename) {
-  const dir = path.join(process.cwd(), "public", "media", folder);
+async function uploadToLocalMedia(bytes, relativePath) {
+  const dir = path.join(process.cwd(), "public", "media", path.posix.dirname(relativePath));
   await mkdir(dir, { recursive: true });
-  await writeFile(path.join(dir, filename), bytes);
-  return `/media/${folder}/${filename}`;
+  await writeFile(path.join(process.cwd(), "public", "media", relativePath), bytes);
+  return `/media/${relativePath}`;
 }
 
 export async function uploadProductImage(productId, file, _accessToken, folder = "products") {
@@ -114,20 +123,32 @@ export async function uploadProductImage(productId, file, _accessToken, folder =
   }
 
   const filename = `${Date.now()}-${crypto.randomUUID()}${extensionOf(file)}`;
-  const destination = destinationFolder(folder, productId);
+  const relativePath = relativeUploadPath(folder, productId, filename);
+
+  if (isMediaRootConfigured()) {
+    const stored = await writeMediaFile(relativePath, bytes);
+    if (isFtpConfigured()) {
+      try {
+        await uploadToHostingerFtp(bytes, relativePath);
+      } catch (error) {
+        console.warn("FTP dual-write failed after MEDIA_ROOT save:", error.message);
+      }
+    }
+    return { path: stored.publicUrl, url: stored.publicUrl };
+  }
 
   if (isFtpConfigured()) {
-    const url = await uploadToHostingerFtp(bytes, destination, filename);
+    const url = await uploadToHostingerFtp(bytes, relativePath);
     return { path: url, url };
   }
 
   if (shouldWriteLocalMedia()) {
-    const url = await uploadToLocalMedia(bytes, destination, filename);
+    const url = await uploadToLocalMedia(bytes, relativePath);
     return { path: url, url };
   }
 
   throw new AppError(
-    "Set HOSTINGER_FTP_HOST, HOSTINGER_FTP_USER, and HOSTINGER_FTP_PASSWORD. New images are stored on Hostinger.",
+    "Set MEDIA_ROOT to a persistent Hostinger directory outside public_html, or configure HOSTINGER_FTP_*.",
     503
   );
 }
@@ -135,3 +156,5 @@ export async function uploadProductImage(productId, file, _accessToken, folder =
 export async function deleteProductImage() {
   return false;
 }
+
+export { publicMediaUrl };

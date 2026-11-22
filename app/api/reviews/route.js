@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { withBackend } from "@/lib/withBackend";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { isLiveBackendConfigured } from "@/lib/backendMode";
 import { getRequestUser } from "@/lib/supabase/server";
 import { addReview, listReviews } from "@/lib/catalogStore";
 import { createReview, getProductReviews } from "@/services/reviewService";
@@ -13,7 +13,7 @@ export async function GET(request) {
     if (!productId) {
       return NextResponse.json({ error: "productId is required." }, { status: 400 });
     }
-    if (isSupabaseConfigured()) {
+    if (isLiveBackendConfigured()) {
       const reviews = await getProductReviews(productId);
       return NextResponse.json({ reviews });
     }
@@ -33,7 +33,7 @@ export async function GET(request) {
 export async function POST(request) {
   return withBackend(request, "/catalog/reviews", async () => {
     const body = await request.json().catch(() => ({}));
-    if (isSupabaseConfigured()) {
+    if (isLiveBackendConfigured()) {
       const user = await getRequestUser(request);
       const review = await createReview({
         ...body,

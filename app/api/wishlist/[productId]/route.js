@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { withBackend } from "@/lib/withBackend";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { isLiveBackendConfigured } from "@/lib/backendMode";
 import { getBearerToken, getRequestUser } from "@/lib/supabase/server";
 import { listWishlist, removeWishlistItem } from "@/services/contentService";
 
 export async function DELETE(request, { params }) {
   const { productId } = await params;
   return withBackend(request, `/wishlist/${productId}`, async () => {
-    if (!isSupabaseConfigured()) {
+    if (!isLiveBackendConfigured()) {
       return NextResponse.json({ error: "Sign in to update saved favourites." }, { status: 401 });
     }
     const user = await getRequestUser(request);

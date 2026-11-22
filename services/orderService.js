@@ -3,7 +3,9 @@ import { AppError, throwIf } from "@/lib/errors";
 import { mapOrder, toDbOrderStatus, toDbPaymentStatus } from "@/lib/mappers";
 import { createServerClient, createServiceClient, createUserClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { useHostingerBackend } from "@/lib/backendMode";
 import { orderPhone, phonesMatch, toPublicTrackOrder } from "@/lib/orderTracking";
+import * as hostingerOrders from "@/services/hostinger/orders";
 
 function client(accessToken) {
   if (!isSupabaseConfigured()) {
@@ -24,6 +26,7 @@ function withItems(orderRow) {
 }
 
 export async function createOrder(orderData, orderItems, accessToken) {
+  if (useHostingerBackend()) return hostingerOrders.createOrder(orderData, orderItems, accessToken);
   const supabase = client(accessToken);
   const items = orderItems || orderData.items || [];
   const { data, error } = await supabase.rpc("place_order", {
@@ -47,6 +50,7 @@ export async function createOrder(orderData, orderItems, accessToken) {
 }
 
 export async function getOrderById(id, accessToken) {
+  if (useHostingerBackend()) return hostingerOrders.getOrderById(id, accessToken);
   const supabase = client(accessToken);
   const { data, error } = await supabase
     .from("orders")
@@ -61,6 +65,7 @@ export async function getOrderById(id, accessToken) {
 }
 
 export async function trackOrder(orderId, phone) {
+  if (useHostingerBackend()) return hostingerOrders.trackOrder(orderId, phone);
   const id = String(orderId || "").trim();
   const supabase = createServiceClient() || client();
   const { data, error } = await supabase
@@ -82,6 +87,7 @@ export async function trackOrder(orderId, phone) {
 }
 
 export async function getUserOrders(userId, accessToken) {
+  if (useHostingerBackend()) return hostingerOrders.getUserOrders(userId, accessToken);
   const supabase = client(accessToken);
   const { data, error } = await supabase
     .from("orders")
@@ -93,6 +99,7 @@ export async function getUserOrders(userId, accessToken) {
 }
 
 export async function getAllOrders(accessToken) {
+  if (useHostingerBackend()) return hostingerOrders.getAllOrders(accessToken);
   const supabase = client(accessToken);
   const { data, error } = await supabase
     .from("orders")
@@ -103,6 +110,7 @@ export async function getAllOrders(accessToken) {
 }
 
 export async function updateOrderStatus(id, status, accessToken) {
+  if (useHostingerBackend()) return hostingerOrders.updateOrderStatus(id, status, accessToken);
   const order = await getOrderById(id, accessToken);
   if (!order) throw new AppError("Order not found", 404);
   const orderStatus = toDbOrderStatus(status);
@@ -184,6 +192,7 @@ async function restoreOrderStock(supabase, items) {
 }
 
 export async function deleteOrder(id, accessToken) {
+  if (useHostingerBackend()) return hostingerOrders.deleteOrder(id, accessToken);
   let supabase = createServiceClient();
   if (!supabase) {
     const token = String(accessToken || "").trim();
@@ -216,6 +225,7 @@ export async function deleteOrder(id, accessToken) {
 }
 
 export async function updatePaymentStatus(id, status, accessToken) {
+  if (useHostingerBackend()) return hostingerOrders.updatePaymentStatus(id, status, accessToken);
   const supabase = client(accessToken);
   const { data, error } = await supabase
     .from("orders")
