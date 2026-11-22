@@ -1,6 +1,6 @@
-import Image from "next/image";
 import { formatPrice } from "@/lib/utils";
 import { useDeliverySettings } from "@/context/DeliverySettingsContext";
+import { FALLBACK_PRODUCT_IMAGE, productThumbSrc } from "@/lib/productImages";
 import { LIMITED_TIME_OFFER_LABEL } from "@/lib/storeOffer";
 
 export default function OrderSummary({
@@ -37,7 +37,14 @@ export default function OrderSummary({
           return (
             <li key={item.id} className="flex min-w-0 items-start gap-3">
               <span className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-neutral-100">
-                <Image src={item.image} alt={item.name} fill className="object-cover" sizes="64px" />
+                <img
+                  src={productThumbSrc(item.image)}
+                  alt={item.name}
+                  className="h-full w-full object-cover"
+                  onError={(event) => {
+                    event.currentTarget.src = FALLBACK_PRODUCT_IMAGE;
+                  }}
+                />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block break-words text-sm font-semibold leading-5 text-neutral-900">

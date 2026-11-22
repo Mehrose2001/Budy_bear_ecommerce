@@ -12,7 +12,7 @@ import { useDeliverySettings } from "@/context/DeliverySettingsContext";
 import { resolveShippingCost } from "@/lib/deliverySettings";
 import { readCart, writeCart } from "@/lib/storage";
 import { getEffectivePrice } from "@/lib/productFilters";
-import { getProductColors } from "@/lib/productImages";
+import { getProductColors, productThumbSrc } from "@/lib/productImages";
 import {
   firstInStockColor,
   firstInStockSize,
@@ -80,7 +80,7 @@ export function CartProvider({ children }) {
           productId: product.id,
           slug: product.slug,
           name: product.name,
-          image: product.images[0],
+          image: productThumbSrc(product),
           price: product.price,
           salePrice: product.salePrice,
           featured: Boolean(product.featured),

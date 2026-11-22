@@ -1,10 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { useCart } from "@/context/CartContext";
+import { FALLBACK_PRODUCT_IMAGE, productThumbSrc } from "@/lib/productImages";
 
 export default function CartItem({ item }) {
   const { updateQuantity, removeItem } = useCart();
@@ -24,7 +24,14 @@ export default function CartItem({ item }) {
         href={`/product/${item.slug}`}
         className="relative h-24 w-24 shrink-0 overflow-hidden rounded-2xl bg-neutral-100"
       >
-        <Image src={item.image} alt={item.name} fill className="object-cover" sizes="96px" />
+        <img
+          src={productThumbSrc(item.image)}
+          alt={item.name}
+          className="h-full w-full object-cover"
+          onError={(event) => {
+            event.currentTarget.src = FALLBACK_PRODUCT_IMAGE;
+          }}
+        />
       </Link>
 
       <div className="min-w-0 flex-1">

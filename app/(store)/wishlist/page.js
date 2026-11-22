@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import Breadcrumbs from "@/components/ui/Breadcrumbs";
 import Button from "@/components/ui/Button";
@@ -9,6 +8,7 @@ import { useCart } from "@/context/CartContext";
 import { useToast } from "@/context/ToastContext";
 import { formatPrice } from "@/lib/utils";
 import { getEffectivePrice } from "@/lib/productFilters";
+import { FALLBACK_PRODUCT_IMAGE, productThumbSrc } from "@/lib/productImages";
 
 export default function WishlistPage() {
   const { items, removeItem, count } = useWishlist();
@@ -59,12 +59,13 @@ export default function WishlistPage() {
                 href={product.slug ? `/product/${product.slug}` : "/products"}
                 className="relative h-28 w-28 shrink-0 overflow-hidden rounded-2xl bg-neutral-100"
               >
-                <Image
-                  src={product.images?.[0] || "/images/brand/logo.jpg"}
+                <img
+                  src={productThumbSrc(product, "/images/brand/logo.jpg")}
                   alt={product.name}
-                  fill
-                  className="object-cover"
-                  sizes="112px"
+                  className="h-full w-full object-cover"
+                  onError={(event) => {
+                    event.currentTarget.src = FALLBACK_PRODUCT_IMAGE;
+                  }}
                 />
               </Link>
               <div className="min-w-0 flex-1">
