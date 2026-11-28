@@ -10,6 +10,8 @@ import {
 import {
   normalizeCategoryBanner,
   normalizeSubcategoryBannerMap,
+  preferStoredBanner,
+  preferStoredBannerMap,
 } from "@/lib/categoryBanner";
 import { createServerClient, createServiceClient, createUserClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -45,8 +47,11 @@ function applyBannerOverlay(category, overlays) {
   const overlay = overlays[category.slug];
   return {
     ...category,
-    banner: overlay.banner || category.banner,
-    subcategoryBanners: overlay.subcategoryBanners || category.subcategoryBanners,
+    banner: preferStoredBanner(overlay.banner, category.banner),
+    subcategoryBanners: preferStoredBannerMap(
+      overlay.subcategoryBanners,
+      category.subcategoryBanners
+    ),
   };
 }
 

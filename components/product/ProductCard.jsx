@@ -1,11 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
-import { Eye, Heart, ShoppingBag } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ArrowUpRight, Eye, Heart } from "lucide-react";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
-import { useCart } from "@/context/CartContext";
 import { useQuickView } from "@/context/QuickViewContext";
 import { useToast } from "@/context/ToastContext";
 import { useWishlist } from "@/context/WishlistContext";
@@ -19,8 +18,9 @@ function isDesktopListing() {
 }
 
 export default function ProductCard({ product, className, mobileClickActions = true }) {
+  const cardRef = useRef(null);
   const [isHovered, setIsHovered] = useState(false);
-  const { addItem } = useCart();
+  const [isRevealed, setIsRevealed] = useState(false);
   const { openQuickView } = useQuickView();
   const { showToast } = useToast();
   const { hasItem, toggleItem } = useWishlist();
@@ -35,38 +35,52 @@ export default function ProductCard({ product, className, mobileClickActions = t
   const fallbackImage = "/images/products/product-1.svg";
   const primaryImage = images[0] || fallbackImage;
   const secondaryImage = images[1] || primaryImage;
+  const hasAltImage = Boolean(images[1] && images[1] !== primaryImage);
   const inStock = getProductStock(product) > 0;
+  const productHref = `/product/${product.slug}`;
+  const showActions = isHovered || isRevealed;
+  const showingAlt = showActions && hasAltImage;
 
-  const handleAddToCart = (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    if (!inStock) return;
-    addItem(product, { quantity: 1 });
-    showToast(`${product.name} added to cart`);
-  };
+  useEffect(() => {
+    if (!isRevealed) return undefined;
+
+    const onPointerDown = (event) => {
+      if (!cardRef.current?.contains(event.target)) setIsRevealed(false);
+    };
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") setIsRevealed(false);
+    };
+
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [isRevealed]);
 
   const handleImageClick = (event) => {
     if (!mobileClickActions || isDesktopListing()) return;
     event.preventDefault();
     event.stopPropagation();
-    openQuickView(product);
+    setIsRevealed((current) => !current);
   };
 
   return (
     <article
+      ref={cardRef}
       className={cn("group relative flex flex-col", className)}
       onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseLeave={() => {
+        setIsHovered(false);
+        setIsRevealed(false);
+      }}
     >
       <div className="relative overflow-hidden rounded-2xl bg-neutral-100 ring-1 ring-neutral-200/80">
-        <a
-          href={`/product/${product.slug}`}
-          className="block"
-          onClick={handleImageClick}
-        >
+        <a href={productHref} className="block" onClick={handleImageClick}>
           <div className="relative aspect-[4/5] overflow-hidden">
             <Image
-              src={isHovered ? secondaryImage : primaryImage}
+              src={showingAlt ? secondaryImage : primaryImage}
               alt={product.name}
               fill
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
@@ -107,7 +121,9 @@ export default function ProductCard({ product, className, mobileClickActions = t
         <div
           className={cn(
             "absolute inset-x-2 bottom-2 flex flex-col gap-2 transition-all duration-300 sm:inset-x-3 sm:bottom-3",
-            "pointer-events-none translate-y-2 opacity-0 lg:group-hover:pointer-events-auto lg:group-hover:translate-y-0 lg:group-hover:opacity-100"
+            showActions
+              ? "pointer-events-auto translate-y-0 opacity-100"
+              : "pointer-events-none translate-y-2 opacity-0 lg:group-hover:pointer-events-auto lg:group-hover:translate-y-0 lg:group-hover:opacity-100"
           )}
         >
           <Button
@@ -118,6 +134,7 @@ export default function ProductCard({ product, className, mobileClickActions = t
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();
+              setIsRevealed(false);
               openQuickView(product);
             }}
           >
@@ -125,20 +142,19 @@ export default function ProductCard({ product, className, mobileClickActions = t
             Quick View
           </Button>
           <Button
-            type="button"
+            href={productHref}
             size="sm"
             className="w-full rounded-xl"
-            onClick={handleAddToCart}
-            disabled={!inStock}
+            onClick={(event) => event.stopPropagation()}
           >
-            <ShoppingBag className="h-4 w-4" />
-            {inStock ? "Add to Cart" : "Sold out"}
+            <ArrowUpRight className="h-4 w-4" />
+            Full View
           </Button>
         </div>
       </div>
 
       <div className="mt-4 flex flex-1 flex-col">
-        <a href={`/product/${product.slug}`} className="group/link flex flex-1 flex-col">
+        <a href={productHref} className="group/link flex flex-1 flex-col">
           <h3 className="line-clamp-2 text-sm font-semibold leading-5 text-neutral-900 transition-colors group-hover/link:text-brand-primary">
             {product.name}
           </h3>

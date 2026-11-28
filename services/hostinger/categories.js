@@ -3,7 +3,12 @@ import { query, queryOne } from "@/lib/db";
 import { asBool, asJson, normalizeMysqlRow, normalizeMysqlRows } from "@/lib/mysql/helpers";
 import { mapCategory } from "@/lib/mappers";
 import { entryUrlError, normalizeEntry } from "@/data/seo";
-import { normalizeCategoryBanner, normalizeSubcategoryBannerMap } from "@/lib/categoryBanner";
+import {
+  normalizeCategoryBanner,
+  normalizeSubcategoryBannerMap,
+  preferStoredBanner,
+  preferStoredBannerMap,
+} from "@/lib/categoryBanner";
 import {
   getCategoryBannerOverlays,
   persistCategoryBannerOverlay,
@@ -29,8 +34,11 @@ function applyBannerOverlay(category, overlays) {
   const overlay = overlays[category.slug];
   return {
     ...category,
-    banner: overlay.banner || category.banner,
-    subcategoryBanners: overlay.subcategoryBanners || category.subcategoryBanners,
+    banner: preferStoredBanner(overlay.banner, category.banner),
+    subcategoryBanners: preferStoredBannerMap(
+      overlay.subcategoryBanners,
+      category.subcategoryBanners
+    ),
   };
 }
 

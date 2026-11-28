@@ -12,7 +12,7 @@ import { useToast } from "@/context/ToastContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { COLOR_SWATCHES } from "@/data/store";
 import { useDeliverySettings } from "@/context/DeliverySettingsContext";
-import { getProductColors } from "@/lib/productImages";
+import { getColorSwatch, getProductColors } from "@/lib/productImages";
 import {
   firstInStockColor,
   firstInStockSize,
@@ -139,7 +139,7 @@ export default function ProductInfo({
                 className="h-4 w-4 rounded-full border border-neutral-200"
                 style={{
                   backgroundColor:
-                    COLOR_SWATCHES[option] || product.colorSwatches?.[option] || "#d4d4d4",
+                    COLOR_SWATCHES[option] || getColorSwatch(product, option) || "#d4d4d4",
                 }}
               />
               {option}
